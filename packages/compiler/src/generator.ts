@@ -683,8 +683,13 @@ export class DriftGenerator {
 
   private addExpressionConstant(ast: any): number {
     const codeStr = astToJS(ast);
+    const deps: string[] = [];
+    for (const name of this.extractIdentifiers(ast)) {
+      if (this.declaredVars.has(name)) deps.push(name);
+    }
     const fnVal = {
-      __drift_fn__: `(scope, declaredVars, setScopeValue, inScopeChain, resolveIterable, getScopeValue) => (${codeStr})`
+      __drift_fn__: `(scope, declaredVars, setScopeValue, inScopeChain, resolveIterable, getScopeValue) => (${codeStr})`,
+      deps,
     };
     return this.addConstant(fnVal);
   }

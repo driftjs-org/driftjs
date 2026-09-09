@@ -87,5 +87,6 @@ export interface ItemRecord {
   indexVal: number;
   registers?: any[] | undefined;
   scope?: Record<string, any> | undefined;
+  lastValues?: Map<number, any> | undefined;
 }
 

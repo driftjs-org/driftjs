@@ -862,7 +862,10 @@ export class DriftClientVM {
             } else {
               const existingNode = this.getRegister(dstReg, registers);
               if (existingNode && existingNode.nodeType === 3) {
-                existingNode.nodeValue = val != null ? String(val) : '';
+                const strVal = val != null ? String(val) : '';
+                if (existingNode.nodeValue !== strVal) {
+                  existingNode.nodeValue = strVal;
+                }
               }
             }
             pc += 3;
@@ -981,6 +984,30 @@ export class DriftClientVM {
             const deps        = new Set<string>(Array.isArray(depsRaw) ? depsRaw : []);
             const forCacheRef: { cache: ItemRecord[] } = { cache: [] };
 
+            const iterableDeps = new Set<string>();
+            if (iterExpr && Array.isArray(iterExpr.deps)) {
+              for (let d = 0; d < iterExpr.deps.length; d++) {
+                iterableDeps.add(iterExpr.deps[d]!);
+              }
+            } else {
+              const bodyBindingVars = new Set<string>();
+              if (bodyMod && bodyMod.reactiveBindings) {
+                for (let b = 0; b < bodyMod.reactiveBindings.length; b++) {
+                  bodyBindingVars.add(bodyMod.reactiveBindings[b]!.variable);
+                }
+              }
+              for (const d of deps) {
+                if (!bodyBindingVars.has(d) || (typeof iterExpr === 'object' && iterExpr?.__drift_fn__ && String(iterExpr.__drift_fn__).includes('.' + d))) {
+                  iterableDeps.add(d);
+                }
+              }
+            }
+            if (keyExpr && Array.isArray(keyExpr.deps)) {
+              for (let d = 0; d < keyExpr.deps.length; d++) {
+                iterableDeps.add(keyExpr.deps[d]!);
+              }
+            }
+
             const startAnchor = this.cursor ? this.cursor.claimComment('for', doc) : doc.createComment('for');
             if (!startAnchor.parentNode || startAnchor.parentNode !== parentElem) {
               parentElem.appendChild(startAnchor);
@@ -1050,6 +1077,26 @@ export class DriftClientVM {
                     ? evaluateExpression(keyExpr, childScope, vm.declaredVars)
                     : indexVal;
 
+                  const lastValues = new Map<number, any>();
+                  if (bodyMod && bodyMod.reactiveBindings) {
+                    for (let b = 0; b < bodyMod.reactiveBindings.length; b++) {
+                      const binding = bodyMod.reactiveBindings[b]!;
+                      for (let p = 0; p < binding.positions.length; p++) {
+                        const targetPc = binding.positions[p]!;
+                        const op = bodyMod.bytecode[targetPc]!;
+                        let exprConst: any = null;
+                        if (op === Opcode.SET_ATTR) {
+                          exprConst = bodyMod.constants[bodyMod.bytecode[targetPc + 3]!];
+                        } else if (op === Opcode.INTERPOLATE_TEXT) {
+                          exprConst = bodyMod.constants[bodyMod.bytecode[targetPc + 2]!];
+                        }
+                        if (exprConst) {
+                          lastValues.set(targetPc, evaluateExpression(exprConst, childScope, vm.declaredVars));
+                        }
+                      }
+                    }
+                  }
+
                   return {
                     key: itemKey,
                     nodes,
@@ -1058,6 +1105,7 @@ export class DriftClientVM {
                     indexVal,
                     registers: rowRegisters,
                     scope: childScope,
+                    lastValues,
                   };
                 },
                 (record, itemVal, indexVal) => {
@@ -1081,6 +1129,25 @@ export class DriftClientVM {
                   const equal = itemsEqual(record.itemVal, itemVal) && (!indexName || record.indexVal === indexVal);
                   record.itemVal = itemVal;
                   record.indexVal = indexVal;
+
+                  if (record.lastValues && bodyMod && bodyMod.reactiveBindings) {
+                    for (let b = 0; b < bodyMod.reactiveBindings.length; b++) {
+                      const binding = bodyMod.reactiveBindings[b]!;
+                      for (let p = 0; p < binding.positions.length; p++) {
+                        const targetPc = binding.positions[p]!;
+                        const op = bodyMod.bytecode[targetPc]!;
+                        let exprConst: any = null;
+                        if (op === Opcode.SET_ATTR) {
+                          exprConst = bodyMod.constants[bodyMod.bytecode[targetPc + 3]!];
+                        } else if (op === Opcode.INTERPOLATE_TEXT) {
+                          exprConst = bodyMod.constants[bodyMod.bytecode[targetPc + 2]!];
+                        }
+                        if (exprConst) {
+                          record.lastValues.set(targetPc, evaluateExpression(exprConst, childScope, vm.declaredVars));
+                        }
+                      }
+                    }
+                  }
 
                   if (record.registers && record.nodes.length > 0) {
                     vm.updateRowRegisters(bodyMod, childScope, record.registers, equal ? undefined : record.childRegions);
@@ -1149,6 +1216,67 @@ export class DriftClientVM {
             };
             renderFor();
 
+            const patchRowsForChangedVars = (changedVars: ReadonlySet<string>) => {
+              const targetPcs = new Set<number>();
+              if (bodyMod && bodyMod.reactiveBindings) {
+                for (let b = 0; b < bodyMod.reactiveBindings.length; b++) {
+                  const binding = bodyMod.reactiveBindings[b]!;
+                  if (changedVars.has(binding.variable)) {
+                    for (let p = 0; p < binding.positions.length; p++) {
+                      targetPcs.add(binding.positions[p]!);
+                    }
+                  }
+                }
+              }
+
+              if (targetPcs.size === 0) return;
+
+              const cache = forCacheRef.cache;
+              for (let i = 0; i < cache.length; i++) {
+                const record = cache[i]!;
+                if (!record.registers || !record.scope) continue;
+
+                if (!record.lastValues) {
+                  record.lastValues = new Map<number, any>();
+                }
+
+                for (const targetPc of targetPcs) {
+                  const op = bodyMod.bytecode[targetPc]!;
+                  let exprConst: any = null;
+                  if (op === Opcode.SET_ATTR) {
+                    exprConst = bodyMod.constants[bodyMod.bytecode[targetPc + 3]!];
+                  } else if (op === Opcode.INTERPOLATE_TEXT) {
+                    exprConst = bodyMod.constants[bodyMod.bytecode[targetPc + 2]!];
+                  }
+
+                  if (exprConst) {
+                    const newVal = evaluateExpression(exprConst, record.scope, vm.declaredVars);
+                    const lastVal = record.lastValues.get(targetPc);
+                    if (lastVal !== newVal) {
+                      record.lastValues.set(targetPc, newVal);
+                      vm.executeFrom(targetPc, bodyMod.bytecode, bodyMod.constants, record.scope, VMMode.UPDATE, record.registers);
+                    }
+                  } else {
+                    vm.executeFrom(targetPc, bodyMod.bytecode, bodyMod.constants, record.scope, VMMode.UPDATE, record.registers);
+                  }
+                }
+
+                if (record.childRegions && record.childRegions.length > 0) {
+                  for (let j = 0; j < record.childRegions.length; j++) {
+                    const child = record.childRegions[j]!;
+                    if (child && typeof child.reRender === 'function') {
+                      for (const dep of child.deps) {
+                        if (changedVars.has(dep)) {
+                          child.reRender(changedVars);
+                          break;
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            };
+
             if (this.cursor) {
               actualEndAnchor = this.cursor.claimComment('/for', doc);
             }
@@ -1158,8 +1286,22 @@ export class DriftClientVM {
 
             const forRegion: ReactiveRegion = {
               deps,
-              reRender: () => {
-                renderFor();
+              reRender: (changedVars?: ReadonlySet<string>) => {
+                let needsReconcile = !changedVars;
+                if (changedVars) {
+                  for (const dep of iterableDeps) {
+                    if (changedVars.has(dep)) {
+                      needsReconcile = true;
+                      break;
+                    }
+                  }
+                }
+
+                if (needsReconcile) {
+                  renderFor();
+                } else if (changedVars) {
+                  patchRowsForChangedVars(changedVars);
+                }
               },
               parentNode: parentElem,
               startAnchor,
@@ -1330,7 +1472,7 @@ export class DriftClientVM {
 
     for (const region of candidateRegions) {
       if (this.reactiveRegions.has(region)) {
-        region.reRender();
+        region.reRender(changedVars);
       }
     }
   }

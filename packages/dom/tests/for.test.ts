@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { DriftClientVM } from '../src/index.js';
 import { compile } from '../../compiler/src/index.js';
 
@@ -392,6 +392,71 @@ describe('DriftJS @for Directive Integration Suite', () => {
       expect(updatedRows[i]).toBe(initialRows[i]);
     }
 
+    document.body.removeChild(container);
+  });
+
+  it('bypasses reconcileKeyedList and mutates only affected DOM nodes when inner dependency changes', () => {
+    const updateRowSpy = vi.spyOn(DriftClientVM.prototype, 'updateRowRegisters');
+
+    const src = `
+      <script>
+        let items = [
+          { id: 1, name: 'Alpha' },
+          { id: 2, name: 'Beta' },
+          { id: 3, name: 'Gamma' }
+        ];
+        let selectedId = 1;
+        function selectTwo() {
+          selectedId = 2;
+        }
+      </script>
+      <div>
+        <button id="select-2" onclick={selectTwo}>Select 2</button>
+        <ul>
+          @for item in items key item.id {
+            <li class={item.id === selectedId ? 'selected' : ''}>
+              <span>{item.name}</span>
+            </li>
+          }
+        </ul>
+      </div>
+    `;
+
+    const mod = compile(src);
+    const vm = new DriftClientVM();
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = vm.execute(mod, { document });
+    if (root) container.appendChild(root);
+
+    updateRowSpy.mockClear();
+
+    const itemsBefore = Array.from(container.querySelectorAll('li'));
+    const textNodesBefore = Array.from(container.querySelectorAll('li span')).map(s => s.firstChild);
+
+    expect(itemsBefore[0]?.className).toBe('selected');
+    expect(itemsBefore[1]?.className).toBe('');
+
+    // Trigger selection change (only selectedId changes, not items array)
+    (container.querySelector('#select-2') as HTMLButtonElement).click();
+
+    // Reconciler's updateRowRegisters MUST NOT be called!
+    expect(updateRowSpy).toHaveBeenCalledTimes(0);
+
+    const itemsAfter = Array.from(container.querySelectorAll('li'));
+    const textNodesAfter = Array.from(container.querySelectorAll('li span')).map(s => s.firstChild);
+
+    // Only class attributes changed
+    expect(itemsAfter[0]?.className).toBe('');
+    expect(itemsAfter[1]?.className).toBe('selected');
+    expect(itemsAfter[2]?.className).toBe('');
+
+    // Text nodes are completely untouched (exact same DOM TextNode references)
+    expect(textNodesAfter[0]).toBe(textNodesBefore[0]);
+    expect(textNodesAfter[1]).toBe(textNodesBefore[1]);
+    expect(textNodesAfter[2]).toBe(textNodesBefore[2]);
+
+    updateRowSpy.mockRestore();
     document.body.removeChild(container);
   });
 });

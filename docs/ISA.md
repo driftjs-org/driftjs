@@ -28,7 +28,7 @@ DriftJS compiles `.drift` template ASTs into a compact, binary-serializable byte
 | **`INTERPOLATE_TEXT`** | `0x07` | `7` | 3 | `dstReg, exprIdx` | Dynamic Binding | Evaluates expression `constants[exprIdx]` to create/patch TextNode |
 | **`EXEC_SCRIPT`** | `0x0C` | `12` | 2 | `scriptIdx` | Scope Initialisation | Executes `<script>` AST `constants[scriptIdx]` into component scope |
 | **`REACTIVE_IF`** | `0x0D` | `13` | 6 | `parentReg, condIdx, consIdx, altIdx, depsIdx` | Reactive Block | Binds dynamic conditional `@if` block between comment anchors |
-| **`REACTIVE_FOR`** | `0x0E` | `14` | 8 | `parentReg, iterIdx, itemNameIdx, idxNameIdx, keyIdx, bodyIdx, depsIdx` | Reactive Block | Binds dynamic `@for` loop with LIS reconciliation & fast-path patching |
+| **`REACTIVE_FOR`** | `0x0E` | `14` | 10 | `parentReg, iterIdx, itemNameIdx, idxNameIdx, keyIdx, bodyIdx, depsIdx, iterDepsIdx, rowDepsIdx` | Reactive Block | Binds dynamic `@for` loop with LIS reconciliation (iterDeps) & per-row fast-patch (rowDeps) |
 | **`MOUNT_COMPONENT`** | `0x0F` | `15` | 4 | `dstReg, compIdx, propsSpecIdx` | Component Mounting | Instantiates child Single File Component VM with props into `dstReg` |
 
 ---
@@ -93,9 +93,14 @@ DriftJS compiles `.drift` template ASTs into a compact, binary-serializable byte
 - **Description**: Registers a dynamic `@if` conditional block bounded by comment anchors (`<!--if-->` / `<!--/if-->`). Re-evaluates test condition `constants[condIdx]` and mounts consequent sub-module `constants[consIdx]` or alternate sub-module `constants[altIdx]` when variables in `constants[depsIdx]` change.
 
 ### `REACTIVE_FOR` (`0x0E`)
-- **Bytecode**: `0x0E <parentReg> <iterIdx> <itemNameIdx> <idxNameIdx> <keyIdx> <bodyIdx> <depsIdx>`
-- **Length**: 8 bytes
+- **Bytecode**: `0x0E <parentReg> <iterIdx> <itemNameIdx> <idxNameIdx> <keyIdx> <bodyIdx> <depsIdx> <iterDepsIdx> <rowDepsIdx>`
+- **Length**: 10 bytes
 - **Description**: Registers a dynamic `@for` loop bounded by comment anchors (`<!--for-->` / `<!--/for-->`). Iterates over array `constants[iterIdx]` using sub-module template `constants[bodyIdx]`.
+- **Operands**:
+  - `depsIdx`: union of all reactive variable names the region subscribes to (used by `triggerUpdates` routing).
+  - `iterDepsIdx`: variables that determine the iterable source — a change triggers full LIS reconciliation.
+  - `rowDepsIdx`: outer-scope variables used inside row expressions but not in the iterable — a change triggers per-row in-place patching via `patchRowsForChangedVars` without touching the list structure.
 - **Features**:
-  - Uses Longest Increasing Subsequence (LIS) keyed reconciliation (`reconcileKeyedList`).
-  - Uses `patchItemAttributes` fast-path for unchanged item references when scope dependencies in `constants[depsIdx]` change.
+  - Uses Longest Increasing Subsequence (LIS) keyed reconciliation (`reconcileKeyedList`) when `iterDepsIdx` variables change.
+  - Uses `patchRowsForChangedVars` fast-path for `rowDepsIdx` variable changes: directly dispatches `executeFrom` at the exact binding PCs per row's register frame — mirroring `triggerUpdates`'s own pattern, with no double-evaluation pre-check.
+  - `SET_ATTR` / `INTERPOLATE_TEXT` opcodes provide their own idempotent no-op guards (`getAttribute !== val`, `nodeValue !== val`).

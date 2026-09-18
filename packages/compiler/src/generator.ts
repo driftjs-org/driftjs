@@ -432,12 +432,37 @@ export class DriftGenerator {
     const indexNameIdx = node.index !== null ? this.addConstant(node.index) : 0xFF;
     const keyIdx = node.key ? this.addExpressionConstant(node.key) : 0xFF;
 
-    // Deps = body's reactive vars + identifiers from iterable expression
-    const deps = this.collectDepsFromSubModule(bodyMod, node.iterable);
-    const depsIdx = this.addConstant(deps);
+    // iterDeps: only the outer declared variables that determine which iterable is evaluated.
+    // A change here requires full reconciliation (list structure may change).
+    const iterDepsSet = new Set<string>();
+    for (const name of this.extractIdentifiers(node.iterable)) {
+      if (this.declaredVars.has(name)) iterDepsSet.add(name);
+    }
+    if (node.key) {
+      // Key expression deps also drive reconciliation (key identity may change).
+      for (const name of this.extractIdentifiers(node.key)) {
+        if (this.declaredVars.has(name)) iterDepsSet.add(name);
+      }
+    }
+    const iterDepsIdx = this.addConstant([...iterDepsSet]);
 
-    // REACTIVE_FOR parentReg iterIdx itemNameIdx indexNameIdx keyIdx bodyIdx depsIdx
-    this.emit(Opcode.REACTIVE_FOR, parentReg, iterIdx, itemNameIdx, indexNameIdx, keyIdx, bodyIdx, depsIdx);
+    // rowDeps: outer declared variables referenced inside the row body that are NOT already
+    // in iterDeps. A change here only needs per-row in-place patching — no reconciliation.
+    const rowDepsSet = new Set<string>();
+    for (const binding of bodyMod.reactiveBindings) {
+      if (!iterDepsSet.has(binding.variable)) {
+        rowDepsSet.add(binding.variable);
+      }
+    }
+    const rowDepsIdx = this.addConstant([...rowDepsSet]);
+
+    // Combined deps = iterDeps ∪ rowDeps — used to subscribe the reactive region to all
+    // variables it cares about so triggerUpdates routes changes here correctly.
+    const allDeps = [...iterDepsSet, ...rowDepsSet];
+    const depsIdx = this.addConstant(allDeps);
+
+    // REACTIVE_FOR parentReg iterIdx itemNameIdx indexNameIdx keyIdx bodyIdx depsIdx iterDepsIdx rowDepsIdx
+    this.emit(Opcode.REACTIVE_FOR, parentReg, iterIdx, itemNameIdx, indexNameIdx, keyIdx, bodyIdx, depsIdx, iterDepsIdx, rowDepsIdx);
   }
 
   private compileAsyncNode(node: AsyncNode, parentReg: number): void {

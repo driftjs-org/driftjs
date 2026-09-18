@@ -14,7 +14,14 @@ export enum Opcode {
   EXEC_SCRIPT = 0x0C,
   /** Reactive conditional block: re-renders its subtree when deps change. */
   REACTIVE_IF = 0x0D,
-  /** Reactive loop block: re-renders its subtree when deps change. */
+  /**
+   * Reactive loop block.
+   * Operands: parentReg iterIdx itemNameIdx idxNameIdx keyIdx bodyIdx depsIdx iterDepsIdx rowDepsIdx
+   * - iterDepsIdx: constant-pool index of string[] listing variables that determine the iterable
+   *   (a change triggers full LIS reconciliation).
+   * - rowDepsIdx: constant-pool index of string[] listing outer-scope variables used inside row
+   *   expressions (a change triggers per-row fast-patch via patchRowsForChangedVars).
+   */
   REACTIVE_FOR = 0x0E,
   /** Mounts a child Single File Component (SFC) into a register. */
   MOUNT_COMPONENT = 0x0F,

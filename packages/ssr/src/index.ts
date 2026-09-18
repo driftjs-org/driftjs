@@ -341,7 +341,8 @@ export class DriftServerVM {
             if (subResult) parentNode.children.push(subResult);
           }
           parentNode.children.push({ type: 'comment', content: '/for', children: [] });
-          pc += 8;
+          // opcode(1) + parentReg iterIdx itemNameIdx idxNameIdx keyIdx bodyIdx depsIdx iterDepsIdx rowDepsIdx (9 operands)
+          pc += 10;
           break;
         }
 

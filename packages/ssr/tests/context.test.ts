@@ -250,7 +250,7 @@ describe('DriftJS Global Context Mechanism (Server VM SSR)', () => {
       bytecode: new Uint32Array([
         Opcode.EXEC_SCRIPT, 0,
         Opcode.CREATE_ELEMENT, 0, 1, // ul
-        Opcode.REACTIVE_FOR, 0, 2, 3, 0xFF, 0xFF, 4, 5,
+        Opcode.REACTIVE_FOR, 0, 2, 3, 0xFF, 0xFF, 4, 5, 0xFF, 0xFF,
         Opcode.RETURN, 0,
       ]),
       constants: [

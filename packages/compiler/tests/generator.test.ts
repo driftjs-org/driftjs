@@ -78,8 +78,8 @@ describe('DriftGenerator', () => {
     const reactiveForIdx = module.bytecode.indexOf(Opcode.REACTIVE_FOR);
     expect(reactiveForIdx).toBeGreaterThan(-1);
 
-    // Operand layout: REACTIVE_FOR parentReg iterIdx itemNameIdx indexNameIdx bodyIdx depsIdx
-    expect(module.bytecode.length).toBeGreaterThan(reactiveForIdx + 6);
+    // Operand layout: REACTIVE_FOR parentReg iterIdx itemNameIdx indexNameIdx keyIdx bodyIdx depsIdx iterDepsIdx rowDepsIdx
+    expect(module.bytecode.length).toBeGreaterThan(reactiveForIdx + 9);
   });
 
   it('generates bytecode for @switch, @case, and @default directives', () => {

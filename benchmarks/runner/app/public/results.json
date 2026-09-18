@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-09-07T17:32:20.988Z",
+  "timestamp": "2026-09-16T03:17:44.901Z",
   "runs": 5,
   "tables": [
     {
@@ -103,7 +103,7 @@
           "unit": "ms",
           "values": {
             "vanilla": 8.24,
-            "drift": 20.56,
+            "drift": 12.92,
             "react": 63.04,
             "vue": 29.24,
             "solid": 17.24,
@@ -113,7 +113,7 @@
           },
           "factors": {
             "vanilla": 1,
-            "drift": 2.5,
+            "drift": 1.57,
             "react": 7.65,
             "vue": 3.55,
             "solid": 2.09,

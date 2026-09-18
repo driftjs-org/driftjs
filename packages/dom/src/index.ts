@@ -639,6 +639,9 @@ export class DriftClientVM {
           pc += 6;
           break;
         case Opcode.REACTIVE_FOR:
+          // opcode(1) + parentReg iterIdx itemNameIdx idxNameIdx keyIdx bodyIdx depsIdx iterDepsIdx rowDepsIdx (9 operands)
+          pc += 10;
+          break;
         case Opcode.REACTIVE_ASYNC:
           pc += 8;
           break;
@@ -973,6 +976,8 @@ export class DriftClientVM {
             const keyIdx      = bytecode[pc + 5]!;
             const bodyIdx     = bytecode[pc + 6]!;
             const depsIdx     = bytecode[pc + 7]!;
+            const iterDepsIdx = bytecode[pc + 8]!;
+            // rowDepsIdx (bytecode[pc + 9]) is implicit — only iterDepsIdx is needed to route at runtime.
 
             const parentElem  = this.getRegister(parentReg, registers);
             const iterExpr    = constants[iterIdx];
@@ -984,27 +989,46 @@ export class DriftClientVM {
             const deps        = new Set<string>(Array.isArray(depsRaw) ? depsRaw : []);
             const forCacheRef: { cache: ItemRecord[] } = { cache: [] };
 
+            // iterableDeps: variables whose change requires full list reconciliation.
+            // Read directly from the compiler-emitted iterDepsIdx constant — no heuristics.
             const iterableDeps = new Set<string>();
-            if (iterExpr && Array.isArray(iterExpr.deps)) {
-              for (let d = 0; d < iterExpr.deps.length; d++) {
-                iterableDeps.add(iterExpr.deps[d]!);
-              }
-            } else {
-              const bodyBindingVars = new Set<string>();
-              if (bodyMod && bodyMod.reactiveBindings) {
-                for (let b = 0; b < bodyMod.reactiveBindings.length; b++) {
-                  bodyBindingVars.add(bodyMod.reactiveBindings[b]!.variable);
+            if (iterDepsIdx !== 0xFF) {
+              const iterDepsRaw = constants[iterDepsIdx];
+              if (Array.isArray(iterDepsRaw)) {
+                for (let d = 0; d < iterDepsRaw.length; d++) {
+                  iterableDeps.add(iterDepsRaw[d] as string);
                 }
               }
-              for (const d of deps) {
-                if (!bodyBindingVars.has(d) || (typeof iterExpr === 'object' && iterExpr?.__drift_fn__ && String(iterExpr.__drift_fn__).includes('.' + d))) {
+            } else {
+              // Legacy fallback: for modules compiled before iterDepsIdx was introduced.
+              // Try to read deps from iterExpr.deps (set by addExpressionConstant).
+              if (iterExpr && Array.isArray(iterExpr.deps)) {
+                for (let d = 0; d < iterExpr.deps.length; d++) {
+                  iterableDeps.add(iterExpr.deps[d]!);
+                }
+              }
+              if (keyExpr && Array.isArray(keyExpr.deps)) {
+                for (let d = 0; d < keyExpr.deps.length; d++) {
+                  iterableDeps.add(keyExpr.deps[d]!);
+                }
+              }
+              // If neither expression has .deps metadata (e.g. hand-crafted test modules),
+              // conservatively treat all registered deps as iterable deps so any state change
+              // still triggers full reconciliation (safe, preserves backward-compatibility).
+              if (iterableDeps.size === 0 && deps.size > 0) {
+                for (const d of deps) {
                   iterableDeps.add(d);
                 }
               }
             }
-            if (keyExpr && Array.isArray(keyExpr.deps)) {
-              for (let d = 0; d < keyExpr.deps.length; d++) {
-                iterableDeps.add(keyExpr.deps[d]!);
+
+            // Pre-build a variable→positions map from bodyMod.reactiveBindings so
+            // patchRowsForChangedVars can look up affected PCs in O(1) per variable.
+            const bodyBindingsMap = new Map<string, number[]>();
+            if (bodyMod && bodyMod.reactiveBindings) {
+              for (let b = 0; b < bodyMod.reactiveBindings.length; b++) {
+                const binding = bodyMod.reactiveBindings[b]!;
+                bodyBindingsMap.set(binding.variable, binding.positions as number[]);
               }
             }
 
@@ -1077,26 +1101,6 @@ export class DriftClientVM {
                     ? evaluateExpression(keyExpr, childScope, vm.declaredVars)
                     : indexVal;
 
-                  const lastValues = new Map<number, any>();
-                  if (bodyMod && bodyMod.reactiveBindings) {
-                    for (let b = 0; b < bodyMod.reactiveBindings.length; b++) {
-                      const binding = bodyMod.reactiveBindings[b]!;
-                      for (let p = 0; p < binding.positions.length; p++) {
-                        const targetPc = binding.positions[p]!;
-                        const op = bodyMod.bytecode[targetPc]!;
-                        let exprConst: any = null;
-                        if (op === Opcode.SET_ATTR) {
-                          exprConst = bodyMod.constants[bodyMod.bytecode[targetPc + 3]!];
-                        } else if (op === Opcode.INTERPOLATE_TEXT) {
-                          exprConst = bodyMod.constants[bodyMod.bytecode[targetPc + 2]!];
-                        }
-                        if (exprConst) {
-                          lastValues.set(targetPc, evaluateExpression(exprConst, childScope, vm.declaredVars));
-                        }
-                      }
-                    }
-                  }
-
                   return {
                     key: itemKey,
                     nodes,
@@ -1105,7 +1109,6 @@ export class DriftClientVM {
                     indexVal,
                     registers: rowRegisters,
                     scope: childScope,
-                    lastValues,
                   };
                 },
                 (record, itemVal, indexVal) => {
@@ -1129,25 +1132,6 @@ export class DriftClientVM {
                   const equal = itemsEqual(record.itemVal, itemVal) && (!indexName || record.indexVal === indexVal);
                   record.itemVal = itemVal;
                   record.indexVal = indexVal;
-
-                  if (record.lastValues && bodyMod && bodyMod.reactiveBindings) {
-                    for (let b = 0; b < bodyMod.reactiveBindings.length; b++) {
-                      const binding = bodyMod.reactiveBindings[b]!;
-                      for (let p = 0; p < binding.positions.length; p++) {
-                        const targetPc = binding.positions[p]!;
-                        const op = bodyMod.bytecode[targetPc]!;
-                        let exprConst: any = null;
-                        if (op === Opcode.SET_ATTR) {
-                          exprConst = bodyMod.constants[bodyMod.bytecode[targetPc + 3]!];
-                        } else if (op === Opcode.INTERPOLATE_TEXT) {
-                          exprConst = bodyMod.constants[bodyMod.bytecode[targetPc + 2]!];
-                        }
-                        if (exprConst) {
-                          record.lastValues.set(targetPc, evaluateExpression(exprConst, childScope, vm.declaredVars));
-                        }
-                      }
-                    }
-                  }
 
                   if (record.registers && record.nodes.length > 0) {
                     vm.updateRowRegisters(bodyMod, childScope, record.registers, equal ? undefined : record.childRegions);
@@ -1216,15 +1200,26 @@ export class DriftClientVM {
             };
             renderFor();
 
+            /**
+             * Fast-path per-row patch for outer-scope variable changes that affect row
+             * expressions but do NOT change the list structure (no reconciliation needed).
+             *
+             * For each changed variable, looks up the exact bytecode positions in bodyMod
+             * via bodyBindingsMap (pre-built from bodyMod.reactiveBindings) and directly
+             * dispatches executeFrom at those PCs on each row's persistent register frame.
+             * This mirrors how triggerUpdates works at the component level — no pre-evaluation
+             * diff pass, no double-work. The SET_ATTR / INTERPOLATE_TEXT opcodes themselves
+             * already perform idempotent no-op checks (attribute value === new value, etc.).
+             */
             const patchRowsForChangedVars = (changedVars: ReadonlySet<string>) => {
+              // Collect the set of bytecode PCs to execute across the body module for
+              // the variables that actually changed.
               const targetPcs = new Set<number>();
-              if (bodyMod && bodyMod.reactiveBindings) {
-                for (let b = 0; b < bodyMod.reactiveBindings.length; b++) {
-                  const binding = bodyMod.reactiveBindings[b]!;
-                  if (changedVars.has(binding.variable)) {
-                    for (let p = 0; p < binding.positions.length; p++) {
-                      targetPcs.add(binding.positions[p]!);
-                    }
+              for (const varName of changedVars) {
+                const positions = bodyBindingsMap.get(varName);
+                if (positions) {
+                  for (let p = 0; p < positions.length; p++) {
+                    targetPcs.add(positions[p]!);
                   }
                 }
               }
@@ -1236,31 +1231,15 @@ export class DriftClientVM {
                 const record = cache[i]!;
                 if (!record.registers || !record.scope) continue;
 
-                if (!record.lastValues) {
-                  record.lastValues = new Map<number, any>();
-                }
-
+                // Execute each affected PC directly on this row's register frame.
+                // Matches the pattern in triggerUpdates / updateRowRegisters but scoped
+                // to only the variables that changed.
                 for (const targetPc of targetPcs) {
-                  const op = bodyMod.bytecode[targetPc]!;
-                  let exprConst: any = null;
-                  if (op === Opcode.SET_ATTR) {
-                    exprConst = bodyMod.constants[bodyMod.bytecode[targetPc + 3]!];
-                  } else if (op === Opcode.INTERPOLATE_TEXT) {
-                    exprConst = bodyMod.constants[bodyMod.bytecode[targetPc + 2]!];
-                  }
-
-                  if (exprConst) {
-                    const newVal = evaluateExpression(exprConst, record.scope, vm.declaredVars);
-                    const lastVal = record.lastValues.get(targetPc);
-                    if (lastVal !== newVal) {
-                      record.lastValues.set(targetPc, newVal);
-                      vm.executeFrom(targetPc, bodyMod.bytecode, bodyMod.constants, record.scope, VMMode.UPDATE, record.registers);
-                    }
-                  } else {
-                    vm.executeFrom(targetPc, bodyMod.bytecode, bodyMod.constants, record.scope, VMMode.UPDATE, record.registers);
-                  }
+                  vm.executeFrom(targetPc, bodyMod.bytecode, bodyMod.constants, record.scope, VMMode.UPDATE, record.registers);
                 }
 
+                // Forward changedVars to any nested reactive regions (nested @if / @for)
+                // within this row so they can perform their own fast-path updates.
                 if (record.childRegions && record.childRegions.length > 0) {
                   for (let j = 0; j < record.childRegions.length; j++) {
                     const child = record.childRegions[j]!;
@@ -1287,6 +1266,8 @@ export class DriftClientVM {
             const forRegion: ReactiveRegion = {
               deps,
               reRender: (changedVars?: ReadonlySet<string>) => {
+                // If no changedVars hint, or any iterable-source variable changed,
+                // run full reconciliation. Otherwise, fast-patch only affected rows.
                 let needsReconcile = !changedVars;
                 if (changedVars) {
                   for (const dep of iterableDeps) {
@@ -1309,7 +1290,7 @@ export class DriftClientVM {
             };
             this.registerRegion(forRegion);
 
-            pc += 8;
+            pc += 10;
             break;
           }
 

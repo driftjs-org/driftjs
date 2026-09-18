@@ -9,6 +9,7 @@ export interface BenchmarkDef {
   run: (page: any, cdpSession: any, config: RunOptions, framework?: FrameworkDef) => Promise<number>;
   warmupRuns?: number;
   runs?: number;
+  cpuSlowdown?: number;
 }
 
 export interface FrameworkDef {
@@ -27,6 +28,7 @@ export interface RunOptions {
   frameworks?: string[];
   benchmarks?: string[];
   outputDir: string;
+  cpuThrottle?: number;
 }
 
 export interface BenchmarkRawResult {

@@ -77,17 +77,22 @@ export async function runBenchmarks(options: RunOptions): Promise<BenchmarkRepor
       const measuredValues: number[] = [];
 
       try {
-        // Warmup runs
-        const warmupCount = benchmark.warmupRuns ?? options.warmup ?? 1;
+        // Set CPU throttling rate matching benchmark spec
+        if (cdpSession) {
+          const rate = options.cpuThrottle ?? benchmark.cpuSlowdown ?? 1;
+          await cdpSession.send('Emulation.setCPUThrottlingRate', { rate }).catch(() => {});
+        }
+
+        // Navigate once to the framework page before the loops
+        await page.goto(frameworkUrl, { waitUntil: 'networkidle' });
+
+        // Warmup runs: executed on the live page context to warm up V8 JIT & ICs
         for (let w = 0; w < warmupCount; w++) {
-          await page.goto(frameworkUrl, { waitUntil: 'networkidle' });
           await benchmark.run(page, cdpSession, options, framework);
         }
 
-        // Measurement runs
-        const runCount = benchmark.runs ?? options.runs ?? 5;
+        // Measurement runs: executed on the warmed-up, steady-state page context
         for (let r = 0; r < runCount; r++) {
-          await page.goto(frameworkUrl, { waitUntil: 'networkidle' });
           const val = await benchmark.run(page, cdpSession, options, framework);
           measuredValues.push(val);
         }
@@ -108,6 +113,10 @@ export async function runBenchmarks(options: RunOptions): Promise<BenchmarkRepor
         });
       } catch (err: any) {
         console.log(`FAILED (${err.message})`);
+      } finally {
+        if (cdpSession && (benchmark.cpuSlowdown || options.cpuThrottle)) {
+          await cdpSession.send('Emulation.setCPUThrottlingRate', { rate: 1 }).catch(() => {});
+        }
       }
     }
 

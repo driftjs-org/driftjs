@@ -42,6 +42,17 @@ async function forceGC(cdpSession: any) {
 }
 
 /**
+ * Ensure table has exactly 0 rows.
+ */
+async function ensureEmptyTable(page: any) {
+  const count = await page.locator('#tbody tr').count();
+  if (count > 0) {
+    await page.click('#clear').catch(() => {});
+    await page.waitForFunction(() => document.querySelectorAll('#tbody tr').length === 0, { timeout: 10000 }).catch(() => {});
+  }
+}
+
+/**
  * Ensure table has exactly 1,000 rows.
  */
 async function ensure1kRows(page: any) {
@@ -52,6 +63,19 @@ async function ensure1kRows(page: any) {
   }
 }
 
+/**
+ * Ensure table has a clean set of 1,000 rows without modified labels.
+ */
+async function ensureClean1kRows(page: any) {
+  await page.click('#run');
+  await page.waitForFunction(() => {
+    const rows = document.querySelectorAll('#tbody tr');
+    if (rows.length !== 1000) return false;
+    const firstText = rows[0]?.querySelector('td:nth-child(2) a')?.textContent || '';
+    return !firstText.includes('!!!');
+  }, { timeout: 15000 });
+}
+
 export const BENCHMARKS: BenchmarkDef[] = [
   // ─── CPU Benchmarks ────────────────────────────────────────────────────────
   {
@@ -60,18 +84,23 @@ export const BENCHMARKS: BenchmarkDef[] = [
     category: 'cpu',
     description: 'Creates 1,000 table rows upon clicking #run.',
     unit: 'ms',
-    warmupRuns: 0,
+    warmupRuns: 5,
     runs: 15,
     run: async (page, cdpSession) => {
-      await page.click('#clear').catch(() => {});
-      await page.waitForFunction(() => document.querySelectorAll('#tbody tr').length === 0, { timeout: 5000 }).catch(() => {});
+      await ensureEmptyTable(page);
       await forceGC(cdpSession);
 
-      const start = Date.now();
-      await page.click('#run');
-      await page.waitForFunction(() => document.querySelectorAll('#tbody tr').length === 1000, { timeout: 15000 });
-      await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0))));
-      return Date.now() - start;
+      const duration = await page.evaluate(async () => {
+        const btn = document.querySelector('#run') as HTMLElement;
+        const start = performance.now();
+        btn.click();
+        await new Promise((resolve) => {
+          requestAnimationFrame(() => setTimeout(resolve, 0));
+        });
+        return performance.now() - start;
+      });
+
+      return Math.round(duration * 100) / 100;
     },
   },
   {
@@ -86,11 +115,17 @@ export const BENCHMARKS: BenchmarkDef[] = [
       await ensure1kRows(page);
       await forceGC(cdpSession);
 
-      const start = Date.now();
-      await page.click('#run');
-      await page.waitForFunction(() => document.querySelectorAll('#tbody tr').length === 1000, { timeout: 15000 });
-      await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0))));
-      return Date.now() - start;
+      const duration = await page.evaluate(async () => {
+        const btn = document.querySelector('#run') as HTMLElement;
+        const start = performance.now();
+        btn.click();
+        await new Promise((resolve) => {
+          requestAnimationFrame(() => setTimeout(resolve, 0));
+        });
+        return performance.now() - start;
+      });
+
+      return Math.round(duration * 100) / 100;
     },
   },
   {
@@ -99,20 +134,24 @@ export const BENCHMARKS: BenchmarkDef[] = [
     category: 'cpu',
     description: 'Updates every 10th row in a table of 1,000 rows.',
     unit: 'ms',
-    warmupRuns: 5,
+    warmupRuns: 3,
     runs: 15,
+    cpuSlowdown: 4,
     run: async (page, cdpSession) => {
-      await ensure1kRows(page);
+      await ensureClean1kRows(page);
       await forceGC(cdpSession);
 
-      const start = Date.now();
-      await page.click('#update');
-      await page.waitForFunction(() => {
-        const text = document.querySelector('#tbody tr:first-child td:nth-child(2) a')?.textContent || '';
-        return text.includes('!!!');
-      }, { timeout: 15000 });
-      await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0))));
-      return Date.now() - start;
+      const duration = await page.evaluate(async () => {
+        const btn = document.querySelector('#update') as HTMLElement;
+        const start = performance.now();
+        btn.click();
+        await new Promise((resolve) => {
+          requestAnimationFrame(() => setTimeout(resolve, 0));
+        });
+        return performance.now() - start;
+      });
+
+      return Math.round(duration * 100) / 100;
     },
   },
   {
@@ -123,21 +162,30 @@ export const BENCHMARKS: BenchmarkDef[] = [
     unit: 'ms',
     warmupRuns: 5,
     runs: 25,
+    cpuSlowdown: 4,
     run: async (page, cdpSession) => {
       await ensure1kRows(page);
+      const isRow2Selected = await page.evaluate(() => document.querySelector('#tbody tr:nth-child(2)')?.classList.contains('danger') || false);
+      if (isRow2Selected) {
+        await page.evaluate(() => {
+          const el = document.querySelector('#tbody tr:nth-child(3) a.lbl') as HTMLElement;
+          if (el) el.click();
+        });
+        await page.waitForFunction(() => !document.querySelector('#tbody tr:nth-child(2)')?.classList.contains('danger'), { timeout: 5000 });
+      }
       await forceGC(cdpSession);
 
-      const start = Date.now();
-      await page.evaluate(() => {
+      const duration = await page.evaluate(async () => {
         const el = document.querySelector('#tbody tr:nth-child(2) a.lbl') as HTMLElement;
-        if (el) el.click();
+        const start = performance.now();
+        el.click();
+        await new Promise((resolve) => {
+          requestAnimationFrame(() => setTimeout(resolve, 0));
+        });
+        return performance.now() - start;
       });
-      await page.waitForFunction(() => {
-        const tr = document.querySelector('#tbody tr:nth-child(2)');
-        return tr && tr.classList.contains('danger');
-      }, { timeout: 10000 });
-      await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0))));
-      return Date.now() - start;
+
+      return Math.round(duration * 100) / 100;
     },
   },
   {
@@ -148,19 +196,22 @@ export const BENCHMARKS: BenchmarkDef[] = [
     unit: 'ms',
     warmupRuns: 5,
     runs: 15,
+    cpuSlowdown: 4,
     run: async (page, cdpSession) => {
       await ensure1kRows(page);
-      const initialRow2Text = await page.locator('#tbody tr:nth-child(2) td:nth-child(2)').innerText();
       await forceGC(cdpSession);
 
-      const start = Date.now();
-      await page.click('#swaprows');
-      await page.waitForFunction((initial: any) => {
-        const current = document.querySelector('#tbody tr:nth-child(2) td:nth-child(2)')?.textContent || '';
-        return current !== initial;
-      }, initialRow2Text, { timeout: 10000 });
-      await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0))));
-      return Date.now() - start;
+      const duration = await page.evaluate(async () => {
+        const btn = document.querySelector('#swaprows') as HTMLElement;
+        const start = performance.now();
+        btn.click();
+        await new Promise((resolve) => {
+          requestAnimationFrame(() => setTimeout(resolve, 0));
+        });
+        return performance.now() - start;
+      });
+
+      return Math.round(duration * 100) / 100;
     },
   },
   {
@@ -171,18 +222,22 @@ export const BENCHMARKS: BenchmarkDef[] = [
     unit: 'ms',
     warmupRuns: 5,
     runs: 15,
+    cpuSlowdown: 2,
     run: async (page, cdpSession) => {
       await ensure1kRows(page);
       await forceGC(cdpSession);
 
-      const start = Date.now();
-      await page.evaluate(() => {
+      const duration = await page.evaluate(async () => {
         const el = document.querySelector('#tbody tr:nth-child(2) a.remove') as HTMLElement;
-        if (el) el.click();
+        const start = performance.now();
+        el.click();
+        await new Promise((resolve) => {
+          requestAnimationFrame(() => setTimeout(resolve, 0));
+        });
+        return performance.now() - start;
       });
-      await page.waitForFunction(() => document.querySelectorAll('#tbody tr').length === 999, { timeout: 10000 });
-      await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0))));
-      return Date.now() - start;
+
+      return Math.round(duration * 100) / 100;
     },
   },
   {
@@ -191,18 +246,23 @@ export const BENCHMARKS: BenchmarkDef[] = [
     category: 'cpu',
     description: 'Creates 10,000 rows on an empty table.',
     unit: 'ms',
-    warmupRuns: 0,
+    warmupRuns: 5,
     runs: 15,
     run: async (page, cdpSession) => {
-      await page.click('#clear').catch(() => {});
-      await page.waitForFunction(() => document.querySelectorAll('#tbody tr').length === 0, { timeout: 5000 }).catch(() => {});
+      await ensureEmptyTable(page);
       await forceGC(cdpSession);
 
-      const start = Date.now();
-      await page.click('#runlots');
-      await page.waitForFunction(() => document.querySelectorAll('#tbody tr').length === 10000, { timeout: 30000 });
-      await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0))));
-      return Date.now() - start;
+      const duration = await page.evaluate(async () => {
+        const btn = document.querySelector('#runlots') as HTMLElement;
+        const start = performance.now();
+        btn.click();
+        await new Promise((resolve) => {
+          requestAnimationFrame(() => setTimeout(resolve, 0));
+        });
+        return performance.now() - start;
+      });
+
+      return Math.round(duration * 100) / 100;
     },
   },
   {
@@ -211,17 +271,23 @@ export const BENCHMARKS: BenchmarkDef[] = [
     category: 'cpu',
     description: 'Appends 1,000 rows to a table with 1,000 rows (total 2k rows).',
     unit: 'ms',
-    warmupRuns: 0,
+    warmupRuns: 5,
     runs: 15,
     run: async (page, cdpSession) => {
       await ensure1kRows(page);
       await forceGC(cdpSession);
 
-      const start = Date.now();
-      await page.click('#add');
-      await page.waitForFunction(() => document.querySelectorAll('#tbody tr').length === 2000, { timeout: 15000 });
-      await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0))));
-      return Date.now() - start;
+      const duration = await page.evaluate(async () => {
+        const btn = document.querySelector('#add') as HTMLElement;
+        const start = performance.now();
+        btn.click();
+        await new Promise((resolve) => {
+          requestAnimationFrame(() => setTimeout(resolve, 0));
+        });
+        return performance.now() - start;
+      });
+
+      return Math.round(duration * 100) / 100;
     },
   },
   {
@@ -230,17 +296,24 @@ export const BENCHMARKS: BenchmarkDef[] = [
     category: 'cpu',
     description: 'Clears all 1,000 rows from the table.',
     unit: 'ms',
-    warmupRuns: 0,
+    warmupRuns: 5,
     runs: 15,
+    cpuSlowdown: 4,
     run: async (page, cdpSession) => {
       await ensure1kRows(page);
       await forceGC(cdpSession);
 
-      const start = Date.now();
-      await page.click('#clear');
-      await page.waitForFunction(() => document.querySelectorAll('#tbody tr').length === 0, { timeout: 10000 });
-      await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0))));
-      return Date.now() - start;
+      const duration = await page.evaluate(async () => {
+        const btn = document.querySelector('#clear') as HTMLElement;
+        const start = performance.now();
+        btn.click();
+        await new Promise((resolve) => {
+          requestAnimationFrame(() => setTimeout(resolve, 0));
+        });
+        return performance.now() - start;
+      });
+
+      return Math.round(duration * 100) / 100;
     },
   },
 
@@ -328,9 +401,10 @@ export const BENCHMARKS: BenchmarkDef[] = [
     category: 'startup',
     description: 'Time in ms to First Contentful Paint / Initial Paint.',
     unit: 'ms',
-    warmupRuns: 1,
+    warmupRuns: 0,
     runs: 3,
     run: async (page) => {
+      await page.reload({ waitUntil: 'networkidle' });
       const paintTime = await page.evaluate(() => {
         const entries = performance.getEntriesByType('paint');
         const fcp = entries.find((e) => e.name === 'first-contentful-paint') || entries[0];

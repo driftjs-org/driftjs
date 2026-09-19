@@ -14,6 +14,8 @@
   --row-hover: #f1f5f9;
   --bar-fill: #3b82f6;
   --bar-track: #f1f5f9;
+  --col-name-width: 280px;
+  --col-unit-width: 80px;
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
@@ -251,31 +253,65 @@ header {
 }
 
 .table-container {
-  overflow-x: auto;
+  overflow: auto;
+  max-height: 75vh;
+  position: relative;
 }
 
 table.bench-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   text-align: left;
   font-size: 0.9rem;
 }
 
-table.bench-table th {
-  padding: 0.85rem 1.25rem;
+/* Frozen Header Row (Framework Names) */
+table.bench-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 20;
   background: #f8fafc;
+  padding: 0.85rem 1.25rem;
   font-weight: 600;
   color: #334155;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 2px solid var(--border);
   font-size: 0.825rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   white-space: nowrap;
+  box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 table.bench-table th.th-framework {
   text-align: right;
   min-width: 110px;
+}
+
+/* Frozen Top-Left Corner Cells (Header Intersection for Name and Unit) */
+table.bench-table thead th:first-child {
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 30;
+  width: var(--col-name-width);
+  min-width: var(--col-name-width);
+  max-width: var(--col-name-width);
+  background: #f8fafc;
+  border-right: 1px solid var(--border);
+}
+
+table.bench-table thead th:nth-child(2) {
+  position: sticky;
+  top: 0;
+  left: var(--col-name-width);
+  z-index: 30;
+  width: var(--col-unit-width);
+  min-width: var(--col-unit-width);
+  max-width: var(--col-unit-width);
+  background: #f8fafc;
+  border-right: 1px solid var(--border);
+  box-shadow: 2px 2px 5px -1px rgba(0, 0, 0, 0.08);
 }
 
 table.bench-table td {
@@ -296,15 +332,73 @@ table.bench-table tbody tr:hover {
   background-color: var(--row-hover);
 }
 
+/* Frozen Benchmark Name Column (td.name in tbody & tfoot) */
+table.bench-table td.name {
+  position: sticky;
+  left: 0;
+  z-index: 10;
+  width: var(--col-name-width);
+  min-width: var(--col-name-width);
+  max-width: var(--col-name-width);
+  border-right: 1px solid var(--border);
+}
+
+table.bench-table tbody tr:nth-child(odd) td.name {
+  background-color: #ffffff;
+}
+
+table.bench-table tbody tr:nth-child(even) td.name {
+  background-color: var(--row-alt);
+}
+
+table.bench-table tbody tr:hover td.name {
+  background-color: var(--row-hover);
+}
+
+/* Frozen Unit Column (td.unit in tbody & tfoot) */
+table.bench-table td.unit {
+  position: sticky;
+  left: var(--col-name-width);
+  z-index: 10;
+  width: var(--col-unit-width);
+  min-width: var(--col-unit-width);
+  max-width: var(--col-unit-width);
+  border-right: 1px solid var(--border);
+  box-shadow: 2px 0 5px -2px rgba(0, 0, 0, 0.08);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+table.bench-table tbody tr:nth-child(odd) td.unit {
+  background-color: #ffffff;
+}
+
+table.bench-table tbody tr:nth-child(even) td.unit {
+  background-color: var(--row-alt);
+}
+
+table.bench-table tbody tr:hover td.unit {
+  background-color: var(--row-hover);
+}
+
 table.bench-table tfoot tr.geometric-mean-row {
   background: #f1f5f9;
-  border-top: 2px solid #cbd5e1;
 }
 
 table.bench-table tfoot tr.geometric-mean-row td {
   padding: 0.95rem 1.25rem;
+  border-top: 2px solid #cbd5e1;
   border-bottom: none;
   font-weight: 600;
+}
+
+table.bench-table tfoot tr.geometric-mean-row td.name {
+  background-color: #f1f5f9;
+}
+
+table.bench-table tfoot tr.geometric-mean-row td.unit {
+  background-color: #f1f5f9;
 }
 
 table.bench-table tfoot tr.geometric-mean-row td.name strong {
@@ -317,10 +411,6 @@ table.bench-table tfoot tr.geometric-mean-row td.geomean-val {
   color: #1e293b;
 }
 
-td.name {
-  min-width: 260px;
-}
-
 td.name strong {
   display: block;
   color: var(--text);
@@ -331,13 +421,6 @@ td.name .desc {
   font-size: 0.8rem;
   color: var(--text-muted);
   margin-top: 0.15rem;
-}
-
-td.unit {
-  width: 70px;
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  white-space: nowrap;
 }
 
 td.num {
@@ -356,6 +439,11 @@ td.num {
   margin-left: 0.35rem;
   font-weight: normal;
   font-family: var(--font-sans);
+}
+
+td.num[style] .factor {
+  color: rgba(0, 0, 0, 0.65);
+  font-weight: 500;
 }
 
 /* ---------------------------------------------------------------------------

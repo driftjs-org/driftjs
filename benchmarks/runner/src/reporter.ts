@@ -63,21 +63,18 @@ export function saveReport(report: BenchmarkReport, outputDir: string): { jsonPa
             }
             existingTable.geometricMean = geometricMean;
 
-            // Build canonical ordered headers
+            // Sort present frameworks by geometric mean ascending
+            const sortedFwIds = Array.from(presentFrameworkIds).sort((a, b) => {
+              const gmA = geometricMean[a] ?? Infinity;
+              const gmB = geometricMean[b] ?? Infinity;
+              return gmA - gmB;
+            });
+
             const orderedHeaders = ['Metric / Benchmark', 'Unit'];
-            for (const fw of FRAMEWORKS) {
-              if (presentFrameworkIds.has(fw.id)) {
-                orderedHeaders.push(fw.name);
-              }
-            }
-            for (const row of existingTable.rows) {
-              for (const fwId of Object.keys(row.values)) {
-                const fwDef = FRAMEWORKS.find(f => f.id === fwId);
-                const name = fwDef ? fwDef.name : fwId;
-                if (!orderedHeaders.includes(name)) {
-                  orderedHeaders.push(name);
-                }
-              }
+            for (const fwId of sortedFwIds) {
+              const fwDef = FRAMEWORKS.find(f => f.id === fwId);
+              const name = fwDef ? fwDef.name : fwId;
+              orderedHeaders.push(name);
             }
 
             existingTable.headers = orderedHeaders;

@@ -73,7 +73,9 @@ export async function runBenchmarks(options: RunOptions): Promise<BenchmarkRepor
     for (const benchmark of selectedBenchmarks) {
       const warmupCount = benchmark.warmupRuns ?? options.warmup ?? 1;
       const runCount = benchmark.runs ?? options.runs ?? 5;
-      process.stdout.write(`   • [${benchmark.id}] ${benchmark.name} (${runCount} runs) ... `);
+      const warmupLabel = warmupCount > 0 ? `, ${warmupCount} warmup` : '';
+      process.stdout.write(`   • [${benchmark.id}] ${benchmark.name} (${runCount} runs${warmupLabel}) ... `);
+      const warmupValues: number[] = [];
       const measuredValues: number[] = [];
 
       try {
@@ -88,7 +90,10 @@ export async function runBenchmarks(options: RunOptions): Promise<BenchmarkRepor
 
         // Warmup runs: executed on the live page context to warm up V8 JIT & ICs
         for (let w = 0; w < warmupCount; w++) {
-          await benchmark.run(page, cdpSession, options, framework);
+          const wVal = await benchmark.run(page, cdpSession, options, framework);
+          if (typeof wVal === 'number' && Number.isFinite(wVal)) {
+            warmupValues.push(wVal);
+          }
         }
 
         // Measurement runs: executed on the warmed-up, steady-state page context
@@ -98,8 +103,7 @@ export async function runBenchmarks(options: RunOptions): Promise<BenchmarkRepor
         }
 
         const mean = computeMean(measuredValues);
-        const runsInfo = measuredValues.length === 1 ? `1 run` : `runs: [${measuredValues.join(', ')}]`;
-        console.log(`Mean: ${mean} ${benchmark.unit} (${runsInfo})`);
+        console.log('Done');
 
         rawResults.push({
           benchmarkId: benchmark.id,
@@ -108,6 +112,7 @@ export async function runBenchmarks(options: RunOptions): Promise<BenchmarkRepor
           unit: benchmark.unit,
           frameworkId: framework.id,
           frameworkName: framework.name,
+          warmupValues,
           values: measuredValues,
           mean,
         });
@@ -172,6 +177,15 @@ export async function runBenchmarks(options: RunOptions): Promise<BenchmarkRepor
         geometricMean[f.id] = computeGeometricMean(fwFactors);
       }
     }
+
+    // Sort framework headers in ascending order of overall geometric mean
+    const sortedFrameworks = [...selectedFrameworks].sort((a, b) => {
+      const gmA = geometricMean[a.id] ?? Infinity;
+      const gmB = geometricMean[b.id] ?? Infinity;
+      return gmA - gmB;
+    });
+
+    const headers = ['Metric / Benchmark', 'Unit', ...sortedFrameworks.map(f => f.name)];
 
     return {
       category,

@@ -20,8 +20,8 @@ export interface FrameworkDef {
 }
 
 export interface RunOptions {
-  runs: number;
-  warmup: number;
+  runs?: number;
+  warmup?: number;
   headless: boolean;
   port: number;
   trace: boolean;
@@ -38,6 +38,7 @@ export interface BenchmarkRawResult {
   unit: string;
   frameworkId: string;
   frameworkName: string;
+  warmupValues?: number[]; // raw values recorded during warmup runs
   values: number[]; // raw measured values across runs
   mean: number;     // arithmetic mean ONLY as specified
 }

@@ -140,6 +140,44 @@ function computeTableGeometricMean(table: BenchmarkTable, fName: string): number
   return Math.round(gm * 100) / 100;
 }
 
+/**
+ * Continuous color scaling for benchmark cells based on factor / geometric mean.
+ * 1.00x (baseline / fastest) scales to green (rgb(99, 191, 124)).
+ * maxFactor (worst factor in the set) scales to red (rgb(249, 105, 108)).
+ * Values in between continuously interpolate through yellow (rgb(254, 230, 130)).
+ */
+function getFactorColor(factor: number | undefined, maxFactor: number | undefined): string {
+  if (typeof factor !== 'number' || !Number.isFinite(factor) || factor <= 0) {
+    return '';
+  }
+
+  const max = typeof maxFactor === 'number' && Number.isFinite(maxFactor) && maxFactor > 1
+    ? maxFactor
+    : 1;
+
+  // Normalized scaling position t from 0.0 (fastest / 1.00x) to 1.0 (worst / maxFactor)
+  const t = max > 1 ? Math.max(0, Math.min(1, (factor - 1) / (max - 1))) : 0;
+
+  // Continuous 2-phase interpolation:
+  // t = 0.0 -> Green: rgb(99, 191, 124)
+  // t = 0.5 -> Yellow: rgb(254, 230, 130)
+  // t = 1.0 -> Red: rgb(249, 105, 108)
+  let r: number, g: number, b: number;
+  if (t <= 0.5) {
+    const u = t * 2;
+    r = Math.round(99 + (254 - 99) * u);
+    g = Math.round(191 + (230 - 191) * u);
+    b = Math.round(124 + (130 - 124) * u);
+  } else {
+    const u = (t - 0.5) * 2;
+    r = Math.round(254 + (249 - 254) * u);
+    g = Math.round(230 + (105 - 230) * u);
+    b = Math.round(130 + (108 - 130) * u);
+  }
+
+  return `background-color: rgb(${r}, ${g}, ${b}); color: rgb(0, 0, 0);`;
+}
+
 // ---------------------------------------------------------------------------
 // TABLE VIEW RENDERING
 // ---------------------------------------------------------------------------
@@ -147,7 +185,22 @@ function computeTableGeometricMean(table: BenchmarkTable, fName: string): number
 function renderTable(table: BenchmarkTable): string {
   if (!table.rows || table.rows.length === 0) return '';
 
-  const headerCells = table.headers.map((h, i) => {
+  const rawFrameworks = table.headers.slice(2);
+
+  // Arrange framework columns in ascending order of their overall geometric mean
+  const sortedFrameworks = [...rawFrameworks].sort((a, b) => {
+    const gmA = computeTableGeometricMean(table, a) ?? Infinity;
+    const gmB = computeTableGeometricMean(table, b) ?? Infinity;
+    return gmA - gmB;
+  });
+
+  const frameworks = sortedFrameworks;
+
+  const headerCells = [
+    table.headers[0] || 'Metric / Benchmark',
+    table.headers[1] || 'Unit',
+    ...frameworks,
+  ].map((h, i) => {
     const isFirst = i === 0;
     const isSecond = i === 1;
     const alignClass = isFirst || isSecond ? '' : 'th-framework';
@@ -155,14 +208,20 @@ function renderTable(table: BenchmarkTable): string {
     return `<th class="${alignClass}">${escapeHtml(label)}</th>`;
   }).join('\n            ');
 
-  const frameworks = table.headers.slice(2);
-
   const bodyRows = table.rows.map(row => {
     const minVal = getRowMin(row);
+    const rowFactors = frameworks
+      .map(fName => {
+        const val = getRowValue(row, fName);
+        return getRowFactor(row, fName) ?? (typeof val === 'number' && typeof minVal === 'number' && minVal > 0 ? val / minVal : undefined);
+      })
+      .filter((f): f is number => typeof f === 'number' && Number.isFinite(f) && f > 0);
+    const rowMaxFactor = rowFactors.length > 0 ? Math.max(...rowFactors) : 1;
+
     const valCells = frameworks.map(fName => {
       const val = getRowValue(row, fName);
       const formatted = formatValue(val, row.unit);
-      const factor = getRowFactor(row, fName) || (typeof val === 'number' && typeof minVal === 'number' && minVal > 0 ? val / minVal : undefined);
+      const factor = getRowFactor(row, fName) ?? (typeof val === 'number' && typeof minVal === 'number' && minVal > 0 ? val / minVal : undefined);
 
       let factorBadge = '';
       if (typeof factor === 'number' && Number.isFinite(factor)) {
@@ -170,7 +229,10 @@ function renderTable(table: BenchmarkTable): string {
         factorBadge = `<span class="factor">(${factorStr})</span>`;
       }
 
-      return `<td class="num">${formatted} ${factorBadge}</td>`;
+      const cellColorStyle = getFactorColor(factor, rowMaxFactor);
+      const styleAttr = cellColorStyle ? ` style="${cellColorStyle}"` : '';
+
+      return `<td class="num"${styleAttr}>${formatted} ${factorBadge}</td>`;
     }).join('\n            ');
 
     return `
@@ -185,10 +247,16 @@ function renderTable(table: BenchmarkTable): string {
   }).join('\n');
 
   // Compute geometric mean of factors across all rows for each framework
+  const geomeans = frameworks.map(fName => computeTableGeometricMean(table, fName));
+  const validGeomeans = geomeans.filter((gm): gm is number => typeof gm === 'number' && Number.isFinite(gm) && gm > 0);
+  const tableMaxGeomean = validGeomeans.length > 0 ? Math.max(...validGeomeans) : 1;
+
   const geomeanCells = frameworks.map(fName => {
     const gm = computeTableGeometricMean(table, fName);
     const formatted = typeof gm === 'number' ? gm.toFixed(2) + 'x' : '-';
-    return `<td class="num geomean-val"><strong>${formatted}</strong></td>`;
+    const cellColorStyle = getFactorColor(gm, tableMaxGeomean);
+    const styleAttr = cellColorStyle ? ` style="${cellColorStyle}"` : '';
+    return `<td class="num geomean-val"${styleAttr}><strong>${formatted}</strong></td>`;
   }).join('\n            ');
 
   const tfootHtml = `
@@ -262,7 +330,12 @@ function getAllFrameworksFromReport(report: BenchmarkReport): { key: string; nam
   for (const table of report.tables) {
     if (!table.headers) continue;
     const fwHeaders = table.headers.slice(2);
-    for (const h of fwHeaders) {
+    const sortedHeaders = [...fwHeaders].sort((a, b) => {
+      const gmA = computeTableGeometricMean(table, a) ?? Infinity;
+      const gmB = computeTableGeometricMean(table, b) ?? Infinity;
+      return gmA - gmB;
+    });
+    for (const h of sortedHeaders) {
       const key = getFrameworkKey(h);
       if (key && !seen.has(key)) {
         seen.set(key, { key, name: getFrameworkName(h) });

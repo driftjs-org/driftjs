@@ -41,7 +41,6 @@ function parseArgs(): RunOptions {
 
 async function main() {
   const options = parseArgs();
-  console.log(`Starting benchmark execution with options:`, options);
 
   const selectedFrameworks = options.frameworks && options.frameworks.length > 0
     ? FRAMEWORKS.filter(f => options.frameworks!.includes(f.id))

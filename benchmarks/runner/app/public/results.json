@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-09-19T06:26:33.812Z",
+  "timestamp": "2026-09-19T07:37:50.112Z",
   "runs": 5,
   "tables": [
     {
@@ -8,14 +8,14 @@
       "headers": [
         "Metric / Benchmark",
         "Unit",
+        "SolidJS",
         "VanillaJS",
+        "Angular",
         "DriftJS",
-        "React 19",
-        "Vue 3.5",
-        "SolidJS 1.9",
-        "Svelte 5",
-        "Angular 22",
-        "Ember 7.2"
+        "Svelte",
+        "Vue",
+        "React",
+        "Ember"
       ],
       "rows": [
         {
@@ -24,7 +24,7 @@
           "description": "Creates 1,000 table rows upon clicking #run.",
           "unit": "ms",
           "values": {
-            "vanilla": 129.42,
+            "vanilla": 139.9,
             "drift": 152.92,
             "react": 152.01,
             "vue": 157.75,
@@ -34,14 +34,14 @@
             "ember": 335.59
           },
           "factors": {
-            "vanilla": 1,
+            "vanilla": 1.08,
             "drift": 1.18,
-            "react": 1.17,
+            "react": 1.18,
             "vue": 1.22,
             "solid": 1,
             "svelte": 1.61,
             "angular": 1.29,
-            "ember": 2.59
+            "ember": 2.6
           }
         },
         {
@@ -50,7 +50,7 @@
           "description": "Replaces all 1,000 rows with 1,000 new rows.",
           "unit": "ms",
           "values": {
-            "vanilla": 175.56,
+            "vanilla": 188.88,
             "drift": 221.61,
             "react": 207.7,
             "vue": 220.74,
@@ -60,14 +60,14 @@
             "ember": 382.57
           },
           "factors": {
-            "vanilla": 1,
-            "drift": 1.26,
-            "react": 1.18,
-            "vue": 1.26,
-            "solid": 1.05,
-            "svelte": 1.35,
-            "angular": 1.24,
-            "ember": 2.18
+            "vanilla": 1.02,
+            "drift": 1.2,
+            "react": 1.13,
+            "vue": 1.2,
+            "solid": 1,
+            "svelte": 1.29,
+            "angular": 1.19,
+            "ember": 2.07
           }
         },
         {
@@ -86,14 +86,14 @@
             "ember": 106.69
           },
           "factors": {
-            "vanilla": 1,
-            "drift": 1.22,
-            "react": 1.04,
-            "vue": 1.23,
-            "solid": 0.9,
-            "svelte": 0.99,
-            "angular": 0.95,
-            "ember": 1.31
+            "vanilla": 1.12,
+            "drift": 1.36,
+            "react": 1.16,
+            "vue": 1.38,
+            "solid": 1,
+            "svelte": 1.11,
+            "angular": 1.06,
+            "ember": 1.46
           }
         },
         {
@@ -138,14 +138,14 @@
             "ember": 124.89
           },
           "factors": {
-            "vanilla": 1,
-            "drift": 1.35,
-            "react": 9.45,
-            "vue": 1.23,
-            "solid": 0.94,
-            "svelte": 1.11,
-            "angular": 1,
-            "ember": 1.6
+            "vanilla": 1.07,
+            "drift": 1.44,
+            "react": 10.1,
+            "vue": 1.31,
+            "solid": 1,
+            "svelte": 1.18,
+            "angular": 1.07,
+            "ember": 1.71
           }
         },
         {
@@ -164,14 +164,14 @@
             "ember": 86.87
           },
           "factors": {
-            "vanilla": 1,
-            "drift": 1.18,
-            "react": 1.05,
-            "vue": 1.23,
-            "solid": 0.96,
-            "svelte": 1.15,
-            "angular": 1.08,
-            "ember": 1.47
+            "vanilla": 1.05,
+            "drift": 1.24,
+            "react": 1.1,
+            "vue": 1.28,
+            "solid": 1,
+            "svelte": 1.2,
+            "angular": 1.13,
+            "ember": 1.53
           }
         },
         {
@@ -190,14 +190,14 @@
             "ember": 2486.28
           },
           "factors": {
-            "vanilla": 1,
-            "drift": 1.12,
-            "react": 1.19,
-            "vue": 1.1,
-            "solid": 0.94,
-            "svelte": 1.49,
-            "angular": 1.07,
-            "ember": 1.75
+            "vanilla": 1.07,
+            "drift": 1.19,
+            "react": 1.26,
+            "vue": 1.17,
+            "solid": 1,
+            "svelte": 1.59,
+            "angular": 1.15,
+            "ember": 1.87
           }
         },
         {
@@ -242,17 +242,27 @@
             "ember": 122.95
           },
           "factors": {
-            "vanilla": 1,
-            "drift": 1.78,
-            "react": 1.64,
-            "vue": 1.22,
-            "solid": 0.99,
-            "svelte": 1.04,
-            "angular": 1.79,
-            "ember": 2.58
+            "vanilla": 1.01,
+            "drift": 1.8,
+            "react": 1.66,
+            "vue": 1.23,
+            "solid": 1,
+            "svelte": 1.05,
+            "angular": 1.82,
+            "ember": 2.61
           }
         }
-      ]
+      ],
+      "geometricMean": {
+        "vanilla": 1.05,
+        "drift": 1.32,
+        "react": 1.56,
+        "vue": 1.34,
+        "solid": 1.01,
+        "svelte": 1.32,
+        "angular": 1.2,
+        "ember": 2.09
+      }
     },
     {
       "category": "memory",
@@ -261,13 +271,13 @@
         "Metric / Benchmark",
         "Unit",
         "VanillaJS",
+        "SolidJS",
         "DriftJS",
-        "React 19",
-        "Vue 3.5",
-        "SolidJS 1.9",
-        "Svelte 5",
-        "Angular 22",
-        "Ember 7.2"
+        "Svelte",
+        "Vue",
+        "React",
+        "Angular",
+        "Ember"
       ],
       "rows": [
         {
@@ -348,7 +358,17 @@
             "ember": 4.19
           }
         }
-      ]
+      ],
+      "geometricMean": {
+        "vanilla": 1,
+        "drift": 1.47,
+        "react": 1.99,
+        "vue": 1.59,
+        "solid": 1.27,
+        "svelte": 1.51,
+        "angular": 2.25,
+        "ember": 5.8
+      }
     },
     {
       "category": "startup",
@@ -357,13 +377,13 @@
         "Metric / Benchmark",
         "Unit",
         "VanillaJS",
+        "SolidJS",
         "DriftJS",
-        "React 19",
-        "Vue 3.5",
-        "SolidJS 1.9",
-        "Svelte 5",
-        "Angular 22",
-        "Ember 7.2"
+        "Svelte",
+        "Vue",
+        "Ember",
+        "Angular",
+        "React"
       ],
       "rows": [
         {
@@ -444,7 +464,17 @@
             "ember": 1.25
           }
         }
-      ]
+      ],
+      "geometricMean": {
+        "vanilla": 1,
+        "drift": 4.67,
+        "react": 14.61,
+        "vue": 7.14,
+        "solid": 2.76,
+        "svelte": 5.43,
+        "angular": 13.99,
+        "ember": 12.81
+      }
     }
   ]
 }

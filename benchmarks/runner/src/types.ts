@@ -45,15 +45,16 @@ export interface BenchmarkRawResult {
 export interface BenchmarkSummaryTable {
   category: BenchmarkCategory;
   title: string;
-  headers: string[]; // ['Benchmark', 'VanillaJS', 'DriftJS', 'React 19', ...]
+  headers: string[]; // ['Benchmark', 'VanillaJS', 'DriftJS', 'React', ...]
   rows: {
     id: string;
     name: string;
     description: string;
     unit: string;
     values: Record<string, number>; // frameworkId -> mean value
-    factors: Record<string, number>; // frameworkId -> relative factor to baseline (VanillaJS)
+    factors: Record<string, number>; // frameworkId -> relative factor to fastest framework (min = 1.00x)
   }[];
+  geometricMean?: Record<string, number>; // frameworkId -> geometric mean of all factors in this table
 }
 
 export interface BenchmarkReport {

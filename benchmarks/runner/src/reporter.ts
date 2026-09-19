@@ -1,5 +1,6 @@
 import type { BenchmarkReport } from './types.js';
 import { FRAMEWORKS } from './frameworks.js';
+import { computeFactors, computeGeometricMean } from './stats.js';
 import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'fs';
 import { resolve } from 'path';
 
@@ -32,16 +33,14 @@ export function saveReport(report: BenchmarkReport, outputDir: string): { jsonPa
                 existingRow.unit = newRow.unit;
 
                 Object.assign(existingRow.values, newRow.values);
-
-                const baseline = existingRow.values['vanilla'];
-                if (baseline) {
-                  for (const [k, v] of Object.entries(existingRow.values)) {
-                    existingRow.factors[k] = Math.round((v / baseline) * 100) / 100;
-                  }
-                }
               } else {
                 existingTable.rows.push(newRow);
               }
+            }
+
+            // Recalculate factors for all rows against fastest (minimum) value
+            for (const row of existingTable.rows) {
+              row.factors = computeFactors(row.values);
             }
 
             // Collect all framework IDs present across rows
@@ -51,6 +50,18 @@ export function saveReport(report: BenchmarkReport, outputDir: string): { jsonPa
                 presentFrameworkIds.add(fwId);
               }
             }
+
+            // Recompute geometric mean of all factors in the table for each framework
+            const geometricMean: Record<string, number> = {};
+            for (const fwId of presentFrameworkIds) {
+              const fwFactors = existingTable.rows
+                .map(r => r.factors[fwId])
+                .filter((f): f is number => typeof f === 'number' && Number.isFinite(f));
+              if (fwFactors.length > 0) {
+                geometricMean[fwId] = computeGeometricMean(fwFactors);
+              }
+            }
+            existingTable.geometricMean = geometricMean;
 
             // Build canonical ordered headers
             const orderedHeaders = ['Metric / Benchmark', 'Unit'];

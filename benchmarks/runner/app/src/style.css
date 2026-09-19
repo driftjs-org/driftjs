@@ -296,6 +296,27 @@ table.bench-table tbody tr:hover {
   background-color: var(--row-hover);
 }
 
+table.bench-table tfoot tr.geometric-mean-row {
+  background: #f1f5f9;
+  border-top: 2px solid #cbd5e1;
+}
+
+table.bench-table tfoot tr.geometric-mean-row td {
+  padding: 0.95rem 1.25rem;
+  border-bottom: none;
+  font-weight: 600;
+}
+
+table.bench-table tfoot tr.geometric-mean-row td.name strong {
+  color: #1e3a8a;
+  font-size: 0.95rem;
+}
+
+table.bench-table tfoot tr.geometric-mean-row td.geomean-val {
+  font-size: 0.95rem;
+  color: #1e293b;
+}
+
 td.name {
   min-width: 260px;
 }

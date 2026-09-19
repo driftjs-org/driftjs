@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-09-18T16:24:06.423Z",
+  "timestamp": "2026-09-19T06:26:33.812Z",
   "runs": 5,
   "tables": [
     {
@@ -24,24 +24,24 @@
           "description": "Creates 1,000 table rows upon clicking #run.",
           "unit": "ms",
           "values": {
-            "vanilla": 130.87,
-            "drift": 152.43,
-            "react": 144.66,
-            "vue": 144.55,
-            "solid": 140.46,
-            "svelte": 172.98,
-            "angular": 171.54,
-            "ember": 316
+            "vanilla": 129.42,
+            "drift": 152.92,
+            "react": 152.01,
+            "vue": 157.75,
+            "solid": 129.24,
+            "svelte": 208.61,
+            "angular": 167.11,
+            "ember": 335.59
           },
           "factors": {
             "vanilla": 1,
-            "drift": 1.16,
-            "react": 1.11,
-            "vue": 1.1,
-            "solid": 1.07,
-            "svelte": 1.32,
-            "angular": 1.31,
-            "ember": 2.41
+            "drift": 1.18,
+            "react": 1.17,
+            "vue": 1.22,
+            "solid": 1,
+            "svelte": 1.61,
+            "angular": 1.29,
+            "ember": 2.59
           }
         },
         {
@@ -50,24 +50,24 @@
           "description": "Replaces all 1,000 rows with 1,000 new rows.",
           "unit": "ms",
           "values": {
-            "vanilla": 173.33,
-            "drift": 216.17,
-            "react": 205.01,
-            "vue": 199.01,
-            "solid": 183.58,
-            "svelte": 221.41,
-            "angular": 215.25,
-            "ember": 369.97
+            "vanilla": 175.56,
+            "drift": 221.61,
+            "react": 207.7,
+            "vue": 220.74,
+            "solid": 184.38,
+            "svelte": 237.38,
+            "angular": 218.57,
+            "ember": 382.57
           },
           "factors": {
             "vanilla": 1,
-            "drift": 1.25,
+            "drift": 1.26,
             "react": 1.18,
-            "vue": 1.15,
-            "solid": 1.06,
-            "svelte": 1.28,
+            "vue": 1.26,
+            "solid": 1.05,
+            "svelte": 1.35,
             "angular": 1.24,
-            "ember": 2.13
+            "ember": 2.18
           }
         },
         {
@@ -76,24 +76,24 @@
           "description": "Updates every 10th row in a table of 1,000 rows.",
           "unit": "ms",
           "values": {
-            "vanilla": 79.34,
-            "drift": 98.44,
-            "react": 82.89,
-            "vue": 96.79,
-            "solid": 70.51,
-            "svelte": 74.85,
-            "angular": 79.18,
-            "ember": 108.41
+            "vanilla": 81.27,
+            "drift": 98.86,
+            "react": 84.39,
+            "vue": 100.25,
+            "solid": 72.83,
+            "svelte": 80.81,
+            "angular": 77.51,
+            "ember": 106.69
           },
           "factors": {
             "vanilla": 1,
-            "drift": 1.24,
+            "drift": 1.22,
             "react": 1.04,
-            "vue": 1.22,
-            "solid": 0.89,
-            "svelte": 0.94,
-            "angular": 1,
-            "ember": 1.37
+            "vue": 1.23,
+            "solid": 0.9,
+            "svelte": 0.99,
+            "angular": 0.95,
+            "ember": 1.31
           }
         },
         {
@@ -102,24 +102,24 @@
           "description": "Selects the 2nd row in a table of 1,000 rows.",
           "unit": "ms",
           "values": {
-            "vanilla": 13.74,
-            "drift": 17.76,
-            "react": 18.17,
-            "vue": 31.57,
+            "vanilla": 13.92,
+            "drift": 18.62,
+            "react": 18.97,
+            "vue": 32.65,
             "solid": 15.78,
-            "svelte": 20.51,
-            "angular": 15.81,
-            "ember": 45.71
+            "svelte": 22.23,
+            "angular": 15.92,
+            "ember": 46.95
           },
           "factors": {
             "vanilla": 1,
-            "drift": 1.29,
-            "react": 1.32,
-            "vue": 2.3,
-            "solid": 1.15,
-            "svelte": 1.49,
-            "angular": 1.15,
-            "ember": 3.33
+            "drift": 1.34,
+            "react": 1.36,
+            "vue": 2.35,
+            "solid": 1.13,
+            "svelte": 1.6,
+            "angular": 1.14,
+            "ember": 3.37
           }
         },
         {
@@ -128,24 +128,24 @@
           "description": "Swaps row 2 and row 999 in a table of 1,000 rows.",
           "unit": "ms",
           "values": {
-            "vanilla": 75.75,
-            "drift": 99.21,
-            "react": 690.97,
-            "vue": 94.21,
-            "solid": 73.42,
-            "svelte": 85.64,
-            "angular": 76.75,
-            "ember": 121.85
+            "vanilla": 78.14,
+            "drift": 105.51,
+            "react": 738.47,
+            "vue": 95.77,
+            "solid": 73.12,
+            "svelte": 86.62,
+            "angular": 78.41,
+            "ember": 124.89
           },
           "factors": {
             "vanilla": 1,
-            "drift": 1.31,
-            "react": 9.12,
-            "vue": 1.24,
-            "solid": 0.97,
-            "svelte": 1.13,
-            "angular": 1.01,
-            "ember": 1.61
+            "drift": 1.35,
+            "react": 9.45,
+            "vue": 1.23,
+            "solid": 0.94,
+            "svelte": 1.11,
+            "angular": 1,
+            "ember": 1.6
           }
         },
         {
@@ -154,23 +154,23 @@
           "description": "Removes the 2nd row from a table of 1,000 rows.",
           "unit": "ms",
           "values": {
-            "vanilla": 58.45,
-            "drift": 71.33,
-            "react": 63.92,
-            "vue": 65.54,
-            "solid": 56.45,
-            "svelte": 67.51,
-            "angular": 58.45,
-            "ember": 85.73
+            "vanilla": 59.23,
+            "drift": 69.97,
+            "react": 62.16,
+            "vue": 72.65,
+            "solid": 56.6,
+            "svelte": 68.07,
+            "angular": 63.71,
+            "ember": 86.87
           },
           "factors": {
             "vanilla": 1,
-            "drift": 1.22,
-            "react": 1.09,
-            "vue": 1.12,
-            "solid": 0.97,
-            "svelte": 1.16,
-            "angular": 1,
+            "drift": 1.18,
+            "react": 1.05,
+            "vue": 1.23,
+            "solid": 0.96,
+            "svelte": 1.15,
+            "angular": 1.08,
             "ember": 1.47
           }
         },
@@ -180,24 +180,24 @@
           "description": "Creates 10,000 rows on an empty table.",
           "unit": "ms",
           "values": {
-            "vanilla": 1369,
-            "drift": 1578.45,
-            "react": 1671.98,
-            "vue": 1470.55,
-            "solid": 1314.56,
-            "svelte": 2067.58,
-            "angular": 1568.19,
-            "ember": 2517.85
+            "vanilla": 1420.13,
+            "drift": 1588.71,
+            "react": 1684.61,
+            "vue": 1564.45,
+            "solid": 1331.86,
+            "svelte": 2116.75,
+            "angular": 1526.1,
+            "ember": 2486.28
           },
           "factors": {
             "vanilla": 1,
-            "drift": 1.15,
-            "react": 1.22,
-            "vue": 1.07,
-            "solid": 0.96,
-            "svelte": 1.51,
-            "angular": 1.15,
-            "ember": 1.84
+            "drift": 1.12,
+            "react": 1.19,
+            "vue": 1.1,
+            "solid": 0.94,
+            "svelte": 1.49,
+            "angular": 1.07,
+            "ember": 1.75
           }
         },
         {
@@ -206,24 +206,24 @@
           "description": "Appends 1,000 rows to a table with 1,000 rows (total 2k rows).",
           "unit": "ms",
           "values": {
-            "vanilla": 170.15,
-            "drift": 207.14,
-            "react": 196.81,
-            "vue": 201.19,
-            "solid": 172.08,
-            "svelte": 237.85,
-            "angular": 192.95,
-            "ember": 400.19
+            "vanilla": 176.42,
+            "drift": 213.05,
+            "react": 199.56,
+            "vue": 207.83,
+            "solid": 178.15,
+            "svelte": 242.11,
+            "angular": 200.3,
+            "ember": 391.18
           },
           "factors": {
             "vanilla": 1,
-            "drift": 1.22,
-            "react": 1.16,
+            "drift": 1.21,
+            "react": 1.13,
             "vue": 1.18,
             "solid": 1.01,
-            "svelte": 1.4,
-            "angular": 1.13,
-            "ember": 2.35
+            "svelte": 1.37,
+            "angular": 1.14,
+            "ember": 2.22
           }
         },
         {
@@ -232,24 +232,24 @@
           "description": "Clears all 1,000 rows from the table.",
           "unit": "ms",
           "values": {
-            "vanilla": 45.48,
-            "drift": 87.69,
-            "react": 80.79,
-            "vue": 59.79,
-            "solid": 48.19,
-            "svelte": 46.71,
-            "angular": 83.93,
-            "ember": 123.34
+            "vanilla": 47.69,
+            "drift": 84.91,
+            "react": 78.09,
+            "vue": 58.09,
+            "solid": 47.11,
+            "svelte": 49.41,
+            "angular": 85.53,
+            "ember": 122.95
           },
           "factors": {
             "vanilla": 1,
-            "drift": 1.93,
-            "react": 1.78,
-            "vue": 1.31,
-            "solid": 1.06,
-            "svelte": 1.03,
-            "angular": 1.85,
-            "ember": 2.71
+            "drift": 1.78,
+            "react": 1.64,
+            "vue": 1.22,
+            "solid": 0.99,
+            "svelte": 1.04,
+            "angular": 1.79,
+            "ember": 2.58
           }
         }
       ]
@@ -305,10 +305,10 @@
             "vanilla": 1.96,
             "drift": 3.8,
             "react": 4.51,
-            "vue": 3.95,
+            "vue": 3.96,
             "solid": 3.07,
             "svelte": 3.99,
-            "angular": 4.68,
+            "angular": 4.67,
             "ember": 11.65
           },
           "factors": {
@@ -318,7 +318,7 @@
             "vue": 2.02,
             "solid": 1.57,
             "svelte": 2.04,
-            "angular": 2.39,
+            "angular": 2.38,
             "ember": 5.94
           }
         },
@@ -424,24 +424,24 @@
           "description": "Time in ms to First Contentful Paint / Initial Paint.",
           "unit": "ms",
           "values": {
-            "vanilla": 29.33,
+            "vanilla": 32,
             "drift": 32,
-            "react": 48,
-            "vue": 36,
-            "solid": 36,
-            "svelte": 32,
+            "react": 42.67,
+            "vue": 34.67,
+            "solid": 32,
+            "svelte": 34.67,
             "angular": 60,
-            "ember": 38.67
+            "ember": 40
           },
           "factors": {
             "vanilla": 1,
-            "drift": 1.09,
-            "react": 1.64,
-            "vue": 1.23,
-            "solid": 1.23,
-            "svelte": 1.09,
-            "angular": 2.05,
-            "ember": 1.32
+            "drift": 1,
+            "react": 1.33,
+            "vue": 1.08,
+            "solid": 1,
+            "svelte": 1.08,
+            "angular": 1.88,
+            "ember": 1.25
           }
         }
       ]

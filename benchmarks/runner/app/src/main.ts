@@ -12,6 +12,7 @@ interface BenchmarkTable {
   title: string;
   headers: string[];
   rows: BenchmarkTableRow[];
+  geometricMean?: Record<string, number>;
 }
 
 interface BenchmarkReport {
@@ -23,12 +24,12 @@ interface BenchmarkReport {
 const FRAMEWORK_NAMES: Record<string, string> = {
   vanilla: 'VanillaJS',
   drift: 'DriftJS',
-  solid: 'SolidJS 1.9',
-  vue: 'Vue 3.5',
-  svelte: 'Svelte 5',
-  angular: 'Angular 22',
-  react: 'React 19',
-  ember: 'Ember 7.2',
+  solid: 'SolidJS',
+  vue: 'Vue',
+  svelte: 'Svelte',
+  angular: 'Angular',
+  react: 'React',
+  ember: 'Ember',
 };
 
 function getFrameworkKey(nameOrKey: string): string {
@@ -42,8 +43,7 @@ function getFrameworkKey(nameOrKey: string): string {
   return lower;
 }
 
-function getFrameworkName(nameOrKey: string, displayName?: string): string {
-  if (displayName) return displayName;
+function getFrameworkName(nameOrKey: string): string {
   const key = getFrameworkKey(nameOrKey);
   return FRAMEWORK_NAMES[key] || nameOrKey;
 }
@@ -110,22 +110,34 @@ function getRowValue(row: BenchmarkTableRow, fName: string): number | undefined 
   return row.values[fName];
 }
 
+function getRowMin(row: BenchmarkTableRow): number | undefined {
+  if (!row || !row.values) return undefined;
+  const numericValues = Object.values(row.values).filter(
+    (v): v is number => typeof v === 'number' && Number.isFinite(v) && v > 0
+  );
+  if (numericValues.length === 0) return undefined;
+  return Math.min(...numericValues);
+}
+
 function getRowFactor(row: BenchmarkTableRow, fName: string): number | undefined {
   if (!row) return undefined;
-  const fKey = getFrameworkKey(fName);
-  if (row.factors) {
-    for (const [k, v] of Object.entries(row.factors)) {
-      if (getFrameworkKey(k) === fKey && typeof v === 'number' && Number.isFinite(v)) {
-        return v;
-      }
-    }
-  }
   const val = getRowValue(row, fName);
-  const baseline = getRowValue(row, 'vanilla');
-  if (typeof val === 'number' && typeof baseline === 'number' && baseline > 0 && Number.isFinite(val) && Number.isFinite(baseline)) {
-    return Math.round((val / baseline) * 100) / 100;
+  const minVal = getRowMin(row);
+  if (typeof val === 'number' && typeof minVal === 'number' && minVal > 0 && Number.isFinite(val) && Number.isFinite(minVal)) {
+    return Math.round((val / minVal) * 100) / 100;
   }
   return undefined;
+}
+
+function computeTableGeometricMean(table: BenchmarkTable, fName: string): number | undefined {
+  const factors = table.rows
+    .map(row => getRowFactor(row, fName))
+    .filter((f): f is number => typeof f === 'number' && Number.isFinite(f) && f > 0);
+
+  if (factors.length === 0) return undefined;
+  const product = factors.reduce((acc, f) => acc * f, 1);
+  const gm = Math.pow(product, 1 / factors.length);
+  return Math.round(gm * 100) / 100;
 }
 
 // ---------------------------------------------------------------------------
@@ -139,25 +151,23 @@ function renderTable(table: BenchmarkTable): string {
     const isFirst = i === 0;
     const isSecond = i === 1;
     const alignClass = isFirst || isSecond ? '' : 'th-framework';
-    return `<th class="${alignClass}">${escapeHtml(h)}</th>`;
+    const label = isFirst || isSecond ? h : getFrameworkName(h);
+    return `<th class="${alignClass}">${escapeHtml(label)}</th>`;
   }).join('\n            ');
 
   const frameworks = table.headers.slice(2);
 
   const bodyRows = table.rows.map(row => {
-    const baselineVal = getRowValue(row, 'vanilla');
+    const minVal = getRowMin(row);
     const valCells = frameworks.map(fName => {
       const val = getRowValue(row, fName);
       const formatted = formatValue(val, row.unit);
-      const fKey = getFrameworkKey(fName);
+      const factor = getRowFactor(row, fName) || (typeof val === 'number' && typeof minVal === 'number' && minVal > 0 ? val / minVal : undefined);
 
       let factorBadge = '';
-      if (typeof baselineVal === 'number' && typeof val === 'number' && baselineVal > 0 && fKey !== 'vanilla') {
-        const factor = getRowFactor(row, fName) || (val / baselineVal);
-        if (Number.isFinite(factor)) {
-          const factorStr = factor.toFixed(2) + 'x';
-          factorBadge = `<span class="factor">(${factorStr})</span>`;
-        }
+      if (typeof factor === 'number' && Number.isFinite(factor)) {
+        const factorStr = factor.toFixed(2) + 'x';
+        factorBadge = `<span class="factor">(${factorStr})</span>`;
       }
 
       return `<td class="num">${formatted} ${factorBadge}</td>`;
@@ -173,6 +183,25 @@ function renderTable(table: BenchmarkTable): string {
             ${valCells}
           </tr>`;
   }).join('\n');
+
+  // Compute geometric mean of factors across all rows for each framework
+  const geomeanCells = frameworks.map(fName => {
+    const gm = computeTableGeometricMean(table, fName);
+    const formatted = typeof gm === 'number' ? gm.toFixed(2) + 'x' : '-';
+    return `<td class="num geomean-val"><strong>${formatted}</strong></td>`;
+  }).join('\n            ');
+
+  const tfootHtml = `
+          <tfoot>
+            <tr class="geometric-mean-row">
+              <td class="name">
+                <strong>Geometric Mean</strong>
+                <div class="desc">Geometric mean of all factors in the table</div>
+              </td>
+              <td class="unit">factor</td>
+              ${geomeanCells}
+            </tr>
+          </tfoot>`;
 
   return `
     <section class="section-card">
@@ -190,6 +219,7 @@ function renderTable(table: BenchmarkTable): string {
           <tbody>
             ${bodyRows}
           </tbody>
+          ${tfootHtml}
         </table>
       </div>
     </section>
@@ -235,7 +265,7 @@ function getAllFrameworksFromReport(report: BenchmarkReport): { key: string; nam
     for (const h of fwHeaders) {
       const key = getFrameworkKey(h);
       if (key && !seen.has(key)) {
-        seen.set(key, { key, name: getFrameworkName(h, h) });
+        seen.set(key, { key, name: getFrameworkName(h) });
       }
     }
   }
@@ -271,7 +301,7 @@ function renderSummaryCard(report: BenchmarkReport): string {
         <div class="summary-stat-box">
           <span class="stat-value">${frameworksCount}</span>
           <span class="stat-label">Compared Frameworks</span>
-          <span class="stat-sub">Baseline: VanillaJS (1.00x)</span>
+          <span class="stat-sub">Baseline: Fastest Framework (1.00x)</span>
         </div>
         <div class="summary-stat-box">
           <span class="stat-value">Arithmetic Mean</span>
@@ -308,7 +338,7 @@ function renderMetricChart(row: BenchmarkTableRow, headers: string[]): string {
     const factor = getRowFactor(row, fName) || 1;
 
     dataPoints.push({
-      name: fName,
+      name: getFrameworkName(fName),
       key,
       value: val,
       factor: Number.isFinite(factor) ? factor : 1,
@@ -665,7 +695,7 @@ async function init() {
       {
         category: 'cpu',
         title: '1. CPU Benchmarks (Duration in ms)',
-        headers: ['Metric / Benchmark', 'Unit', 'VanillaJS', 'DriftJS', 'React 19', 'Vue 3.5', 'SolidJS 1.9', 'Svelte 5'],
+        headers: ['Metric / Benchmark', 'Unit', 'VanillaJS', 'DriftJS', 'React', 'Vue', 'SolidJS', 'Svelte'],
         rows: [
           {
             id: '01_run1k',

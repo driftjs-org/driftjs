@@ -2,7 +2,7 @@ import { chromium, type Browser, type Page } from 'playwright';
 import { BENCHMARKS } from './benchmarks.js';
 import { FRAMEWORKS } from './frameworks.js';
 import { startFrameworkServer } from './server.js';
-import { computeMean } from './stats.js';
+import { computeMean, computeFactors, computeGeometricMean } from './stats.js';
 import type { BenchmarkReport, BenchmarkSummaryTable, BenchmarkRawResult, RunOptions, FrameworkDef, BenchmarkDef } from './types.js';
 
 export async function runBenchmarks(options: RunOptions): Promise<BenchmarkReport> {
@@ -143,7 +143,6 @@ export async function runBenchmarks(options: RunOptions): Promise<BenchmarkRepor
     const categoryBenchmarks = selectedBenchmarks.filter(b => b.category === category);
     const rows = categoryBenchmarks.map(b => {
       const values: Record<string, number> = {};
-      const factors: Record<string, number> = {};
 
       for (const f of selectedFrameworks) {
         const result = rawResults.find(r => r.benchmarkId === b.id && r.frameworkId === f.id);
@@ -152,12 +151,7 @@ export async function runBenchmarks(options: RunOptions): Promise<BenchmarkRepor
         }
       }
 
-      const baseline = values['vanilla'];
-      if (baseline) {
-        for (const [k, v] of Object.entries(values)) {
-          factors[k] = Math.round((v / baseline) * 100) / 100;
-        }
-      }
+      const factors = computeFactors(values);
 
       return {
         id: b.id,
@@ -169,11 +163,22 @@ export async function runBenchmarks(options: RunOptions): Promise<BenchmarkRepor
       };
     });
 
+    const geometricMean: Record<string, number> = {};
+    for (const f of selectedFrameworks) {
+      const fwFactors = rows
+        .map(r => r.factors[f.id])
+        .filter((factor): factor is number => typeof factor === 'number' && Number.isFinite(factor));
+      if (fwFactors.length > 0) {
+        geometricMean[f.id] = computeGeometricMean(fwFactors);
+      }
+    }
+
     return {
       category,
       title,
       headers,
       rows,
+      geometricMean,
     };
   });
 

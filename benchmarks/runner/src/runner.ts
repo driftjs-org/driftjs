@@ -72,7 +72,7 @@ export function buildBenchmarkReport(
 
   return {
     timestamp: new Date().toISOString(),
-    runs: runsCount,
+    runs: runsCount ?? 15,
     tables,
     rawResults,
   };

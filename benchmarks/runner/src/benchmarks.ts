@@ -76,6 +76,38 @@ async function ensureClean1kRows(page: any) {
   }, { timeout: 15000 });
 }
 
+/**
+ * Measures end-to-end user interaction duration up to the next paint
+ * using the W3C Event Timing API and trusted Playwright click dispatch.
+ */
+async function measureClick(page: any, selector: string): Promise<number> {
+  const measurementPromise = page.evaluate((sel: string) => {
+    return new Promise<number>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        observer.disconnect();
+        reject(new Error(`Timed out waiting for click Event Timing entry on ${sel}`));
+      }, 15000);
+
+      const observer = new PerformanceObserver((list) => {
+        for (const entry of list.getEntries() as PerformanceEventTiming[]) {
+          if (entry.name === 'click') {
+            clearTimeout(timeout);
+            observer.disconnect();
+            resolve(entry.duration);
+            return;
+          }
+        }
+      });
+
+      observer.observe({ type: 'event', durationThreshold: 0, buffered: false } as any);
+    });
+  }, selector);
+
+  await page.click(selector);
+  const duration = await measurementPromise;
+  return Math.round(duration * 100) / 100;
+}
+
 export const BENCHMARKS: BenchmarkDef[] = [
   // ─── CPU Benchmarks ────────────────────────────────────────────────────────
   {
@@ -89,18 +121,7 @@ export const BENCHMARKS: BenchmarkDef[] = [
     run: async (page, cdpSession) => {
       await ensureEmptyTable(page);
       await forceGC(cdpSession);
-
-      const duration = await page.evaluate(async () => {
-        const btn = document.querySelector('#run') as HTMLElement;
-        const start = performance.now();
-        btn.click();
-        await new Promise((resolve) => {
-          requestAnimationFrame(() => setTimeout(resolve, 0));
-        });
-        return performance.now() - start;
-      });
-
-      return Math.round(duration * 100) / 100;
+      return measureClick(page, '#run');
     },
   },
   {
@@ -114,18 +135,7 @@ export const BENCHMARKS: BenchmarkDef[] = [
     run: async (page, cdpSession) => {
       await ensure1kRows(page);
       await forceGC(cdpSession);
-
-      const duration = await page.evaluate(async () => {
-        const btn = document.querySelector('#run') as HTMLElement;
-        const start = performance.now();
-        btn.click();
-        await new Promise((resolve) => {
-          requestAnimationFrame(() => setTimeout(resolve, 0));
-        });
-        return performance.now() - start;
-      });
-
-      return Math.round(duration * 100) / 100;
+      return measureClick(page, '#run');
     },
   },
   {
@@ -140,18 +150,7 @@ export const BENCHMARKS: BenchmarkDef[] = [
     run: async (page, cdpSession) => {
       await ensureClean1kRows(page);
       await forceGC(cdpSession);
-
-      const duration = await page.evaluate(async () => {
-        const btn = document.querySelector('#update') as HTMLElement;
-        const start = performance.now();
-        btn.click();
-        await new Promise((resolve) => {
-          requestAnimationFrame(() => setTimeout(resolve, 0));
-        });
-        return performance.now() - start;
-      });
-
-      return Math.round(duration * 100) / 100;
+      return measureClick(page, '#update');
     },
   },
   {
@@ -167,25 +166,11 @@ export const BENCHMARKS: BenchmarkDef[] = [
       await ensure1kRows(page);
       const isRow2Selected = await page.evaluate(() => document.querySelector('#tbody tr:nth-child(2)')?.classList.contains('danger') || false);
       if (isRow2Selected) {
-        await page.evaluate(() => {
-          const el = document.querySelector('#tbody tr:nth-child(3) a.lbl') as HTMLElement;
-          if (el) el.click();
-        });
+        await page.click('#tbody tr:nth-child(3) a.lbl');
         await page.waitForFunction(() => !document.querySelector('#tbody tr:nth-child(2)')?.classList.contains('danger'), { timeout: 5000 });
       }
       await forceGC(cdpSession);
-
-      const duration = await page.evaluate(async () => {
-        const el = document.querySelector('#tbody tr:nth-child(2) a.lbl') as HTMLElement;
-        const start = performance.now();
-        el.click();
-        await new Promise((resolve) => {
-          requestAnimationFrame(() => setTimeout(resolve, 0));
-        });
-        return performance.now() - start;
-      });
-
-      return Math.round(duration * 100) / 100;
+      return measureClick(page, '#tbody tr:nth-child(2) a.lbl');
     },
   },
   {
@@ -200,18 +185,7 @@ export const BENCHMARKS: BenchmarkDef[] = [
     run: async (page, cdpSession) => {
       await ensure1kRows(page);
       await forceGC(cdpSession);
-
-      const duration = await page.evaluate(async () => {
-        const btn = document.querySelector('#swaprows') as HTMLElement;
-        const start = performance.now();
-        btn.click();
-        await new Promise((resolve) => {
-          requestAnimationFrame(() => setTimeout(resolve, 0));
-        });
-        return performance.now() - start;
-      });
-
-      return Math.round(duration * 100) / 100;
+      return measureClick(page, '#swaprows');
     },
   },
   {
@@ -226,18 +200,7 @@ export const BENCHMARKS: BenchmarkDef[] = [
     run: async (page, cdpSession) => {
       await ensure1kRows(page);
       await forceGC(cdpSession);
-
-      const duration = await page.evaluate(async () => {
-        const el = document.querySelector('#tbody tr:nth-child(2) a.remove') as HTMLElement;
-        const start = performance.now();
-        el.click();
-        await new Promise((resolve) => {
-          requestAnimationFrame(() => setTimeout(resolve, 0));
-        });
-        return performance.now() - start;
-      });
-
-      return Math.round(duration * 100) / 100;
+      return measureClick(page, '#tbody tr:nth-child(2) a.remove');
     },
   },
   {
@@ -251,18 +214,7 @@ export const BENCHMARKS: BenchmarkDef[] = [
     run: async (page, cdpSession) => {
       await ensureEmptyTable(page);
       await forceGC(cdpSession);
-
-      const duration = await page.evaluate(async () => {
-        const btn = document.querySelector('#runlots') as HTMLElement;
-        const start = performance.now();
-        btn.click();
-        await new Promise((resolve) => {
-          requestAnimationFrame(() => setTimeout(resolve, 0));
-        });
-        return performance.now() - start;
-      });
-
-      return Math.round(duration * 100) / 100;
+      return measureClick(page, '#runlots');
     },
   },
   {
@@ -276,18 +228,7 @@ export const BENCHMARKS: BenchmarkDef[] = [
     run: async (page, cdpSession) => {
       await ensure1kRows(page);
       await forceGC(cdpSession);
-
-      const duration = await page.evaluate(async () => {
-        const btn = document.querySelector('#add') as HTMLElement;
-        const start = performance.now();
-        btn.click();
-        await new Promise((resolve) => {
-          requestAnimationFrame(() => setTimeout(resolve, 0));
-        });
-        return performance.now() - start;
-      });
-
-      return Math.round(duration * 100) / 100;
+      return measureClick(page, '#add');
     },
   },
   {
@@ -302,18 +243,7 @@ export const BENCHMARKS: BenchmarkDef[] = [
     run: async (page, cdpSession) => {
       await ensure1kRows(page);
       await forceGC(cdpSession);
-
-      const duration = await page.evaluate(async () => {
-        const btn = document.querySelector('#clear') as HTMLElement;
-        const start = performance.now();
-        btn.click();
-        await new Promise((resolve) => {
-          requestAnimationFrame(() => setTimeout(resolve, 0));
-        });
-        return performance.now() - start;
-      });
-
-      return Math.round(duration * 100) / 100;
+      return measureClick(page, '#clear');
     },
   },
 

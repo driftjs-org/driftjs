@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-09-19T07:37:50.112Z",
+  "timestamp": "2026-09-19T10:12:20.957Z",
   "runs": 5,
   "tables": [
     {
@@ -11,11 +11,11 @@
         "SolidJS",
         "VanillaJS",
         "Angular",
-        "DriftJS",
         "Svelte",
         "Vue",
         "React",
-        "Ember"
+        "Ember",
+        "DriftJS"
       ],
       "rows": [
         {
@@ -25,7 +25,7 @@
           "unit": "ms",
           "values": {
             "vanilla": 139.9,
-            "drift": 152.92,
+            "drift": 437.87,
             "react": 152.01,
             "vue": 157.75,
             "solid": 129.24,
@@ -35,7 +35,7 @@
           },
           "factors": {
             "vanilla": 1.08,
-            "drift": 1.18,
+            "drift": 3.39,
             "react": 1.18,
             "vue": 1.22,
             "solid": 1,
@@ -51,7 +51,7 @@
           "unit": "ms",
           "values": {
             "vanilla": 188.88,
-            "drift": 221.61,
+            "drift": 529.07,
             "react": 207.7,
             "vue": 220.74,
             "solid": 184.38,
@@ -61,7 +61,7 @@
           },
           "factors": {
             "vanilla": 1.02,
-            "drift": 1.2,
+            "drift": 2.87,
             "react": 1.13,
             "vue": 1.2,
             "solid": 1,
@@ -77,7 +77,7 @@
           "unit": "ms",
           "values": {
             "vanilla": 81.27,
-            "drift": 98.86,
+            "drift": 361.6,
             "react": 84.39,
             "vue": 100.25,
             "solid": 72.83,
@@ -87,7 +87,7 @@
           },
           "factors": {
             "vanilla": 1.12,
-            "drift": 1.36,
+            "drift": 4.96,
             "react": 1.16,
             "vue": 1.38,
             "solid": 1,
@@ -103,7 +103,7 @@
           "unit": "ms",
           "values": {
             "vanilla": 13.92,
-            "drift": 18.62,
+            "drift": 116.16,
             "react": 18.97,
             "vue": 32.65,
             "solid": 15.78,
@@ -113,7 +113,7 @@
           },
           "factors": {
             "vanilla": 1,
-            "drift": 1.34,
+            "drift": 8.34,
             "react": 1.36,
             "vue": 2.35,
             "solid": 1.13,
@@ -129,7 +129,7 @@
           "unit": "ms",
           "values": {
             "vanilla": 78.14,
-            "drift": 105.51,
+            "drift": 287.47,
             "react": 738.47,
             "vue": 95.77,
             "solid": 73.12,
@@ -139,7 +139,7 @@
           },
           "factors": {
             "vanilla": 1.07,
-            "drift": 1.44,
+            "drift": 3.93,
             "react": 10.1,
             "vue": 1.31,
             "solid": 1,
@@ -155,7 +155,7 @@
           "unit": "ms",
           "values": {
             "vanilla": 59.23,
-            "drift": 69.97,
+            "drift": 222.93,
             "react": 62.16,
             "vue": 72.65,
             "solid": 56.6,
@@ -165,7 +165,7 @@
           },
           "factors": {
             "vanilla": 1.05,
-            "drift": 1.24,
+            "drift": 3.94,
             "react": 1.1,
             "vue": 1.28,
             "solid": 1,
@@ -181,7 +181,7 @@
           "unit": "ms",
           "values": {
             "vanilla": 1420.13,
-            "drift": 1588.71,
+            "drift": 3756.8,
             "react": 1684.61,
             "vue": 1564.45,
             "solid": 1331.86,
@@ -191,7 +191,7 @@
           },
           "factors": {
             "vanilla": 1.07,
-            "drift": 1.19,
+            "drift": 2.82,
             "react": 1.26,
             "vue": 1.17,
             "solid": 1,
@@ -207,7 +207,7 @@
           "unit": "ms",
           "values": {
             "vanilla": 176.42,
-            "drift": 213.05,
+            "drift": 511.47,
             "react": 199.56,
             "vue": 207.83,
             "solid": 178.15,
@@ -217,7 +217,7 @@
           },
           "factors": {
             "vanilla": 1,
-            "drift": 1.21,
+            "drift": 2.9,
             "react": 1.13,
             "vue": 1.18,
             "solid": 1.01,
@@ -233,7 +233,7 @@
           "unit": "ms",
           "values": {
             "vanilla": 47.69,
-            "drift": 84.91,
+            "drift": 258.67,
             "react": 78.09,
             "vue": 58.09,
             "solid": 47.11,
@@ -243,7 +243,7 @@
           },
           "factors": {
             "vanilla": 1.01,
-            "drift": 1.8,
+            "drift": 5.49,
             "react": 1.66,
             "vue": 1.23,
             "solid": 1,
@@ -255,7 +255,7 @@
       ],
       "geometricMean": {
         "vanilla": 1.05,
-        "drift": 1.32,
+        "drift": 4.03,
         "react": 1.56,
         "vue": 1.34,
         "solid": 1.01,
@@ -287,7 +287,7 @@
           "unit": "MB",
           "values": {
             "vanilla": 0.74,
-            "drift": 0.95,
+            "drift": 0.96,
             "react": 1.45,
             "vue": 1.12,
             "solid": 0.86,
@@ -297,7 +297,7 @@
           },
           "factors": {
             "vanilla": 1,
-            "drift": 1.28,
+            "drift": 1.3,
             "react": 1.96,
             "vue": 1.51,
             "solid": 1.16,
@@ -313,7 +313,7 @@
           "unit": "MB",
           "values": {
             "vanilla": 1.96,
-            "drift": 3.8,
+            "drift": 3.81,
             "react": 4.51,
             "vue": 3.96,
             "solid": 3.07,
@@ -339,7 +339,7 @@
           "unit": "MB",
           "values": {
             "vanilla": 1.84,
-            "drift": 2.35,
+            "drift": 2.36,
             "react": 3.22,
             "vue": 2.42,
             "solid": 2.08,
@@ -361,7 +361,7 @@
       ],
       "geometricMean": {
         "vanilla": 1,
-        "drift": 1.47,
+        "drift": 1.48,
         "react": 1.99,
         "vue": 1.59,
         "solid": 1.27,
@@ -378,8 +378,8 @@
         "Unit",
         "VanillaJS",
         "SolidJS",
-        "DriftJS",
         "Svelte",
+        "DriftJS",
         "Vue",
         "Ember",
         "Angular",
@@ -445,7 +445,7 @@
           "unit": "ms",
           "values": {
             "vanilla": 32,
-            "drift": 32,
+            "drift": 89.33,
             "react": 42.67,
             "vue": 34.67,
             "solid": 32,
@@ -455,7 +455,7 @@
           },
           "factors": {
             "vanilla": 1,
-            "drift": 1,
+            "drift": 2.79,
             "react": 1.33,
             "vue": 1.08,
             "solid": 1,
@@ -467,7 +467,7 @@
       ],
       "geometricMean": {
         "vanilla": 1,
-        "drift": 4.67,
+        "drift": 6.57,
         "react": 14.61,
         "vue": 7.14,
         "solid": 2.76,

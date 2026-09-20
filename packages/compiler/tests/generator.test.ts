@@ -88,7 +88,7 @@ describe('DriftGenerator', () => {
     const src = `@switch role { @case "admin" { <p>Admin</p> } @default { <p>User</p> } }`;
     const module = compile(src);
 
-    expect(module.bytecode).toContain(Opcode.REACTIVE_IF);
+    expect(module.bytecode).toContain(Opcode.REACTIVE_SWITCH);
   });
 
   it('generates REACTIVE_ASYNC opcode for @async directives with sub-modules', () => {

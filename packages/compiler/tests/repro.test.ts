@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { compile, DriftLexer, DriftParser, DriftTransformer, DriftGenerator, astToJS } from '../src/index.js';
 import { decodeHTMLEntities } from '../src/parser.js';
-import { ASTNodeType } from '../types/index.js';
+import { ASTNodeType, Opcode } from '../types/index.js';
 
 describe('DriftJS Compiler - Reproduction Test Cases', () => {
   it('correctly parses @for iterables that contain the word "key" in expressions', () => {
@@ -133,8 +133,9 @@ describe('DriftJS Compiler - Reproduction Test Cases', () => {
     const generator = new DriftGenerator(transformed);
     const compiled = generator.generate();
 
-    const ifNode = transformed.body.find((n) => n.type === ASTNodeType.If) as any;
-    expect(ifNode).toBeDefined();
+    const switchNode = transformed.body.find((n) => n.type === ASTNodeType.Switch) as any;
+    expect(switchNode).toBeDefined();
+    expect(compiled.bytecode).toContain(Opcode.REACTIVE_SWITCH);
   });
 
   it('identifier scoping in astToJS resolves globals on prototype chain', () => {
@@ -274,13 +275,8 @@ describe('DriftJS Compiler - Reproduction Test Cases', () => {
     const generator = new DriftGenerator(transformed);
     const compiled = generator.generate();
 
-    const reactiveIfConsts = compiled.constants.filter((c) => c && typeof c === 'object' && c.bytecode);
-    for (const mod of reactiveIfConsts) {
-      if (mod.constants) {
-        const depsArray = mod.constants.find((c: any) => Array.isArray(c) && c.includes('state'));
-        expect(depsArray).toBeDefined();
-      }
-    }
+    const depsArray = compiled.constants.find((c: any) => Array.isArray(c) && c.includes('state'));
+    expect(depsArray).toBeDefined();
   });
 
   it('ArrayPattern destructuring assignment resolves iterables', () => {
@@ -493,10 +489,9 @@ describe('DriftJS Compiler - Reproduction Test Cases', () => {
     `;
     const ast = new DriftParser(new DriftLexer(template)).parse();
     const transformed = new DriftTransformer(ast).transform();
-    const ifNode = transformed.body.find((n: any) => n.type === ASTNodeType.If) as any;
-    expect(ifNode).toBeDefined();
-    // Test that the binary expression directly tests user.role
-    expect(ifNode.test.left.type).toBe('MemberExpression');
+    const switchNode = transformed.body.find((n: any) => n.type === ASTNodeType.Switch) as any;
+    expect(switchNode).toBeDefined();
+    expect(switchNode.discriminant.type).toBe('MemberExpression');
   });
 });
 

@@ -87,11 +87,12 @@ describe('DriftTransformer', () => {
     const transformer = new DriftTransformer(rawAst);
     const transformedAst = transformer.transform();
 
-    const switchIfNode = transformedAst.body[0] as any;
-    expect(switchIfNode.type).toBe(ASTNodeType.If);
-    expect(switchIfNode.test.type).toBe('BinaryExpression');
+    const switchNode = transformedAst.body[0] as any;
+    expect(switchNode.type).toBe(ASTNodeType.Switch);
+    expect(switchNode.discriminant.type).toBe('CallExpression');
+    expect(switchNode.cases[0].expression.type).toBe('Literal');
 
-    const forNode = switchIfNode.consequent.find((n: any) => n.type === ASTNodeType.For);
+    const forNode = switchNode.cases[0].body.find((n: any) => n.type === ASTNodeType.For);
     expect(forNode.iterable.type).toBe('CallExpression');
 
     const ifNode = forNode.body.find((n: any) => n.type === ASTNodeType.If);
@@ -125,12 +126,14 @@ describe('DriftTransformer', () => {
     const transformer = new DriftTransformer(rawAst);
     const transformedAst = transformer.transform();
 
-    const ifNode = transformedAst.body[0] as any;
-    expect(ifNode.type).toBe(ASTNodeType.If);
-    expect(ifNode.consequent).toHaveLength(3);
-    expect(ifNode.consequent[0].tagName).toBe('p');
-    expect(ifNode.consequent[1].tagName).toBe('p');
-    expect(ifNode.consequent[2].tagName).toBe('p');
+    const switchNode = transformedAst.body[0] as any;
+    expect(switchNode.type).toBe(ASTNodeType.Switch);
+    expect(switchNode.cases).toHaveLength(1);
+    expect(switchNode.cases[0].expression).toBeNull();
+    expect(switchNode.cases[0].body).toHaveLength(3);
+    expect(switchNode.cases[0].body[0].tagName).toBe('p');
+    expect(switchNode.cases[0].body[1].tagName).toBe('p');
+    expect(switchNode.cases[0].body[2].tagName).toBe('p');
   });
 
   describe('BUG-023: traverseTemplateAST visitor pattern', () => {

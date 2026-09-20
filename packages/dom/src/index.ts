@@ -635,6 +635,7 @@ export class DriftClientVM {
           pc += 2;
           break;
         case Opcode.REACTIVE_IF:
+        case Opcode.REACTIVE_SWITCH:
           pc += 6;
           break;
         case Opcode.REACTIVE_FOR:
@@ -963,6 +964,98 @@ export class DriftClientVM {
               endAnchor: actualEndAnchor,
             };
             this.registerRegion(ifRegion);
+
+            pc += 6;
+            break;
+          }
+
+          case Opcode.REACTIVE_SWITCH: {
+            const parentReg     = bytecode[pc + 1]!;
+            const discIdx       = bytecode[pc + 2]!;
+            const casesTableIdx = bytecode[pc + 3]!;
+            const defaultModIdx = bytecode[pc + 4]!;
+            const depsIdx       = bytecode[pc + 5]!;
+
+            const parentElem    = this.getRegister(parentReg, registers);
+            const discExpr      = constants[discIdx];
+            const casesTable    = constants[casesTableIdx] as { testIdx: number; modIdx: number }[];
+            const defaultMod    = defaultModIdx !== 0xFF ? constants[defaultModIdx] : null;
+            const depsRaw       = constants[depsIdx];
+            const deps          = new Set<string>(Array.isArray(depsRaw) ? depsRaw : []);
+
+            const startAnchor = this.cursor ? this.cursor.claimComment('switch', doc) : doc.createComment('switch');
+            if (!startAnchor.parentNode || startAnchor.parentNode !== parentElem) {
+              parentElem.appendChild(startAnchor);
+            }
+
+            let actualEndAnchor: Comment = !this.cursor ? doc.createComment('/switch') : (null as any);
+            if (actualEndAnchor) {
+              parentElem.appendChild(actualEndAnchor);
+            }
+
+            const vm = this;
+            let childRegions: ReactiveRegion[] = [];
+            let switchRegion: ReactiveRegion | null = null;
+
+            const renderSwitch = () => {
+              for (const r of childRegions) {
+                vm.removeRegion(r);
+              }
+              childRegions = [];
+              if (actualEndAnchor && startAnchor.parentNode) {
+                clearBetweenAnchors(startAnchor, actualEndAnchor, vm);
+              }
+
+              // Evaluate discriminant once into local variable on stack — zero scope pollution
+              const discVal = evaluateExpression(discExpr, scope, vm.declaredVars);
+
+              let matchedMod = defaultMod;
+              if (Array.isArray(casesTable)) {
+                for (let i = 0; i < casesTable.length; i++) {
+                  const c = casesTable[i]!;
+                  const caseVal = evaluateExpression(constants[c.testIdx], scope, vm.declaredVars);
+                  if (discVal === caseVal) {
+                    matchedMod = constants[c.modIdx];
+                    break;
+                  }
+                }
+              }
+
+              if (matchedMod) {
+                const { fragment, createdRegions } = vm.runSubModule(matchedMod, scope);
+                childRegions = createdRegions;
+                if (fragment) {
+                  if (actualEndAnchor && actualEndAnchor.parentNode) {
+                    actualEndAnchor.parentNode.insertBefore(fragment, actualEndAnchor);
+                  } else {
+                    parentElem.appendChild(fragment);
+                  }
+                }
+              }
+              if (switchRegion) {
+                switchRegion.childRegions = childRegions;
+              }
+            };
+            renderSwitch();
+
+            if (this.cursor) {
+              actualEndAnchor = this.cursor.claimComment('/switch', doc);
+              if (!actualEndAnchor.parentNode || actualEndAnchor.parentNode !== parentElem) {
+                parentElem.appendChild(actualEndAnchor);
+              }
+            }
+
+            switchRegion = {
+              deps,
+              reRender: () => {
+                renderSwitch();
+              },
+              childRegions,
+              parentNode: parentElem,
+              startAnchor,
+              endAnchor: actualEndAnchor,
+            };
+            this.registerRegion(switchRegion);
 
             pc += 6;
             break;

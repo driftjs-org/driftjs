@@ -192,4 +192,28 @@ describe('DriftJS @switch Directive Integration Suite', () => {
 
     document.body.removeChild(container);
   });
+
+  it('does NOT pollute component scope with internal __drift_sw_* variables (BUG-107)', () => {
+    const src = `
+      <script>
+        function getRole() { return 'editor'; }
+      </script>
+      <div>
+        @switch getRole() {
+          @case 'admin' { <p>Admin</p> }
+          @case 'editor' { <p id="result">Editor</p> }
+          @default { <p>Guest</p> }
+        }
+      </div>
+    `;
+
+    const mod = compile(src);
+    const vm = new DriftClientVM();
+    const scope: Record<string, any> = {};
+    const root = vm.execute(mod, { scope, document });
+
+    expect(scope.__drift_sw_0).toBeUndefined();
+    const swKeys = Object.keys(scope).filter((k) => k.startsWith('__drift_sw_'));
+    expect(swKeys).toHaveLength(0);
+  });
 });

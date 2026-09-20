@@ -78,6 +78,50 @@ describe('DriftServerVM (SSR Engine)', () => {
     expect(guestHtml).toBe('<!--if--><span>Guest User</span><!--/if-->');
   });
 
+  it('renders REACTIVE_SWITCH blocks on server with correct matched case or default', () => {
+    const adminMod: CompiledModule = {
+      bytecode: [
+        Opcode.CREATE_FRAGMENT, 0,
+        Opcode.CREATE_ELEMENT, 1, 0,
+        Opcode.CREATE_TEXT, 2, 1,
+        Opcode.APPEND_CHILD, 1, 2,
+        Opcode.APPEND_CHILD, 0, 1,
+        Opcode.RETURN, 0,
+      ],
+      constants: ['span', 'Admin Panel'],
+    };
+    const defaultMod: CompiledModule = {
+      bytecode: [
+        Opcode.CREATE_FRAGMENT, 0,
+        Opcode.CREATE_ELEMENT, 1, 0,
+        Opcode.CREATE_TEXT, 2, 1,
+        Opcode.APPEND_CHILD, 1, 2,
+        Opcode.APPEND_CHILD, 0, 1,
+        Opcode.RETURN, 0,
+      ],
+      constants: ['span', 'Guest Page'],
+    };
+
+    const discExpr = { __drift_fn__: '(scope) => scope.role' };
+    const caseTestExpr = { __drift_fn__: '() => "admin"' };
+    const casesTable = [{ testIdx: 2, modIdx: 3 }];
+
+    const module: CompiledModule = {
+      bytecode: [
+        Opcode.CREATE_FRAGMENT, 0,
+        Opcode.REACTIVE_SWITCH, 0, 1, 4, 5, 6,
+        Opcode.RETURN, 0,
+      ],
+      constants: [null, discExpr, caseTestExpr, adminMod, casesTable, defaultMod, ['role']],
+    };
+
+    const adminHtml = renderToString(module, { scope: { role: 'admin' } });
+    expect(adminHtml).toBe('<!--switch--><span>Admin Panel</span><!--/switch-->');
+
+    const guestHtml = renderToString(module, { scope: { role: 'other' } });
+    expect(guestHtml).toBe('<!--switch--><span>Guest Page</span><!--/switch-->');
+  });
+
   it('renders REACTIVE_FOR loops with item and index scope bindings', () => {
     const bodyMod: CompiledModule = {
       bytecode: [

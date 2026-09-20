@@ -14,6 +14,10 @@ This document tracks identified architectural shortcuts, LLM-generated code hack
 | [BUG-109](#bug-109-dead-code-island-anchors-and-unimplemented-event-replay-stub)    | `driftjs-dom`         |   Low   |   **Open**   | Dead`claimComponentAnchor` comments and no-op `__drift_replayed__` stub            |
 | [BUG-110](#bug-110-hallucinated-named-exports-in-vite-plugin-documentation)         | `driftjs-vite-plugin` |   Low   |   **Open**   | JSDoc documents`import { mount } from './comp.drift'` but only default export exists |
 | [BUG-111](#bug-111-hardcoded-version-string-in-cli-dependency-sanitizer)            | `create-drift`        |   Low   |   **Open**   | `sanitizeDependencies` has hardcoded default version `'^0.0.14'`                   |
+| [BUG-117](#bug-117-generator-omits-loop-alias-variables-from-sub-module-reactive-bindings) | `driftjs-compiler` | Medium | **Open** | Compiler omits `@for` loop alias variables from `reactiveBindings`, causing duplicate runtime scanner |
+| [BUG-118](#bug-118-redundant-4-tier-nested-ternary-fallback-in-asttojs-identifier-codegen) | `driftjs-compiler` | Medium | **Open** | Every variable identifier emits a 4-tier ternary fallback chain, introducing runtime overhead and constant pool bloat |
+| [BUG-119](#bug-119-keyed-list-reconciler-silently-destroys-duplicate-keyed-rows)    | `driftjs-dom`         |   Low   |   **Open**   | Duplicate keys in `@for` trigger a warning but are silently unmounted by `keyToNewIndexMap` collision |
+| [BUG-120](#bug-120-global-delegated-event-listeners-accumulate-indefinitely-on-document) | `driftjs-dom`    |   Low   |   **Open**   | Delegated event listeners on `document` are never removed on VM unmount or teardown |
 
 ---
 
@@ -160,4 +164,117 @@ This document tracks identified architectural shortcuts, LLM-generated code hack
   When scaffolding new projects, if `targetVersion` is not passed, newly scaffolded projects are pinned to a stale version (`^0.0.14`) instead of reading the actual published package version dynamically.
 * **Recommended Fix:**
   Read the version dynamically from the monorepo root or package manifest at runtime.
+
+---
+
+### BUG-117: Generator Omits Loop Alias Variables from Sub-Module Reactive Bindings
+
+* **Package:** `packages/compiler/src/generator.ts` (lines 477–528, 756–767, 781–792) & `packages/dom/src/index.ts` (lines 600–659)
+* **Severity:** Medium
+* **Status:** **Open**
+* **Description:**
+  When compiling `@for (item, index) in list` loop bodies, `compileNodesToSubModule()` runs with `this.declaredVars` populated only with top-level script variables. Loop aliases (`node.item`, `node.index`) are never registered in the compiler's declared variable set.
+
+  Consequently:
+  1. In `recordBindingPositions(expr, pc)`:
+     ```ts
+     for (const name of ids) {
+       if (this.declaredVars.has(name)) { // Returns false for 'item' and 'index'!
+         this.bindingPositions.get(name)!.push(pc);
+       }
+     }
+     ```
+     `bodyMod.reactiveBindings` completely omits loop variables like `item` and `index`.
+  2. In `addExpressionConstant(ast)`:
+     ```ts
+     for (const name of this.extractIdentifiers(ast)) {
+       if (this.declaredVars.has(name)) deps.push(name); // Returns false for 'item' and 'index'!
+     }
+     ```
+     Inner row expressions like `{item.name}` receive an empty `deps: []` array.
+* **Impact:**
+  - Because `bodyMod.reactiveBindings` lacks entries for loop items, the client VM reconciler cannot determine which bytecode PCs to execute when row data updates.
+  - To compensate, an ad-hoc runtime scanner [`getDynamicPcs()`](file:///home/hrutav-modha/Documents/driftjs/packages/dom/src/index.ts#L600) was introduced into `driftjs-dom`. This duplicates the variable-length instruction set decoder in the client runtime.
+  - Furthermore, in [`updateRowRegisters()`](file:///home/hrutav-modha/Documents/driftjs/packages/dom/src/index.ts#L665), looping over `dynamicPcs` and calling `executeFrom(pc, ..., VMMode.UPDATE)` cascades down to `RETURN` on every iteration, re-executing subsequent dynamic instructions multiple times for every row.
+* **Recommended Fix:**
+  1. In `DriftGenerator.compileNodesToSubModule()`, pass in or temporarily extend `this.declaredVars` with the loop's alias names (`node.item`, `node.index`) so `recordBindingPositions` records `{ variable: 'item', positions: [...] }` in `bodyMod.reactiveBindings`.
+  2. Alternatively or additionally, have the compiler emit a static `dynamicPcs: readonly number[]` array on sub-modules at build time.
+  3. Remove `getDynamicPcs` and its duplicate `switch (opcode)` block from `DriftClientVM`, and update `updateRowRegisters` to execute row updates directly using compiler-emitted metadata.
+
+---
+
+### BUG-118: Redundant 4-Tier Nested Ternary Fallback in `astToJS` Identifier CodeGen
+
+* **Package:** `packages/compiler/src/generator.ts` (lines 1081–1084)
+* **Severity:** Medium
+* **Status:** **Open**
+* **Description:**
+  For every single variable identifier in an expression, `astToJS` generates a 4-tier ternary fallback chain:
+  ```js
+  (typeof getScopeValue === 'function' 
+    ? getScopeValue(scope, "x") 
+    : (typeof inScopeChain === 'function' && inScopeChain(scope, "x") 
+        ? scope["x"] 
+        : (typeof globalThis !== 'undefined' && globalThis && ("x" in globalThis) 
+            ? globalThis["x"] 
+            : (scope || {})["x"])))
+  ```
+* **Impact:**
+  - Because `getScopeValue` is already guaranteed as a core parameter in every compiled `__drift_fn__` signature `(scope, declaredVars, setScopeValue, inScopeChain, resolveIterable, getScopeValue) => ...`, checking `typeof getScopeValue === 'function'` and falling through three redundant tiers on every variable lookup introduces unnecessary branching and runtime overhead during evaluation.
+  - Generates massive string bloat in the constant pool (e.g., an expression with 3–4 identifiers expands to hundreds of characters of duplicate ternary checks and repeated string literals).
+* **Recommended Fix:**
+  Simplify identifier code generation in `astToJS` to invoke `getScopeValue(scope, "x")` directly (or `scope["x"]` when referencing local identifiers), removing the redundant 4-tier ternary chain.
+
+---
+
+### BUG-119: Keyed List Reconciler Silently Destroys Duplicate-Keyed Rows
+
+* **Package:** `packages/dom/src/reconciler.ts` (lines 99–106, 159–165, 177–180)
+* **Severity:** Low
+* **Status:** **Open**
+* **Description:**
+  When a list contains duplicate keys, `reconcileKeyedList()` detects the collision and logs a warning, but still pushes both records into `newCache` with the duplicate key:
+  ```ts
+  if (newKeySet.has(baseKey)) {
+    console.warn(`[DriftJS] Duplicate key "${String(baseKey)}" detected...`);
+  } else {
+    newKeySet.add(baseKey);
+  }
+  newCache.push({ key: baseKey, ... });
+  ```
+  However, when building `keyToNewIndexMap`:
+  ```ts
+  for (let k = s1; k <= e1; k++) {
+    const kKey = newCache[k]!.key;
+    if (!keyToNewIndexMap.has(kKey)) {
+      keyToNewIndexMap.set(kKey, k); // Keeps ONLY the first occurrence!
+    }
+  }
+  ```
+  When the loop subsequently reconciles old rows against `keyToNewIndexMap`, any duplicate row after the first matches `sources[newIndex - s1] !== -1` and is passed to `removeRecordNodes(oldRec)`.
+* **Impact:**
+  Duplicate keys result in the second item's DOM node being unmounted and permanently removed from the rendered list rather than being kept or gracefully falling back.
+* **Recommended Fix:**
+  When duplicate keys are detected, fall back to index-based keys or composite keys (`${baseKey}__${index}`) to ensure all items remain mounted in the DOM.
+
+---
+
+### BUG-120: Global Delegated Event Listeners Accumulate Indefinitely on Document
+
+* **Package:** `packages/dom/src/index.ts` (lines 520–553)
+* **Severity:** Low
+* **Status:** **Open**
+* **Description:**
+  `DriftClientVM.ensureEventDelegated()` registers event listeners directly on the global `document` or root node:
+  ```ts
+  let docListeners = DriftClientVM.globalDelegatedListeners.get(root);
+  if (!docListeners.has(eventName)) {
+    root.addEventListener(eventName, listener, useCapture);
+    docListeners.set(eventName, { listener, useCapture });
+  }
+  ```
+* **Impact:**
+  While per-element event handlers stored in `WeakMap` get garbage collected, the delegated event listeners attached to the global `document` are never removed on VM unmount or teardown. In single-page applications or environments with frequent component mounting and unmounting, these listeners persist indefinitely.
+* **Recommended Fix:**
+  Add an event listener cleanup / teardown routine to `DriftClientVM.unmount()` that removes global event listeners from the document when the root VM or container is destroyed.
 

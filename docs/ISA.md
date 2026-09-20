@@ -30,6 +30,8 @@ DriftJS compiles `.drift` template ASTs into a compact, binary-serializable byte
 | **`REACTIVE_IF`** | `0x0D` | `13` | 6 | `parentReg, condIdx, consIdx, altIdx, depsIdx` | Reactive Block | Binds dynamic conditional `@if` block between comment anchors |
 | **`REACTIVE_FOR`** | `0x0E` | `14` | 10 | `parentReg, iterIdx, itemNameIdx, idxNameIdx, keyIdx, bodyIdx, depsIdx, iterDepsIdx, rowDepsIdx` | Reactive Block | Binds dynamic `@for` loop with LIS reconciliation (iterDeps) & per-row fast-patch (rowDeps) |
 | **`MOUNT_COMPONENT`** | `0x0F` | `15` | 4 | `dstReg, compIdx, propsSpecIdx` | Component Mounting | Instantiates child Single File Component VM with props into `dstReg` |
+| **`REACTIVE_ASYNC`** | `0x10` | `16` | 9 | `parentReg, promiseIdx, aliasIdx, bodyIdx, fallbackIdx, catchIdx, depsIdx, aliasPopulatorIdx` | Reactive Block | Suspends and streams subtree when promise resolves or rejects |
+| **`REACTIVE_SWITCH`** | `0x11` | `17` | 6 | `parentReg, discIdx, casesTableIdx, defaultModIdx, depsIdx` | Reactive Block | Binds dynamic `@switch` block between comment anchors, evaluating discriminant once |
 
 ---
 
@@ -104,3 +106,14 @@ DriftJS compiles `.drift` template ASTs into a compact, binary-serializable byte
   - Uses Longest Increasing Subsequence (LIS) keyed reconciliation (`reconcileKeyedList`) when `iterDepsIdx` variables change.
   - Uses `patchRowsForChangedVars` fast-path for `rowDepsIdx` variable changes: directly dispatches `executeFrom` at the exact binding PCs per row's register frame — mirroring `triggerUpdates`'s own pattern, with no double-evaluation pre-check.
   - `SET_ATTR` / `INTERPOLATE_TEXT` opcodes provide their own idempotent no-op guards (`getAttribute !== val`, `nodeValue !== val`).
+
+### `REACTIVE_ASYNC` (`0x10`)
+- **Bytecode**: `0x10 <parentReg> <promiseIdx> <aliasIdx> <bodyIdx> <fallbackIdx> <catchIdx> <depsIdx> <aliasPopulatorIdx>`
+- **Length**: 9 bytes
+- **Description**: Registers a dynamic `@async` boundary bounded by comment anchors (`<!--drift-async:id-->` / `<!--/drift-async:id-->`). Renders fallback sub-module `constants[fallbackIdx]` while the promise at `constants[promiseIdx]` is pending, then replaces the region with the resolved body sub-module `constants[bodyIdx]` (using compiled AOT populator `constants[aliasPopulatorIdx]`) or catch branch `constants[catchIdx]` upon rejection.
+
+### `REACTIVE_SWITCH` (`0x11`)
+- **Bytecode**: `0x11 <parentReg> <discIdx> <casesTableIdx> <defaultModIdx> <depsIdx>`
+- **Length**: 6 bytes
+- **Description**: Registers a dynamic `@switch` block bounded by comment anchors (`<!--switch-->` / `<!--/switch-->`). Evaluates discriminant expression `constants[discIdx]` strictly once into a local stack variable without mutating component scope. Iterates through the cases table `constants[casesTableIdx]` (`[{ testIdx, modIdx }, ...]`), evaluates case test expressions in source order, and renders the matching sub-module or fallback default sub-module `constants[defaultModIdx]`. Re-evaluates when variables in `constants[depsIdx]` change.
+

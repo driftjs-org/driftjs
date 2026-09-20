@@ -125,6 +125,9 @@ export class DriftGenerator {
       case ASTNodeType.If:
         this.compileIfNode(node, parentReg);
         break;
+      case ASTNodeType.Switch:
+        this.compileSwitchNode(node as SwitchNode, parentReg);
+        break;
       case ASTNodeType.For:
         this.compileForNode(node, parentReg);
         break;
@@ -420,6 +423,55 @@ export class DriftGenerator {
 
     // REACTIVE_IF parentReg condIdx consIdx altIdx depsIdx  (5 operand bytes)
     this.emit(Opcode.REACTIVE_IF, parentReg, condIdx, consIdx, altIdx, depsIdx);
+  }
+
+  private compileSwitchNode(node: SwitchNode, parentReg: number): void {
+    const discIdx = this.addExpressionConstant(node.discriminant);
+
+    const casesTable: { testIdx: number; modIdx: number }[] = [];
+    let defaultModIdx = 0xFF;
+    const allSubMods: { reactiveBindings: ReactiveBinding[] }[] = [];
+
+    for (const c of node.cases) {
+      if (c.expression === null) {
+        // @default branch
+        const defaultMod = this.compileNodesToSubModule(c.body);
+        allSubMods.push(defaultMod);
+        defaultModIdx = this.addConstant(defaultMod);
+      } else {
+        // @case branch
+        const testIdx = this.addExpressionConstant(c.expression);
+        const caseMod = this.compileNodesToSubModule(c.body);
+        allSubMods.push(caseMod);
+        const modIdx = this.addConstant(caseMod);
+        casesTable.push({ testIdx, modIdx });
+      }
+    }
+
+    const casesTableIdx = this.addConstant(casesTable);
+
+    // Deps = union of discriminant deps + all case expression deps + all case sub-module reactive bindings
+    const depsSet = new Set<string>();
+    for (const name of this.extractIdentifiers(node.discriminant)) {
+      if (this.declaredVars.has(name)) depsSet.add(name);
+    }
+    for (const c of node.cases) {
+      if (c.expression !== null) {
+        for (const name of this.extractIdentifiers(c.expression)) {
+          if (this.declaredVars.has(name)) depsSet.add(name);
+        }
+      }
+    }
+    for (const subMod of allSubMods) {
+      for (const dep of this.collectDepsFromSubModule(subMod)) {
+        depsSet.add(dep);
+      }
+    }
+
+    const depsIdx = this.addConstant(Array.from(depsSet));
+
+    // REACTIVE_SWITCH parentReg discIdx casesTableIdx defaultModIdx depsIdx (5 operand bytes)
+    this.emit(Opcode.REACTIVE_SWITCH, parentReg, discIdx, casesTableIdx, defaultModIdx, depsIdx);
   }
 
   private compileForNode(node: ForNode, parentReg: number): void {

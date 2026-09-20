@@ -27,6 +27,16 @@ export enum Opcode {
   MOUNT_COMPONENT = 0x0F,
   /** Reactive async block: suspends and streams subtree when promise resolves or rejects. */
   REACTIVE_ASYNC = 0x10,
+  /** Reactive switch block: evaluates discriminant once and renders matching case. */
+  REACTIVE_SWITCH = 0x11,
+}
+
+/**
+ * Describes a case branch in the constant pool table for REACTIVE_SWITCH.
+ */
+export interface SwitchCaseSpec {
+  readonly testIdx: number;
+  readonly modIdx: number;
 }
 
 /**

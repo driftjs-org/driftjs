@@ -24,6 +24,22 @@ export function executePrecompiledFn(node: any, scope: Record<string, any>, decl
   if (typeof node._executableFn === 'function') {
     return node._executableFn(scope, declaredVars, setScopeValue, inScopeChain, resolveIterable, getScopeValue);
   }
+  if (typeof node.__drift_fn__ === 'string') {
+    try {
+      node.__drift_fn__ = new Function('return (' + node.__drift_fn__ + ')')();
+      return node.__drift_fn__(scope, declaredVars, setScopeValue, inScopeChain, resolveIterable, getScopeValue);
+    } catch {
+      return undefined;
+    }
+  }
+  if (typeof node._executableFn === 'string') {
+    try {
+      node._executableFn = new Function('return (' + node._executableFn + ')')();
+      return node._executableFn(scope, declaredVars, setScopeValue, inScopeChain, resolveIterable, getScopeValue);
+    } catch {
+      return undefined;
+    }
+  }
   return undefined;
 }
 
@@ -38,7 +54,7 @@ export function evaluateExpression(node: any, scope: Record<string, any>, declar
   }
 
   if (typeof node === 'object' && node !== null) {
-    if ('__drift_fn__' in node || typeof node._executableFn === 'function') {
+    if ('__drift_fn__' in node || '_executableFn' in node) {
       return executePrecompiledFn(node, scope, declaredVars);
     }
     if (Array.isArray(node)) {

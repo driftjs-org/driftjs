@@ -346,6 +346,43 @@ export class DriftServerVM {
           break;
         }
 
+        case Opcode.REACTIVE_SWITCH: {
+          const parentReg = bytecode[pc + 1]!;
+          const discIdx = bytecode[pc + 2]!;
+          const casesTableIdx = bytecode[pc + 3]!;
+          const defaultModIdx = bytecode[pc + 4]!;
+
+          const parentNode = this.getRegister(parentReg);
+          const discExpr = constants[discIdx];
+          const casesTable = constants[casesTableIdx] as { testIdx: number; modIdx: number }[];
+          const defaultMod = defaultModIdx !== 0xFF ? constants[defaultModIdx] : null;
+
+          const discVal = evaluateExpression(discExpr, this.scope, this.declaredVars);
+          let matchedMod = defaultMod;
+          if (Array.isArray(casesTable)) {
+            for (let i = 0; i < casesTable.length; i++) {
+              const c = casesTable[i]!;
+              const caseVal = evaluateExpression(constants[c.testIdx], this.scope, this.declaredVars);
+              if (discVal === caseVal) {
+                matchedMod = constants[c.modIdx];
+                break;
+              }
+            }
+          }
+
+          parentNode.children.push({ type: 'comment', content: 'switch', children: [] });
+          if (matchedMod) {
+            const childScope = Object.create(this.scope);
+            const subVm = new DriftServerVM();
+            subVm.parentVM = this;
+            const subResult = subVm.execute(matchedMod, { scope: childScope });
+            if (subResult) parentNode.children.push(subResult);
+          }
+          parentNode.children.push({ type: 'comment', content: '/switch', children: [] });
+          pc += 6;
+          break;
+        }
+
         case Opcode.REACTIVE_FOR: {
           const parentReg = bytecode[pc + 1]!;
           const iterIdx = bytecode[pc + 2]!;

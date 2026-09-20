@@ -160,11 +160,9 @@ export function traverseTemplateAST<T extends ProgramNode | TemplateChildNode>(
  * Performs AST enrichment via structured visitor passes:
  * 1. Stripping redundant whitespace/newline TextNodes between element boundaries.
  * 2. Parsing raw JS strings in interpolations, directives, and <script> tags into Acorn AST nodes.
- * 3. Lowering @switch / @case directives into equivalent reactive @if / @else if chains.
  */
 export class DriftTransformer {
   private readonly rawAst: ProgramNode;
-  private switchCounter = 0;
 
   constructor(rawAst: ProgramNode) {
     this.rawAst = rawAst;
@@ -184,15 +182,8 @@ export class DriftTransformer {
       },
     });
 
-    // Pass 2: Lower @switch / @case directives to @if chains
-    const loweredAst = traverseTemplateAST(strippedAst, {
-      Switch: (node) => {
-        return this.transformSwitchToIfChain(node);
-      },
-    });
-
-    // Pass 3: Parse JS expressions into Acorn AST nodes
-    const enrichedAst = traverseTemplateAST(loweredAst, {
+    // Pass 2: Parse JS expressions into Acorn AST nodes
+    const enrichedAst = traverseTemplateAST(strippedAst, {
       Interpolation: (node) => {
         return this.transformInterpolation(node);
       },
@@ -238,6 +229,29 @@ export class DriftTransformer {
               : (node.key ?? null),
         };
       },
+      Switch: (node) => {
+        const discAst =
+          typeof node.discriminant === 'string' && node.discriminant.trim().length > 0
+            ? acorn.parseExpressionAt(node.discriminant, 0, { ecmaVersion: 'latest' })
+            : node.discriminant;
+
+        const enrichedCases = node.cases.map((c) => {
+          const caseExpr =
+            c.expression !== null && typeof c.expression === 'string' && c.expression.trim().length > 0
+              ? acorn.parseExpressionAt(c.expression, 0, { ecmaVersion: 'latest' })
+              : c.expression;
+          return {
+            ...c,
+            expression: caseExpr,
+          };
+        });
+
+        return {
+          ...node,
+          discriminant: discAst,
+          cases: enrichedCases,
+        };
+      },
       Async: (node) => {
         return {
           ...node,
@@ -252,151 +266,7 @@ export class DriftTransformer {
     return enrichedAst;
   }
 
-  /**
-   * Transforms @switch node into a reactive @if / @else if / @else chain.
-   */
-  private transformSwitchToIfChain(node: SwitchNode): TemplateChildNode {
-    const discAst =
-      typeof node.discriminant === 'string'
-        ? acorn.parseExpressionAt(node.discriminant, 0, { ecmaVersion: 'latest' })
-        : node.discriminant;
 
-    const isSimple =
-      (discAst as any).type === 'Identifier' ||
-      (discAst as any).type === 'Literal' ||
-      (discAst as any).type === 'MemberExpression';
-    const discVarName = `__drift_sw_${this.switchCounter++}`;
-    let isFirstCase = true;
-
-    const buildIfChain = (index: number): TemplateChildNode | TemplateChildNode[] | null => {
-      const c = node.cases[index];
-      if (!c) return null;
-      if (c.expression === null) {
-        const consequent = [...c.body];
-        const nextAlt = buildIfChain(index + 1);
-
-        let alternate: TemplateChildNode[] | IfNode | null = null;
-        if (Array.isArray(nextAlt)) {
-          alternate = nextAlt;
-        } else if (nextAlt !== null && (nextAlt as TemplateChildNode).type === ASTNodeType.If) {
-          alternate = nextAlt as IfNode;
-        }
-
-        if (index > 0 && alternate === null) {
-          return consequent;
-        }
-
-        const trueAst: acorn.Node = {
-          type: 'Literal',
-          value: true,
-          raw: 'true',
-          start: 0,
-          end: 0,
-        } as any;
-
-        return {
-          type: ASTNodeType.If,
-          test: trueAst,
-          consequent,
-          alternate,
-          loc: c.loc,
-        };
-      }
-
-      const caseAst =
-        typeof c.expression === 'string' && c.expression.trim().length > 0
-          ? acorn.parseExpressionAt(c.expression, 0, { ecmaVersion: 'latest' })
-          : c.expression;
-
-      let leftNode: acorn.Node;
-      if (isSimple) {
-        leftNode = structuredClone(discAst);
-      } else if (isFirstCase) {
-        isFirstCase = false;
-        leftNode = {
-          type: 'AssignmentExpression',
-          operator: '=',
-          left: {
-            type: 'Identifier',
-            name: discVarName,
-            start: 0,
-            end: 0,
-          },
-          right: structuredClone(discAst),
-          start: 0,
-          end: 0,
-        } as any;
-      } else {
-        leftNode = {
-          type: 'Identifier',
-          name: discVarName,
-          start: 0,
-          end: 0,
-        } as any;
-      }
-
-      const parsedTest: acorn.Node = {
-        type: 'BinaryExpression',
-        operator: '===',
-        left: leftNode as any,
-        right: caseAst as any,
-        start: 0,
-        end: 0,
-      } as any;
-
-      const consequent = [...c.body];
-      const nextAlt = buildIfChain(index + 1);
-
-      let alternate: TemplateChildNode[] | IfNode | null = null;
-      if (Array.isArray(nextAlt)) {
-        alternate = nextAlt;
-      } else if (nextAlt !== null && (nextAlt as TemplateChildNode).type === ASTNodeType.If) {
-        alternate = nextAlt as IfNode;
-      }
-
-      return {
-        type: ASTNodeType.If,
-        test: parsedTest,
-        consequent,
-        alternate,
-        extraDeps: structuredClone(discAst),
-        loc: c.loc,
-      };
-    };
-
-    const res = buildIfChain(0);
-    if (!res) {
-      return {
-        type: ASTNodeType.Comment,
-        content: 'empty switch',
-        loc: node.loc,
-      };
-    }
-    if (Array.isArray(res)) {
-      if (res.length === 0) {
-        return {
-          type: ASTNodeType.Comment,
-          content: 'empty switch',
-          loc: node.loc,
-        };
-      }
-      const trueAst: acorn.Node = {
-        type: 'Literal',
-        value: true,
-        raw: 'true',
-        start: 0,
-        end: 0,
-      } as any;
-      return {
-        type: ASTNodeType.If,
-        test: trueAst,
-        consequent: res,
-        alternate: null,
-        loc: node.loc,
-      };
-    }
-    return res;
-  }
 
   /**
    * Parses raw JS string expression in interpolation into an Acorn AST node.

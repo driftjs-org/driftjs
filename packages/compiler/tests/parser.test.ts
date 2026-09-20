@@ -320,6 +320,55 @@ describe('DriftParser', () => {
     expect(() => parser.parse()).toThrow(DriftParserError);
   });
 
+  it('validates @for target bindings and throws on invalid targets', () => {
+    // 1. Invalid expression as item binding
+    expect(() => new DriftParser(new DriftLexer('@for a + b in list { <li>item</li> }')).parse())
+      .toThrow(DriftParserError);
+
+    // 2. Trailing comma in bindings
+    expect(() => new DriftParser(new DriftLexer('@for (item, ) in list { <li>item</li> }')).parse())
+      .toThrow(/trailing comma/i);
+
+    // 3. Non-identifier as index binding
+    expect(() => new DriftParser(new DriftLexer('@for (item, { a, b }) in list { <li>item</li> }')).parse())
+      .toThrow(/index must be a valid identifier/i);
+
+    // 4. Numbers as binding targets
+    expect(() => new DriftParser(new DriftLexer('@for (123, 456) in list { <li>item</li> }')).parse())
+      .toThrow(DriftParserError);
+
+    // 5. Syntax error in header (invalid token e.g. 1a)
+    expect(() => new DriftParser(new DriftLexer('@for 1a in list { <li>item</li> }')).parse())
+      .toThrow(/syntax error in @for header/i);
+
+    // 6. Unparenthesized multiple variables (e.g. a, b)
+    expect(() => new DriftParser(new DriftLexer('@for a, b in list { <li>item</li> }')).parse())
+      .toThrow(/multiple loop variables must be enclosed in parentheses/i);
+  });
+
+  it('correctly parses single destructuring pattern wrapped in parens without index', () => {
+    const parser = new DriftParser(
+      new DriftLexer('@for ({ id, title }) in posts key id { <div>{title}</div> }')
+    );
+    const ast = parser.parse();
+    const forNode = ast.body[0] as any;
+    expect(forNode.item).toBe('{ id, title }');
+    expect(forNode.index).toBeNull();
+    expect(forNode.iterable).toBe('posts');
+    expect(forNode.key).toBe('id');
+  });
+
+  it('correctly tracks depth inside template literals containing in keyword', () => {
+    const parser = new DriftParser(
+      new DriftLexer('@for item in list.filter(x => `${x in y ? "a" : "b"}`) key item.id { <div>{item}</div> }')
+    );
+    const ast = parser.parse();
+    const forNode = ast.body[0] as any;
+    expect(forNode.item).toBe('item');
+    expect(forNode.iterable).toBe('list.filter(x => `${x in y ? "a" : "b"}`)');
+    expect(forNode.key).toBe('item.id');
+  });
+
   it('throws on invalid content inside @switch blocks that is not @case or @default', () => {
     const parser = new DriftParser(new DriftLexer('@switch mode { <div>invalid direct child</div> }'));
     expect(() => parser.parse()).toThrow(DriftParserError);

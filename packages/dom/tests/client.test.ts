@@ -1170,21 +1170,26 @@ describe('DriftClientVM', () => {
     document.body.removeChild(container);
   });
 
-  it('triggers reactive updates when calling array mutators on nested object properties', () => {
+  it('triggers reactive updates on arrays via contractual reassignment', () => {
     const src = `
       <script>
-        let user = { todos: ['Buy milk'] };
-        function addTodo() {
-          user.todos.push('Walk dog');
+        let items = ['Buy milk'];
+        function addViaReassign() {
+          items.push('Walk dog');
+          items = items;
+        }
+        function addViaSpread() {
+          items = [...items, 'Feed cat'];
         }
       </script>
       <div>
         <ul class="todos">
-          @for todo in user.todos {
+          @for todo in items {
             <li class="todo-item">{todo}</li>
           }
         </ul>
-        <button class="add-btn" onclick={addTodo}>Add Todo</button>
+        <button class="reassign-btn" onclick={addViaReassign}>Reassign</button>
+        <button class="spread-btn" onclick={addViaSpread}>Spread</button>
       </div>
     `;
 
@@ -1204,10 +1209,15 @@ describe('DriftClientVM', () => {
     expect(container.querySelectorAll('.todo-item').length).toBe(1);
     expect(container.querySelector('.todo-item')?.textContent).toBe('Buy milk');
 
-    (container.querySelector('.add-btn') as HTMLButtonElement).click();
-
+    // In-place mutation + reassignment (items.push(); items = items;)
+    (container.querySelector('.reassign-btn') as HTMLButtonElement).click();
     expect(container.querySelectorAll('.todo-item').length).toBe(2);
     expect(container.querySelectorAll('.todo-item')[1]?.textContent).toBe('Walk dog');
+
+    // Idiomatic spread reassignment (items = [...items, x])
+    (container.querySelector('.spread-btn') as HTMLButtonElement).click();
+    expect(container.querySelectorAll('.todo-item').length).toBe(3);
+    expect(container.querySelectorAll('.todo-item')[2]?.textContent).toBe('Feed cat');
 
     document.body.removeChild(container);
   });

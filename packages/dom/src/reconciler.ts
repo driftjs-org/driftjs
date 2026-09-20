@@ -96,14 +96,14 @@ export function reconcileKeyedList(
     const indexVal = i;
     const rawKeyVal = getKey(itemVal, indexVal);
     const baseKey = rawKeyVal !== null && rawKeyVal !== undefined ? rawKeyVal : indexVal;
-    let keyVal = baseKey;
-    let dupIdx = 0;
-    while (newKeySet.has(keyVal)) {
-      dupIdx++;
-      keyVal = String(baseKey) + '__dup_' + dupIdx;
+    if (newKeySet.has(baseKey)) {
+      console.warn(
+        `[DriftJS] Duplicate key "${String(baseKey)}" detected in @for loop. Keys must be unique to maintain component identity across updates.`
+      );
+    } else {
+      newKeySet.add(baseKey);
     }
-    newKeySet.add(keyVal);
-    newCache.push({ key: keyVal, nodes: [], childRegions: [], itemVal, indexVal });
+    newCache.push({ key: baseKey, nodes: [], childRegions: [], itemVal, indexVal });
   }
 
   const oldLen = oldCache.length;
@@ -158,7 +158,10 @@ export function reconcileKeyedList(
 
     const keyToNewIndexMap = new Map<unknown, number>();
     for (let k = s1; k <= e1; k++) {
-      keyToNewIndexMap.set(newCache[k]!.key, k);
+      const kKey = newCache[k]!.key;
+      if (!keyToNewIndexMap.has(kKey)) {
+        keyToNewIndexMap.set(kKey, k);
+      }
     }
 
     const unhandledNewCount = e1 - s1 + 1;
@@ -172,7 +175,7 @@ export function reconcileKeyedList(
     for (let k = s2; k <= e2; k++) {
       const oldRec = oldCache[k]!;
       const newIndex = keyToNewIndexMap.get(oldRec.key);
-      if (newIndex === undefined) {
+      if (newIndex === undefined || sources[newIndex - s1] !== -1) {
         removeRecordNodes(oldRec);
       } else {
         const newIndexInSources = newIndex - s1;

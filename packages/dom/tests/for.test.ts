@@ -459,6 +459,45 @@ describe('DriftJS @for Directive Integration Suite', () => {
     updateRowSpy.mockRestore();
     document.body.removeChild(container);
   });
+
+  it('warns when duplicate keys are encountered without generating fake __dup_ keys', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const src = `
+      <script>
+        let items = [
+          { id: 1, text: 'First 1' },
+          { id: 1, text: 'Duplicate 1' },
+          { id: 2, text: 'Second' }
+        ];
+      </script>
+      <ul>
+        @for item in items key item.id {
+          <li>{item.text}</li>
+        }
+      </ul>
+    `;
+
+    const mod = compile(src);
+    const vm = new DriftClientVM();
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = vm.execute(mod, { document });
+    if (root) container.appendChild(root);
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Duplicate key "1" detected in @for loop')
+    );
+
+    const lis = container.querySelectorAll('li');
+    expect(lis).toHaveLength(3);
+    expect(lis[0]?.textContent).toBe('First 1');
+    expect(lis[1]?.textContent).toBe('Duplicate 1');
+    expect(lis[2]?.textContent).toBe('Second');
+
+    warnSpy.mockRestore();
+    document.body.removeChild(container);
+  });
 });
 
 

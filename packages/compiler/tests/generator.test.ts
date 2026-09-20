@@ -604,12 +604,26 @@ describe('DriftGenerator', () => {
       expect(scriptConst.__drift_fn__).not.toContain('.log');
     });
 
-    it('does not mangle regular data objects or arrays containing a .type property', () => {
+    it('emits clean CallExpression without synthetic array mutator IIFEs', () => {
       const src = `
-        <div>{items}</div>
+        <script>
+          let list = [];
+          function addItem(x) {
+            list.push(x);
+          }
+        </script>
+        <button onclick={() => list.push(1)}>Add</button>
       `;
       const module = compile(src);
-      expect(module.constants.some((c) => typeof c === 'object' && c?.__drift_fn__)).toBe(true);
+      const allFnStrings = module.constants
+        .filter((c: any) => c && typeof c === 'object' && typeof c.__drift_fn__ === 'string')
+        .map((c: any) => c.__drift_fn__);
+
+      expect(allFnStrings.length).toBeGreaterThan(0);
+      for (const fn of allFnStrings) {
+        expect(fn).not.toContain('(() => { const _res =');
+        expect(fn).not.toContain('setScopeValue(scope, "list", scope["list"])');
+      }
     });
   });
 });

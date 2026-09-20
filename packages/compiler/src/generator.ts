@@ -989,19 +989,7 @@ export function astToJS(node: any, locals?: Set<string>): string {
       const calleeJS = astToJS(node.callee, locals);
       const argsJS = node.arguments ? node.arguments.map((arg: any) => astToJS(arg, locals)).join(', ') : '';
       const optCall = node.optional ? '?.(' : '(';
-      const rawCall = `(${calleeJS}${optCall}${argsJS}))`;
-      if (
-        node.callee?.type === 'MemberExpression' &&
-        node.callee.property?.type === 'Identifier'
-      ) {
-        const rootObjName = getRootIdentifier(node.callee.object);
-        const methodName = node.callee.property.name;
-        const arrayMutators = ['push', 'pop', 'shift', 'unshift', 'splice', 'sort', 'reverse'];
-        if (rootObjName && arrayMutators.includes(methodName) && (!locals || !locals.has(rootObjName))) {
-          return `(() => { const _res = ${rawCall}; if (typeof setScopeValue === 'function' && scope && typeof inScopeChain === 'function' && inScopeChain(scope, ${JSON.stringify(rootObjName)})) setScopeValue(scope, ${JSON.stringify(rootObjName)}, scope[${JSON.stringify(rootObjName)}]); return _res; })()`;
-        }
-      }
-      return rawCall;
+      return `(${calleeJS}${optCall}${argsJS}))`;
     }
 
     case 'AssignmentExpression': {

@@ -440,110 +440,109 @@ export class DriftParser {
       header = header.slice(1, -1).trim();
     }
 
-    let item = '';
-    let index: string | null = null;
-    let iterable = '';
-    let key: string | null = null;
+    // 1. Locate the top-level 'in' keyword using Acorn's tokenizer with depth tracking
+    let inToken: any = null;
+    let parenDepth = 0;
+    let bracketDepth = 0;
+    let braceDepth = 0;
+    let tokenizerError: any = null;
 
-    let forAst: any = null;
     try {
-      forAst = acorn.parseExpressionAt(header, 0, { ecmaVersion: 'latest' });
-    } catch {
-      forAst = null;
+      const tokenizer = acorn.tokenizer(header, { ecmaVersion: 'latest' });
+      for (const tok of tokenizer) {
+        if (tok.type === acorn.tokTypes.parenL) {
+          parenDepth++;
+        } else if (tok.type === acorn.tokTypes.parenR) {
+          parenDepth = Math.max(0, parenDepth - 1);
+        } else if (tok.type === acorn.tokTypes.bracketL) {
+          bracketDepth++;
+        } else if (tok.type === acorn.tokTypes.bracketR) {
+          bracketDepth = Math.max(0, bracketDepth - 1);
+        } else if (tok.type === acorn.tokTypes.braceL || tok.type === acorn.tokTypes.dollarBraceL) {
+          braceDepth++;
+        } else if (tok.type === acorn.tokTypes.braceR) {
+          braceDepth = Math.max(0, braceDepth - 1);
+        } else if (
+          tok.type === acorn.tokTypes._in &&
+          parenDepth === 0 &&
+          bracketDepth === 0 &&
+          braceDepth === 0
+        ) {
+          inToken = tok;
+          break;
+        }
+      }
+    } catch (err) {
+      tokenizerError = err;
     }
 
-    if (forAst && forAst.type === 'BinaryExpression' && forAst.operator === 'in') {
-      if (forAst.left.type === 'SequenceExpression') {
-        const exprs = forAst.left.expressions;
-        if (exprs.length < 1 || exprs.length > 2) {
-          throw new DriftParserError(
-            `Invalid @for target bindings. Expected at most 2 variables (item, index).`,
-            forToken.loc.start.line,
-            forToken.loc.start.column,
-            forToken.loc.start.offset
-          );
-        }
-        item = header.slice(exprs[0].start, exprs[0].end).trim();
-        index = exprs.length === 2 ? header.slice(exprs[1].start, exprs[1].end).trim() : null;
-      } else {
-        item = header.slice(forAst.left.start, forAst.left.end).trim();
-      }
-
-      iterable = header.slice(forAst.right.start, forAst.right.end).trim();
-
-      const remaining = header.slice(forAst.end).trim();
-      if (remaining.length > 0) {
-        if (remaining.startsWith('key ') || remaining.startsWith('key\t') || remaining.startsWith('key\n')) {
-          const keyRaw = remaining.slice(3).trim();
-          try {
-            const keyAst = acorn.parseExpressionAt(keyRaw, 0, { ecmaVersion: 'latest' });
-            key = keyRaw.slice(0, keyAst.end).trim();
-          } catch {
-            throw new DriftParserError(
-              `Invalid key expression in @for directive: '${keyRaw}'`,
-              forToken.loc.start.line,
-              forToken.loc.start.column,
-              forToken.loc.start.offset
-            );
-          }
-        } else {
-          throw new DriftParserError(
-            `Unexpected token '${remaining}' in @for header. Expected 'key <expression>' or block opening '{'.`,
-            forToken.loc.start.line,
-            forToken.loc.start.column,
-            forToken.loc.start.offset
-          );
-        }
-      }
-    } else {
-      let inIdx = -1;
-      let matchedParamsAst: any = null;
-
-      for (let i = 0; i < header.length - 1; i++) {
-        if (header[i] === 'i' && header[i + 1] === 'n') {
-          const before = i === 0 || !/[a-zA-Z0-9_$]/.test(header[i - 1]!);
-          const after = i + 2 >= header.length || !/[a-zA-Z0-9_$]/.test(header[i + 2]!);
-          if (before && after) {
-            const candidateLhs = header.slice(0, i).trim();
-            const wrappedLhs = candidateLhs.startsWith('(') && candidateLhs.endsWith(')')
-              ? candidateLhs
-              : `(${candidateLhs})`;
-            try {
-              const arrowFnAst: any = acorn.parseExpressionAt(`${wrappedLhs} => {}`, 0, { ecmaVersion: 'latest' });
-              if (arrowFnAst && arrowFnAst.type === 'ArrowFunctionExpression') {
-                inIdx = i;
-                matchedParamsAst = arrowFnAst.params;
-                break;
-              }
-            } catch {
-              // Try next boundary
-            }
-          }
-        }
-      }
-
-      if (inIdx === -1 || !matchedParamsAst) {
+    if (!inToken) {
+      if (tokenizerError) {
         throw new DriftParserError(
-          `Invalid @for header syntax '${forToken.value.trim()}'. Expected format: 'item in list' or '(item, index) in list'`,
+          `Syntax error in @for header: ${tokenizerError.message}`,
+          forToken.loc.start.line,
+          forToken.loc.start.column,
+          forToken.loc.start.offset
+        );
+      }
+      throw new DriftParserError(
+        `Invalid @for header syntax '${forToken.value.trim()}'. Expected format: 'item in list' or '(item, index) in list'`,
+        forToken.loc.start.line,
+        forToken.loc.start.column,
+        forToken.loc.start.offset
+      );
+    }
+
+    // 2. Parse Target Bindings (LHS) via Acorn token stream
+    let lhs = header.slice(0, inToken.start).trim();
+
+    if (lhs.length === 0) {
+      throw new DriftParserError(
+        `Invalid @for header syntax '${forToken.value.trim()}'. Expected format: 'item in list' or '(item, index) in list'`,
+        forToken.loc.start.line,
+        forToken.loc.start.column,
+        forToken.loc.start.offset
+      );
+    }
+
+    let item = '';
+    let index: string | null = null;
+
+    if (hasMatchingOuterParens(lhs)) {
+      const inner = lhs.slice(1, -1).trim();
+      const commaIndices: number[] = [];
+      let pDepth = 0;
+      let bDepth = 0;
+      let brDepth = 0;
+
+      try {
+        const tokenizer = acorn.tokenizer(inner, { ecmaVersion: 'latest' });
+        for (const tok of tokenizer) {
+          if (tok.type === acorn.tokTypes.parenL) pDepth++;
+          else if (tok.type === acorn.tokTypes.parenR) pDepth = Math.max(0, pDepth - 1);
+          else if (tok.type === acorn.tokTypes.bracketL) bDepth++;
+          else if (tok.type === acorn.tokTypes.bracketR) bDepth = Math.max(0, bDepth - 1);
+          else if (tok.type === acorn.tokTypes.braceL || tok.type === acorn.tokTypes.dollarBraceL) brDepth++;
+          else if (tok.type === acorn.tokTypes.braceR) brDepth = Math.max(0, brDepth - 1);
+          else if (tok.type === acorn.tokTypes.comma && pDepth === 0 && bDepth === 0 && brDepth === 0) {
+            commaIndices.push(tok.start);
+          }
+        }
+      } catch (err: any) {
+        throw new DriftParserError(
+          `Invalid @for target bindings '${lhs}': ${err.message}`,
           forToken.loc.start.line,
           forToken.loc.start.column,
           forToken.loc.start.offset
         );
       }
 
-      const lhs = header.slice(0, inIdx).trim();
-      const rhs = header.slice(inIdx + 2).trim();
-
-      if (matchedParamsAst.length === 1) {
-        let rawItem = lhs;
-        while (hasMatchingOuterParens(rawItem)) rawItem = rawItem.slice(1, -1).trim();
-        item = rawItem;
-      } else if (matchedParamsAst.length === 2) {
-        let unwrapped = lhs;
-        while (hasMatchingOuterParens(unwrapped)) unwrapped = unwrapped.slice(1, -1).trim();
-        const comma = unwrapped.lastIndexOf(',');
-        item = unwrapped.slice(0, comma).trim();
-        index = unwrapped.slice(comma + 1).trim();
+      if (commaIndices.length === 0) {
+        item = inner;
+      } else if (commaIndices.length === 1) {
+        const comma = commaIndices[0]!;
+        item = inner.slice(0, comma).trim();
+        index = inner.slice(comma + 1).trim();
       } else {
         throw new DriftParserError(
           `Invalid @for target bindings. Expected at most 2 variables (item, index).`,
@@ -552,29 +551,149 @@ export class DriftParser {
           forToken.loc.start.offset
         );
       }
-
+    } else {
+      // Step 2: Reject unparenthesized top-level comma
+      let pDepth = 0;
+      let bDepth = 0;
+      let brDepth = 0;
+      let hasTopLevelComma = false;
       try {
-        const iterAst = acorn.parseExpressionAt(rhs, 0, { ecmaVersion: 'latest' });
-        iterable = rhs.slice(0, iterAst.end).trim();
-        const remaining = rhs.slice(iterAst.end).trim();
-        if (remaining.length > 0) {
-          if (remaining.startsWith('key ') || remaining.startsWith('key\t') || remaining.startsWith('key\n')) {
-            const keyRaw = remaining.slice(3).trim();
-            const keyAst = acorn.parseExpressionAt(keyRaw, 0, { ecmaVersion: 'latest' });
-            key = keyRaw.slice(0, keyAst.end).trim();
-          } else {
+        const tokenizer = acorn.tokenizer(lhs, { ecmaVersion: 'latest' });
+        for (const tok of tokenizer) {
+          if (tok.type === acorn.tokTypes.parenL) pDepth++;
+          else if (tok.type === acorn.tokTypes.parenR) pDepth = Math.max(0, pDepth - 1);
+          else if (tok.type === acorn.tokTypes.bracketL) bDepth++;
+          else if (tok.type === acorn.tokTypes.bracketR) bDepth = Math.max(0, bDepth - 1);
+          else if (tok.type === acorn.tokTypes.braceL || tok.type === acorn.tokTypes.dollarBraceL) brDepth++;
+          else if (tok.type === acorn.tokTypes.braceR) brDepth = Math.max(0, brDepth - 1);
+          else if (tok.type === acorn.tokTypes.comma && pDepth === 0 && bDepth === 0 && brDepth === 0) {
+            hasTopLevelComma = true;
+            break;
+          }
+        }
+      } catch {
+        // Handled below by item binding validation
+      }
+
+      if (hasTopLevelComma) {
+        throw new DriftParserError(
+          `Invalid @for target bindings '${lhs}'. Multiple loop variables must be enclosed in parentheses: '(${lhs})'.`,
+          forToken.loc.start.line,
+          forToken.loc.start.column,
+          forToken.loc.start.offset
+        );
+      }
+
+      item = lhs;
+    }
+
+    // Step 1: Validate item binding via Acorn AST inspection
+    if (item.length === 0) {
+      throw new DriftParserError(
+        `Expected item identifier in @for target bindings.`,
+        forToken.loc.start.line,
+        forToken.loc.start.column,
+        forToken.loc.start.offset
+      );
+    }
+    try {
+      const parsed: any = acorn.parse(`let ${item} = 0;`, { ecmaVersion: 'latest' });
+      if (
+        !parsed ||
+        !Array.isArray(parsed.body) ||
+        parsed.body.length !== 1 ||
+        parsed.body[0].type !== 'VariableDeclaration' ||
+        !Array.isArray(parsed.body[0].declarations) ||
+        parsed.body[0].declarations.length !== 1
+      ) {
+        throw new Error();
+      }
+    } catch {
+      throw new DriftParserError(
+        `Invalid @for item binding '${item}'. Expected a valid variable identifier or destructuring pattern.`,
+        forToken.loc.start.line,
+        forToken.loc.start.column,
+        forToken.loc.start.offset
+      );
+    }
+
+    // Validate index binding if present
+    if (index !== null) {
+      if (index.length === 0) {
+        throw new DriftParserError(
+          `Unexpected trailing comma in @for target bindings. Expected index identifier.`,
+          forToken.loc.start.line,
+          forToken.loc.start.column,
+          forToken.loc.start.offset
+        );
+      }
+      try {
+        const indexAst = acorn.parseExpressionAt(index, 0, { ecmaVersion: 'latest' });
+        if (indexAst.type !== 'Identifier' || index.slice(indexAst.end).trim().length > 0) {
+          throw new Error();
+        }
+      } catch {
+        throw new DriftParserError(
+          `Invalid @for index binding '${index}'. Array index must be a valid identifier.`,
+          forToken.loc.start.line,
+          forToken.loc.start.column,
+          forToken.loc.start.offset
+        );
+      }
+    }
+
+    // 3. Parse Iterable Expression (RHS) via Acorn
+    const rhsStart = inToken.end;
+    const rhsRaw = header.slice(rhsStart);
+    const leadingWhitespaceLen = rhsRaw.length - rhsRaw.trimStart().length;
+    const iterExprStart = rhsStart + leadingWhitespaceLen;
+
+    let iterable = '';
+    let iterAst: any = null;
+
+    try {
+      iterAst = acorn.parseExpressionAt(header, iterExprStart, { ecmaVersion: 'latest' });
+      iterable = header.slice(iterExprStart, iterAst.end).trim();
+    } catch {
+      throw new DriftParserError(
+        `Invalid @for iterable expression in '${forToken.value.trim()}'`,
+        forToken.loc.start.line,
+        forToken.loc.start.column,
+        forToken.loc.start.offset
+      );
+    }
+
+    // 4. Parse Optional 'key' Clause
+    let key: string | null = null;
+    const remaining = header.slice(iterAst.end).trim();
+
+    if (remaining.length > 0) {
+      if (remaining.startsWith('key ') || remaining.startsWith('key\t') || remaining.startsWith('key\n')) {
+        const keyRaw = remaining.slice(3).trim();
+        try {
+          const keyAst = acorn.parseExpressionAt(keyRaw, 0, { ecmaVersion: 'latest' });
+          key = keyRaw.slice(0, keyAst.end).trim();
+          const keyRemaining = keyRaw.slice(keyAst.end).trim();
+          if (keyRemaining.length > 0) {
             throw new DriftParserError(
-              `Unexpected token '${remaining}' in @for header. Expected 'key <expression>' or block opening '{'.`,
+              `Unexpected token '${keyRemaining}' after key expression in @for directive.`,
               forToken.loc.start.line,
               forToken.loc.start.column,
               forToken.loc.start.offset
             );
           }
+        } catch (err: any) {
+          if (err instanceof DriftParserError) throw err;
+          throw new DriftParserError(
+            `Invalid key expression in @for directive: '${keyRaw}'`,
+            forToken.loc.start.line,
+            forToken.loc.start.column,
+            forToken.loc.start.offset
+          );
         }
-      } catch (err: any) {
-        if (err instanceof DriftParserError) throw err;
+      } else {
         throw new DriftParserError(
-          `Invalid @for iterable expression in '${forToken.value.trim()}'`,
+          `Unexpected token '${remaining}' in @for header. Expected 'key <expression>' or block opening '{'.`,
           forToken.loc.start.line,
           forToken.loc.start.column,
           forToken.loc.start.offset

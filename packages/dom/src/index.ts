@@ -1133,66 +1133,8 @@ export class DriftClientVM {
                   record.itemVal = itemVal;
                   record.indexVal = indexVal;
 
-                  if (record.registers && record.nodes.length > 0) {
+                  if (record.registers) {
                     vm.updateRowRegisters(bodyMod, childScope, record.registers, equal ? undefined : record.childRegions);
-                    return;
-                  }
-
-                  if (equal) {
-                    return;
-                  }
-
-                  if (record.childRegions) {
-                    for (const r of record.childRegions) {
-                      vm.removeRegion(r);
-                    }
-                  }
-
-                  const { fragment: frag, createdRegions, registers: newRegisters } = vm.runSubModule(bodyMod, childScope);
-                  record.childRegions = createdRegions;
-                  record.registers = newRegisters;
-
-                  if (frag && record.nodes.length > 0) {
-                    const rootNode = record.nodes[0];
-                    if (
-                      frag.childNodes.length === 1 &&
-                      frag.childNodes[0]?.nodeName === rootNode?.nodeName &&
-                      rootNode &&
-                      typeof (rootNode as any).setAttribute === 'function'
-                    ) {
-                      const newElem = frag.childNodes[0] as Element;
-                      const elem = rootNode as Element;
-                      const newHandlers = DriftClientVM.eventHandlersMap.get(newElem);
-                      if (newHandlers) {
-                        DriftClientVM.eventHandlersMap.set(elem, newHandlers);
-                      } else {
-                        DriftClientVM.eventHandlersMap.delete(elem);
-                      }
-                      for (const attr of Array.from(elem.attributes)) {
-                        elem.removeAttribute(attr.name);
-                      }
-                      for (const attr of Array.from(newElem.attributes)) {
-                        elem.setAttribute(attr.name, attr.value);
-                      }
-                      while (elem.firstChild) {
-                        vm.unmountSubtree(elem.firstChild);
-                        elem.removeChild(elem.firstChild);
-                      }
-                      while (newElem.firstChild) {
-                        elem.appendChild(newElem.firstChild);
-                      }
-                    } else if (rootNode?.parentNode) {
-                      const parent = rootNode.parentNode;
-                      const newNodes = frag.nodeType === 11 ? Array.from(frag.childNodes) : [frag];
-                      parent.insertBefore(frag, rootNode);
-                      for (const oldNode of record.nodes) {
-                        if (oldNode.parentNode === parent) {
-                          vm.unmountSubtree(oldNode);
-                          parent.removeChild(oldNode);
-                        }
-                      }
-                      record.nodes = newNodes;
-                    }
                   }
                 },
                 removeItem

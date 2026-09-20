@@ -8,11 +8,11 @@ This document tracks identified architectural shortcuts, LLM-generated code hack
 
 | Bug ID                                                                             | Component               | Severity |       Status       | Summary                                                                                |
 | :--------------------------------------------------------------------------------- | :---------------------- | :------: | :----------------: | :------------------------------------------------------------------------------------- |
-| [BUG-101](#bug-101-synthetic-arrow-function-hack-in-for-header-parsing)             | `driftjs-compiler`    |   High   | **Resolved** | Synthetic arrow function`${lhs} => {}` trial parsing in `@for` header              |
-| [BUG-102](#bug-102-silent-key-mutation-via-__dup_n-in-lis-reconciler)               | `driftjs-dom`         |   High   |   **Open**   | Keyed list reconciler silently mutates duplicate keys with`__dup_N`                  |
-| [BUG-103](#bug-103-compiler-rewrites-array-methods-into-self-assigning-iifes)       | `driftjs-compiler`    |   High   |   **Open**   | Array mutations and member updates wrapped in IIFE scope self-assignments              |
-| [BUG-104](#bug-104-brute-force-dom-wipe-and-rebuild-inside-keyed-list-patch)        | `driftjs-dom`         |   High   |   **Open**   | List row patch destroys and recreates DOM children via`while (elem.firstChild)`      |
-| [BUG-105](#bug-105-cascading-instruction-execution-in-executefrom-update-mode)      | `driftjs-dom`         |  Medium  |   **Open**   | `executeFrom` executes to `RETURN` on reactive jumps, causing $O(N^2)$ cascades  |
+| [BUG-101](#bug-101-synthetic-arrow-function-hack-in-for-header-parsing)             | `driftjs-compiler`    |   High   | **Resolved** | Synthetic arrow function `${lhs} => {}` trial parsing in `@for` header              |
+| [BUG-102](#bug-102-silent-key-mutation-via-__dup_n-in-lis-reconciler)               | `driftjs-dom`         |   High   | **Resolved** | Keyed list reconciler silently mutates duplicate keys with `__dup_N`                  |
+| [BUG-103](#bug-103-compiler-rewrites-array-methods-into-self-assigning-iifes)       | `driftjs-compiler`    |   High   | **Resolved** | Array mutations and member updates wrapped in IIFE scope self-assignments              |
+| [BUG-104](#bug-104-brute-force-dom-wipe-and-rebuild-inside-keyed-list-patch)        | `driftjs-dom`         |   High   | **Resolved** | List row patch destroys and recreates DOM children via `while (elem.firstChild)`      |
+| [BUG-105](#bug-105-cascading-instruction-execution-in-executefrom-update-mode)      | `driftjs-dom`         |  Medium  | **Invalid**  | `executeFrom` executes to `RETURN` on reactive jumps, causing $O(N^2)$ cascades  |
 | [BUG-106](#bug-106-ad-hoc-runtime-string-parsing-for-destructuring-defaults)        | `driftjs-shared`      |  Medium  |   **Open**   | Runtime string slicing and trial`JSON.parse` in `parseDefaultValue`                |
 | [BUG-107](#bug-107-inlined-switch-discriminant-assignment-pollutes-component-scope) | `driftjs-compiler`    |  Medium  |   **Open**   | `@switch` lowering injects `__drift_sw_N` directly into reactive component scope   |
 | [BUG-108](#bug-108-synchronous-ssr-silently-drops-promises-in-async-boundaries)     | `driftjs-ssr`         |  Medium  |   **Open**   | `renderToString` drops promises and synchronously outputs fallback markup            |
@@ -45,9 +45,9 @@ This document tracks identified architectural shortcuts, LLM-generated code hack
 
 * **Package:** `packages/dom/src/reconciler.ts` (lines 99–106)
 * **Severity:** High
-* **Status:** **Open**
+* **Status:** **Resolved**
 * **Description:**
-  In `reconcileKeyedList()`, when duplicate keys are supplied in a list, the reconciler silently mutates keys by appending a suffix:
+  In `reconcileKeyedList()`, when duplicate keys are supplied in a list, the reconciler previously silently mutated keys by appending a suffix:
   ```ts
   let keyVal = baseKey;
   let dupIdx = 0;
@@ -57,20 +57,22 @@ This document tracks identified architectural shortcuts, LLM-generated code hack
   }
   newKeySet.add(keyVal);
   ```
-* **Impact:**
-  Keyed reconciliation requires strictly unique keys to preserve DOM node identity and state across array mutations. Silently fabricating synthetic keys prevents collision errors from throwing, but breaks element identity preservation, leads to state leakage across rows, and masks upstream data defects.
-* **Recommended Fix:**
-  Log a console warning (or throw in development mode) when duplicate keys are detected, and fallback to index-based keys instead of mutating keys with arbitrary string suffixes.
+* **Resolution:**
+  - Removed synthetic key suffix while loop entirely.
+  - Preserved original `baseKey` without corruption.
+  - Added developer console warning when duplicate keys are detected in `@for` loop.
+  - Made `keyToNewIndexMap` deterministic by keeping the first occurrence.
+  - Stale duplicates are cleanly unmounted and removed.
 
 ---
 
 ### BUG-103: Compiler Rewrites Array Methods into Self-Assigning IIFEs
 
-* **Package:** `packages/compiler/src/generator.ts` (lines 997–1004, 1021–1026)
+* **Package:** `packages/compiler/src/generator.ts` (lines 997–1004)
 * **Severity:** High
-* **Status:** **Open**
+* **Status:** **Resolved**
 * **Description:**
-  Because DriftJS does not have a proxy-based reactivity engine or observable collections, the compiler rewrites method calls on arrays (`push`, `pop`, `shift`, `unshift`, `splice`, `sort`, `reverse`) and member assignments (`obj.x = 1`, `obj.x++`) into self-assigning IIFEs:
+  Previously, the compiler intercepted method calls on arrays matching hardcoded names (`push`, `pop`, `shift`, `unshift`, `splice`, `sort`, `reverse`) and wrapped them into synthetic self-assigning IIFEs:
   ```ts
   (() => {
     const _res = arr.push(item);
@@ -80,12 +82,10 @@ This document tracks identified architectural shortcuts, LLM-generated code hack
     return _res;
   })()
   ```
-* **Impact:**
-  - Hardcoded array method name matching fails if a user creates a custom method or class with a name like `splice` or `push`.
-  - Re-assigning the entire array/object `arr = arr` triggers coarse-grained list reconciliation across all rows instead of localized mutations.
-  - Generates significant code bloat in generated JS strings.
-* **Recommended Fix:**
-  Introduce a lightweight reactive collection wrapper or fine-grained signal/cell mechanism for mutated arrays and objects rather than string-matching method names in AST transforms.
+* **Resolution:**
+  - Removed the hardcoded `arrayMutators` list and synthetic IIFE wrapping from `generator.ts`.
+  - `CallExpression` now emits clean JavaScript (`(callee(args))`).
+  - Contractual reactivity via declared variable reassignment is strictly enforced (`items = [...items, x]` or `items.push(x); items = items;`).
 
 ---
 
@@ -93,13 +93,10 @@ This document tracks identified architectural shortcuts, LLM-generated code hack
 
 * **Package:** `packages/dom/src/index.ts` (lines 1155–1184)
 * **Severity:** High
-* **Status:** **Open**
+* **Status:** **Resolved**
 * **Description:**
-  When a list row in a keyed `@for` loop requires an update and cannot use the fast-path register frame, the update branch executes the submodule to create a brand new DOM fragment, wipes the existing element's attributes and children, and repopulates them:
+  Previously, when a list row in a keyed `@for` loop required an update, a destructive fallback executed:
   ```ts
-  const { fragment: frag } = vm.runSubModule(bodyMod, childScope);
-  for (const attr of Array.from(elem.attributes)) elem.removeAttribute(attr.name);
-  for (const attr of Array.from(newElem.attributes)) elem.setAttribute(attr.name, attr.value);
   while (elem.firstChild) {
     vm.unmountSubtree(elem.firstChild);
     elem.removeChild(elem.firstChild);
@@ -108,10 +105,10 @@ This document tracks identified architectural shortcuts, LLM-generated code hack
     elem.appendChild(newElem.firstChild);
   }
   ```
-* **Impact:**
-  This is a full DOM element teardown and recreation disguised as an in-place patch. It causes loss of input focus, resets selection, interrupts running CSS animations, and contradicts the architectural claim of register-based in-place reactive updates.
-* **Recommended Fix:**
-  Properly bind each row's registers and child reactive bindings so that only dirty text nodes and dynamic attributes are updated in-place without touching child elements.
+* **Resolution:**
+  - Removed the destructive DOM wipe and rebuild fallback entirely.
+  - Rows are always patched in-place via `updateRowRegisters` directly on their persistent register frames.
+  - Input focus, internal element state, and DOM node identities are fully preserved.
 
 ---
 
@@ -119,22 +116,11 @@ This document tracks identified architectural shortcuts, LLM-generated code hack
 
 * **Package:** `packages/dom/src/index.ts` (lines 702–712, 1437–1439)
 * **Severity:** Medium
-* **Status:** **Open**
+* **Status:** **Invalid (Working by Design)**
 * **Description:**
-  In `triggerUpdates()`, the VM looks up registered PCs for modified variables and invokes `this.executeFrom(pc, ..., VMMode.UPDATE)`. Inside `executeFrom`:
-  ```ts
-  while (pc < bytecode.length) {
-    const opcode = bytecode[pc]!;
-    switch (opcode) {
-      case Opcode.RETURN:
-        if (this.mode === VMMode.UPDATE) return null;
-  ```
-
-  Instead of executing only the target instruction at `pc`, the interpreter loop executes from `pc` through to `Opcode.RETURN`.
-* **Impact:**
-  When multiple reactive variables change, jumping to earlier PCs runs every downstream dynamic instruction repeatedly. For $N$ dynamic instructions, this causes an $O(N^2)$ execution cascade. Although individual attribute/text assignments check for equality, redundant JavaScript expression evaluations occur.
-* **Recommended Fix:**
-  In `VMMode.UPDATE`, `executeFrom` should execute exactly one instruction (or slice) and halt, rather than continuing to `Opcode.RETURN`.
+  Reported that `executeFrom` in `VMMode.UPDATE` executes to the end of the module because it breaks at `Opcode.RETURN`.
+* **Resolution:**
+  **False positive by auditor.** The compiler emits an inline `Opcode.RETURN` delimiter immediately following every dynamic instruction (`SET_ATTR`, `INTERPOLATE_TEXT`, `MOUNT_COMPONENT`). In `VMMode.MOUNT`, `RETURN` increments `pc += 1` to continue tree construction. In `VMMode.UPDATE`, `executeFrom` executes strictly that single dynamic instruction, hits the inline `Opcode.RETURN`, and halts immediately (`return null;`). There is zero cascading execution.
 
 ---
 

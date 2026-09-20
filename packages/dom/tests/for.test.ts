@@ -498,6 +498,67 @@ describe('DriftJS @for Directive Integration Suite', () => {
     warnSpy.mockRestore();
     document.body.removeChild(container);
   });
+
+  it('preserves child DOM node identity and child element state during keyed row patch (no wipe)', () => {
+    const src = `
+      <script>
+        let items = [
+          { id: 1, text: 'Item 1' },
+          { id: 2, text: 'Item 2' }
+        ];
+        function updateItemOne() {
+          items = [
+            { id: 1, text: 'Item 1 Updated' },
+            { id: 2, text: 'Item 2' }
+          ];
+        }
+      </script>
+      <div>
+        <button id="update-btn" onclick={updateItemOne}>Update</button>
+        <ul>
+          @for item in items key item.id {
+            <li class="row">
+              <span class="label">{item.text}</span>
+              <input class="row-input" />
+            </li>
+          }
+        </ul>
+      </div>
+    `;
+
+    const mod = compile(src);
+    const vm = new DriftClientVM();
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = vm.execute(mod, { document });
+    if (root) container.appendChild(root);
+
+    const firstLi = container.querySelector('li')!;
+    const firstSpan = container.querySelector('.label')!;
+    const firstInput = container.querySelector('.row-input') as HTMLInputElement;
+
+    // Simulate user typing into input inside the row
+    firstInput.value = 'user typed text';
+
+    (container.querySelector('#update-btn') as HTMLButtonElement).click();
+
+    const updatedLi = container.querySelector('li')!;
+    const updatedSpan = container.querySelector('.label')!;
+    const updatedInput = container.querySelector('.row-input') as HTMLInputElement;
+
+    // Node identities must be strictly preserved — NO wipe and rebuild!
+    expect(updatedLi).toBe(firstLi);
+    expect(updatedSpan).toBe(firstSpan);
+    expect(updatedInput).toBe(firstInput);
+
+    // Dynamic text is updated in-place
+    expect(updatedSpan.textContent).toBe('Item 1 Updated');
+
+    // User state in input was NOT destroyed/reset
+    expect(updatedInput.value).toBe('user typed text');
+
+    document.body.removeChild(container);
+  });
 });
 
 

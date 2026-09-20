@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   evaluateExpression,
   setScopeValue,
+  setScopeProp,
   inScopeChain,
   populateItemScope,
   resolveIterable,
@@ -11,10 +12,6 @@ import {
   camelToKebab,
   MAX_REGISTERS,
   VOID_ELEMENTS,
-  scanBalancedDelimiters,
-  findTopLevelChar,
-  splitPatternEntries,
-  hasMatchingOuterParens,
 } from '../src/index.js';
 
 describe('driftjs-shared Module', () => {
@@ -162,50 +159,29 @@ describe('driftjs-shared Module', () => {
     });
   });
 
-  describe('Balanced Scanner Utilities (BUG-028)', () => {
-    it('findTopLevelChar correctly finds chars at depth 0 ignoring quotes, comments, regex, and brackets', () => {
-      const expr = `(a, b = "x,y", c = [1, 2], d = { key: 'a,b' }) => a + b`;
-      expect(findTopLevelChar(expr, '>')).toBe(48);
-      expect(findTopLevelChar(`a, b /* comment with , */, c`, ',')).toBe(1);
-    });
-
-    it('splitPatternEntries splits top-level pattern commas accurately', () => {
-      const pattern = `a, { b, c = 10, d: [e, f = 'hello, world'] }, ...rest`;
-      const entries = splitPatternEntries(pattern);
-      expect(entries).toEqual([
-        'a',
-        "{ b, c = 10, d: [e, f = 'hello, world'] }",
-        '...rest',
-      ]);
-    });
-
-    it('hasMatchingOuterParens determines if string is enclosed in matching parens', () => {
-      expect(hasMatchingOuterParens('(item, index)')).toBe(true);
-      expect(hasMatchingOuterParens('(item, index) in list')).toBe(false);
-      expect(hasMatchingOuterParens('(a) + (b)')).toBe(false);
-      expect(hasMatchingOuterParens('item')).toBe(false);
-    });
-  });
-
   describe('populateItemScope (BUG-004)', () => {
-    it('resolves literals and scope variables in destructuring default values', () => {
-      const scope: Record<string, any> = {
-        defaultRole: 'member',
-        defaultCount: 10,
-      };
+    it('stores plain identifier values under the raw key (BUG-113)', () => {
+      const scope: Record<string, any> = {};
+
+      populateItemScope(scope, 'user', { id: 101, name: 'Ada' }, 'i', 0);
+
+      expect(scope.user).toEqual({ id: 101, name: 'Ada' });
+      expect(scope.i).toBe(0);
+    });
+
+    it('does NOT string-scan destructuring patterns (BUG-113) — assignment stays literal', () => {
+      const scope: Record<string, any> = {};
 
       populateItemScope(
         scope,
-        '{ id, name = "Anonymous", role = defaultRole, count = defaultCount }',
-        { id: 101 },
+        '{ id, name = "Anonymous" }',
+        { id: 101, name: 'Ada' },
         null,
         0
       );
 
-      expect(scope.id).toBe(101);
-      expect(scope.name).toBe('Anonymous');
-      expect(scope.role).toBe('member');
-      expect(scope.count).toBe(10);
+      expect(scope['{ id, name = "Anonymous" }']).toEqual({ id: 101, name: 'Ada' });
+      expect(scope.id).toBeUndefined();
     });
 
     it('strictly prevents prototype pollution via __proto__, constructor, and prototype', () => {
@@ -221,6 +197,32 @@ describe('driftjs-shared Module', () => {
       expect((Object.prototype as any).polluted).toBeUndefined();
       expect((Object.prototype as any).evil).toBeUndefined();
       expect(scope.__proto__).toBe(Object.prototype);
+    });
+  });
+
+  describe('setScopeProp', () => {
+    it('safely assigns own property on scope and returns value', () => {
+      const scope: Record<string, any> = {};
+      const res = setScopeProp(scope, 'foo', 'bar');
+      expect(res).toBe('bar');
+      expect(scope.foo).toBe('bar');
+      expect(Object.prototype.hasOwnProperty.call(scope, 'foo')).toBe(true);
+    });
+
+    it('rejects prototype pollution keys', () => {
+      const scope: Record<string, any> = {};
+      setScopeProp(scope, '__proto__', { evil: true });
+      setScopeProp(scope, 'constructor', { evil: true });
+      setScopeProp(scope, 'prototype', { evil: true });
+      setScopeProp(scope, '__drift_mark_dirty__', () => {});
+
+      expect((Object.prototype as any).evil).toBeUndefined();
+      expect(scope.constructor).toBe(Object);
+    });
+
+    it('safely handles non-object scope arguments', () => {
+      expect(setScopeProp(null as any, 'key', 123)).toBe(123);
+      expect(setScopeProp(undefined as any, 'key', 123)).toBe(123);
     });
   });
 });

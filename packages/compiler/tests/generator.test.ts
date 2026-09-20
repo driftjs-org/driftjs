@@ -78,8 +78,10 @@ describe('DriftGenerator', () => {
     const reactiveForIdx = module.bytecode.indexOf(Opcode.REACTIVE_FOR);
     expect(reactiveForIdx).toBeGreaterThan(-1);
 
-    // Operand layout: REACTIVE_FOR parentReg iterIdx itemNameIdx indexNameIdx keyIdx bodyIdx depsIdx iterDepsIdx rowDepsIdx
-    expect(module.bytecode.length).toBeGreaterThan(reactiveForIdx + 9);
+    // Operand layout: REACTIVE_FOR parentReg iterIdx itemNameIdx indexNameIdx keyIdx bodyIdx depsIdx iterDepsIdx rowDepsIdx itemPopulatorIdx
+    // The final operand is an AOT item-populator constant (BUG-112): retained from the
+    // parsed Acorn pattern so the runtime never string-scans destructuring patterns.
+    expect(module.bytecode.length).toBeGreaterThan(reactiveForIdx + 10);
   });
 
   it('generates bytecode for @switch, @case, and @default directives', () => {
@@ -105,8 +107,9 @@ describe('DriftGenerator', () => {
     const asyncIdx = module.bytecode.indexOf(Opcode.REACTIVE_ASYNC);
     expect(asyncIdx).toBeGreaterThan(-1);
 
-    // Operands: parentReg, promiseIdx, aliasIdx, bodyIdx, fallbackIdx, catchIdx, depsIdx
-    expect(module.bytecode.length).toBeGreaterThan(asyncIdx + 7);
+    // Operands: parentReg, promiseIdx, aliasIdx, bodyIdx, fallbackIdx, catchIdx, depsIdx, aliasPopulatorIdx
+    // The final operand is an AOT alias-populator constant (BUG-115).
+    expect(module.bytecode.length).toBeGreaterThan(asyncIdx + 8);
   });
 
   it('works end-to-end via compile() function', () => {

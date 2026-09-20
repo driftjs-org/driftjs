@@ -8,11 +8,6 @@ This document tracks identified architectural shortcuts, LLM-generated code hack
 
 | Bug ID                                                                             | Component               | Severity |       Status       | Summary                                                                                |
 | :--------------------------------------------------------------------------------- | :---------------------- | :------: | :----------------: | :------------------------------------------------------------------------------------- |
-| [BUG-101](#bug-101-synthetic-arrow-function-hack-in-for-header-parsing)             | `driftjs-compiler`    |   High   | **Resolved** | Synthetic arrow function `${lhs} => {}` trial parsing in `@for` header              |
-| [BUG-102](#bug-102-silent-key-mutation-via-__dup_n-in-lis-reconciler)               | `driftjs-dom`         |   High   | **Resolved** | Keyed list reconciler silently mutates duplicate keys with `__dup_N`                  |
-| [BUG-103](#bug-103-compiler-rewrites-array-methods-into-self-assigning-iifes)       | `driftjs-compiler`    |   High   | **Resolved** | Array mutations and member updates wrapped in IIFE scope self-assignments              |
-| [BUG-104](#bug-104-brute-force-dom-wipe-and-rebuild-inside-keyed-list-patch)        | `driftjs-dom`         |   High   | **Resolved** | List row patch destroys and recreates DOM children via `while (elem.firstChild)`      |
-| [BUG-105](#bug-105-cascading-instruction-execution-in-executefrom-update-mode)      | `driftjs-dom`         |  Medium  | **Invalid**  | `executeFrom` executes to `RETURN` on reactive jumps, causing $O(N^2)$ cascades  |
 | [BUG-106](#bug-106-ad-hoc-runtime-string-parsing-for-destructuring-defaults)        | `driftjs-shared`      |  Medium  |   **Open**   | Runtime string slicing and trial`JSON.parse` in `parseDefaultValue`                |
 | [BUG-107](#bug-107-inlined-switch-discriminant-assignment-pollutes-component-scope) | `driftjs-compiler`    |  Medium  |   **Open**   | `@switch` lowering injects `__drift_sw_N` directly into reactive component scope   |
 | [BUG-108](#bug-108-synchronous-ssr-silently-drops-promises-in-async-boundaries)     | `driftjs-ssr`         |  Medium  |   **Open**   | `renderToString` drops promises and synchronously outputs fallback markup            |
@@ -23,106 +18,6 @@ This document tracks identified architectural shortcuts, LLM-generated code hack
 ---
 
 ## Detailed Bug Reports
-
-### BUG-101: Synthetic Arrow Function Hack in `@for` Header Parsing
-
-* **Package:** `packages/compiler/src/parser.ts`
-* **Severity:** High
-* **Status:** **Resolved** (Verified in parser & test suite)
-* **Description:**
-  To parse `@for (item, index) in list key expr`, the compiler previously looped character-by-character searching for `"in"` and wrapped candidate LHS slices into mock arrow function strings `${wrappedLhs} => {}`, feeding them into `acorn.parseExpressionAt` inside a `try/catch` loop to guess the delimiter.
-* **Resolution:**
-  Replaced with a formal 4-phase parsing architecture:
-  1. Acorn's tokenizer (`acorn.tokTypes._in`) finds the delimiter at depth 0, with full depth tracking across `()`, `[]`, `{}`, and template literals (`tokTypes.dollarBraceL`).
-  2. LHS bindings are inspected for top-level unparenthesized commas (`@for a, b in list` is rejected with a descriptive error).
-  3. Single `item` binding is verified against Acorn AST ensuring strictly one variable declaration (`parsed.body.length === 1 && parsed.body[0].declarations.length === 1`).
-  4. Non-null `index` is verified to be a single, non-empty `Identifier`.
-  5. Acorn's Pratt parser parses the RHS iterable expression, followed by optional `key <expr>`.
-
----
-
-### BUG-102: Silent Key Mutation via `__dup_N` in LIS Reconciler
-
-* **Package:** `packages/dom/src/reconciler.ts` (lines 99–106)
-* **Severity:** High
-* **Status:** **Resolved**
-* **Description:**
-  In `reconcileKeyedList()`, when duplicate keys are supplied in a list, the reconciler previously silently mutated keys by appending a suffix:
-  ```ts
-  let keyVal = baseKey;
-  let dupIdx = 0;
-  while (newKeySet.has(keyVal)) {
-    dupIdx++;
-    keyVal = String(baseKey) + '__dup_' + dupIdx;
-  }
-  newKeySet.add(keyVal);
-  ```
-* **Resolution:**
-  - Removed synthetic key suffix while loop entirely.
-  - Preserved original `baseKey` without corruption.
-  - Added developer console warning when duplicate keys are detected in `@for` loop.
-  - Made `keyToNewIndexMap` deterministic by keeping the first occurrence.
-  - Stale duplicates are cleanly unmounted and removed.
-
----
-
-### BUG-103: Compiler Rewrites Array Methods into Self-Assigning IIFEs
-
-* **Package:** `packages/compiler/src/generator.ts` (lines 997–1004)
-* **Severity:** High
-* **Status:** **Resolved**
-* **Description:**
-  Previously, the compiler intercepted method calls on arrays matching hardcoded names (`push`, `pop`, `shift`, `unshift`, `splice`, `sort`, `reverse`) and wrapped them into synthetic self-assigning IIFEs:
-  ```ts
-  (() => {
-    const _res = arr.push(item);
-    if (typeof setScopeValue === 'function' && inScopeChain(scope, "arr")) {
-      setScopeValue(scope, "arr", scope["arr"]);
-    }
-    return _res;
-  })()
-  ```
-* **Resolution:**
-  - Removed the hardcoded `arrayMutators` list and synthetic IIFE wrapping from `generator.ts`.
-  - `CallExpression` now emits clean JavaScript (`(callee(args))`).
-  - Contractual reactivity via declared variable reassignment is strictly enforced (`items = [...items, x]` or `items.push(x); items = items;`).
-
----
-
-### BUG-104: Brute-Force DOM Wipe and Rebuild Inside Keyed List "Patch"
-
-* **Package:** `packages/dom/src/index.ts` (lines 1155–1184)
-* **Severity:** High
-* **Status:** **Resolved**
-* **Description:**
-  Previously, when a list row in a keyed `@for` loop required an update, a destructive fallback executed:
-  ```ts
-  while (elem.firstChild) {
-    vm.unmountSubtree(elem.firstChild);
-    elem.removeChild(elem.firstChild);
-  }
-  while (newElem.firstChild) {
-    elem.appendChild(newElem.firstChild);
-  }
-  ```
-* **Resolution:**
-  - Removed the destructive DOM wipe and rebuild fallback entirely.
-  - Rows are always patched in-place via `updateRowRegisters` directly on their persistent register frames.
-  - Input focus, internal element state, and DOM node identities are fully preserved.
-
----
-
-### BUG-105: Cascading Instruction Execution in `executeFrom` UPDATE Mode
-
-* **Package:** `packages/dom/src/index.ts` (lines 702–712, 1437–1439)
-* **Severity:** Medium
-* **Status:** **Invalid (Working by Design)**
-* **Description:**
-  Reported that `executeFrom` in `VMMode.UPDATE` executes to the end of the module because it breaks at `Opcode.RETURN`.
-* **Resolution:**
-  **False positive by auditor.** The compiler emits an inline `Opcode.RETURN` delimiter immediately following every dynamic instruction (`SET_ATTR`, `INTERPOLATE_TEXT`, `MOUNT_COMPONENT`). In `VMMode.MOUNT`, `RETURN` increments `pc += 1` to continue tree construction. In `VMMode.UPDATE`, `executeFrom` executes strictly that single dynamic instruction, hits the inline `Opcode.RETURN`, and halts immediately (`return null;`). There is zero cascading execution.
-
----
 
 ### BUG-106: Ad-Hoc Runtime String Parsing for Destructuring Defaults
 
@@ -265,3 +160,4 @@ This document tracks identified architectural shortcuts, LLM-generated code hack
   When scaffolding new projects, if `targetVersion` is not passed, newly scaffolded projects are pinned to a stale version (`^0.0.14`) instead of reading the actual published package version dynamically.
 * **Recommended Fix:**
   Read the version dynamically from the monorepo root or package manifest at runtime.
+

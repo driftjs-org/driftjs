@@ -432,6 +432,16 @@ export class DriftGenerator {
     const indexNameIdx = node.index !== null ? this.addConstant(node.index) : 0xFF;
     const keyIdx = node.key ? this.addExpressionConstant(node.key) : 0xFF;
 
+    // BUG-112 fix: emit an AOT item populator function using the retained Acorn pattern AST.
+    // The populator is a curried __drift_fn__ that returns a (itemVal, indexVal) => void.
+    // VMs call: const populate = evaluateExpression(itemPopulatorConst, scope, declaredVars);
+    //           populate(itemVal, indexVal);
+    // This eliminates all runtime string scanning in populateItemScope for @for loops.
+    let itemPopulatorIdx = 0xFF;
+    if (node.pattern) {
+      itemPopulatorIdx = this.addConstant(buildItemPopulatorFn(node.pattern, node.index));
+    }
+
     // iterDeps: only the outer declared variables that determine which iterable is evaluated.
     // A change here requires full reconciliation (list structure may change).
     const iterDepsSet = new Set<string>();
@@ -461,9 +471,10 @@ export class DriftGenerator {
     const allDeps = [...iterDepsSet, ...rowDepsSet];
     const depsIdx = this.addConstant(allDeps);
 
-    // REACTIVE_FOR parentReg iterIdx itemNameIdx indexNameIdx keyIdx bodyIdx depsIdx iterDepsIdx rowDepsIdx
-    this.emit(Opcode.REACTIVE_FOR, parentReg, iterIdx, itemNameIdx, indexNameIdx, keyIdx, bodyIdx, depsIdx, iterDepsIdx, rowDepsIdx);
+    // REACTIVE_FOR parentReg iterIdx itemNameIdx indexNameIdx keyIdx bodyIdx depsIdx iterDepsIdx rowDepsIdx itemPopulatorIdx
+    this.emit(Opcode.REACTIVE_FOR, parentReg, iterIdx, itemNameIdx, indexNameIdx, keyIdx, bodyIdx, depsIdx, iterDepsIdx, rowDepsIdx, itemPopulatorIdx);
   }
+
 
   private compileAsyncNode(node: AsyncNode, parentReg: number): void {
     const bodyMod = this.compileNodesToSubModule(node.body);
@@ -484,6 +495,13 @@ export class DriftGenerator {
     const promiseIdx = this.addExpressionConstant(node.promise);
     const aliasIdx = this.addConstant(node.alias);
 
+    // BUG-115 fix: emit an AOT alias populator using the retained aliasAst from the parser.
+    // aliasPopulatorIdx = 0xFF means fall back to the legacy populateAsyncScope at runtime.
+    let aliasPopulatorIdx = 0xFF;
+    if (node.aliasAst) {
+      aliasPopulatorIdx = this.addConstant(buildItemPopulatorFn(node.aliasAst, null));
+    }
+
     const depsSet = new Set<string>();
     for (const dep of this.collectDepsFromSubModule(bodyMod, node.promise)) {
       depsSet.add(dep);
@@ -495,7 +513,7 @@ export class DriftGenerator {
     }
     const depsIdx = this.addConstant(Array.from(depsSet));
 
-    // REACTIVE_ASYNC parentReg promiseIdx aliasIdx bodyIdx fallbackIdx catchIdx depsIdx
+    // REACTIVE_ASYNC parentReg promiseIdx aliasIdx bodyIdx fallbackIdx catchIdx depsIdx aliasPopulatorIdx
     this.emit(
       Opcode.REACTIVE_ASYNC,
       parentReg,
@@ -504,9 +522,11 @@ export class DriftGenerator {
       bodyIdx,
       fallbackIdx,
       catchIdx,
-      depsIdx
+      depsIdx,
+      aliasPopulatorIdx
     );
   }
+
 
   private collectDeclaredVars(nodes: readonly TemplateChildNode[]): void {
     for (const node of nodes) {
@@ -892,13 +912,31 @@ function generatePatternAssignments(
       } else if (prop.type === 'RestElement') {
         const varName = prop.argument?.name || astToJS(prop.argument, locals);
         if (varName) {
-          const knownKeys = (pattern.properties || [])
+          // BUG-116 fix: emit native ES2018 object rest destructuring instead of the
+          // `delete` operator IIFE which de-optimises V8 hidden classes.
+          const knownProps = (pattern.properties || [])
             .filter((p: any) => p.type === 'Property')
-            .map((p: any) => p.key?.name || (typeof p.key?.value === 'string' ? p.key.value : ''))
+            .map((p: any) => {
+              const k = p.key?.name !== undefined ? p.key.name : (typeof p.key?.value === 'string' ? p.key.value : null);
+              return k != null ? JSON.stringify(k) : null;
+            })
             .filter(Boolean);
-          const expr = `(() => { const _r = Object.assign({}, ${sourceVar}); ${JSON.stringify(knownKeys)}.forEach(k => delete _r[k]); return _r; })()`;
+          // Build a destructuring parameter list: ({ knownProp1, knownProp2, ...rest }) => rest
+          const knownParams = (pattern.properties || [])
+            .filter((p: any) => p.type === 'Property')
+            .map((p: any) => {
+              const k = p.key?.name !== undefined ? p.key.name : (typeof p.key?.value === 'string' ? p.key.value : null);
+              return k != null ? String(k) : null;
+            })
+            .filter(Boolean)
+            .join(', ');
+          const restParam = knownParams.length > 0
+            ? `{ ${knownParams}, ...${varName} }`
+            : `{ ...${varName} }`;
+          const expr = `(((${restParam}) => ${varName})(${sourceVar} ?? {}))`;
           stmts.push(emitAssign(varName, expr, locals));
         }
+
       }
     }
     return stmts;
@@ -941,6 +979,42 @@ function generatePatternAssignments(
   }
 
   return stmts;
+}
+
+/**
+ * Builds an AOT item-populator constant suitable for storage in the constant pool.
+ *
+ * The emitted `__drift_fn__` is a curried function:
+ *   (scope, declaredVars, setScopeValue, inScopeChain, resolveIterable, getScopeValue)
+ *     => (itemVal: any, indexVal: number) => void
+ *
+ * At runtime the VM does:
+ *   const populate = evaluateExpression(populatorConst, scope, declaredVars);
+ *   populate(itemVal, indexVal);
+ *
+ * For a plain Identifier pattern this reduces to a single `setScopeValue` call.
+ * For ObjectPattern / ArrayPattern it expands into fully AOT-generated assignments,
+ * eliminating all runtime string scanning (BUG-112 / BUG-115 fix).
+ *
+ * @param pattern   Acorn AST pattern node (Identifier | ObjectPattern | ArrayPattern | …)
+ * @param indexName Name of the loop index variable, or null if none.
+ */
+function buildItemPopulatorFn(pattern: any, indexName: string | null): { __drift_fn__: string } {
+  const stmts: string[] = [];
+
+  // Assign item pattern from the `_item` local variable
+  const itemStmts = generatePatternAssignments(pattern, '_item', undefined, { count: 0 });
+  stmts.push(...itemStmts);
+
+  // Assign index if present
+  if (indexName) {
+    stmts.push(emitAssign(indexName, '_index', undefined));
+  }
+
+  const body = stmts.join('; ');
+  return {
+    __drift_fn__: `(scope, declaredVars, setScopeValue, inScopeChain, resolveIterable, getScopeValue) => (_item, _index) => { ${body}; }`,
+  };
 }
 
 /**

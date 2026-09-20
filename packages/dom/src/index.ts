@@ -21,7 +21,6 @@ import {
   normalizeStyle,
   pushActiveVM,
   popActiveVM,
-  populateItemScope,
   createContext,
   provide,
   inject,
@@ -639,11 +638,12 @@ export class DriftClientVM {
           pc += 6;
           break;
         case Opcode.REACTIVE_FOR:
-          // opcode(1) + parentReg iterIdx itemNameIdx idxNameIdx keyIdx bodyIdx depsIdx iterDepsIdx rowDepsIdx (9 operands)
-          pc += 10;
+          // opcode(1) + parentReg iterIdx itemNameIdx idxNameIdx keyIdx bodyIdx depsIdx iterDepsIdx rowDepsIdx itemPopulatorIdx (10 operands)
+          pc += 11;
           break;
         case Opcode.REACTIVE_ASYNC:
-          pc += 8;
+          // opcode(1) + parentReg promiseIdx aliasIdx bodyIdx fallbackIdx catchIdx depsIdx aliasPopulatorIdx (8 operands)
+          pc += 9;
           break;
         case Opcode.RETURN:
           pc += 1;
@@ -978,6 +978,10 @@ export class DriftClientVM {
             const depsIdx     = bytecode[pc + 7]!;
             const iterDepsIdx = bytecode[pc + 8]!;
             // rowDepsIdx (bytecode[pc + 9]) is implicit — only iterDepsIdx is needed to route at runtime.
+            // itemPopulatorIdx (bytecode[pc + 10]): AOT item populator constant (BUG-112 fix).
+            // 0xFF means no populator emitted — fall back to plain identifier assignment.
+            const itemPopulatorRawIdx = bytecode[pc + 10] ?? 0xFF;
+            const itemPopulatorConst  = itemPopulatorRawIdx !== 0xFF ? constants[itemPopulatorRawIdx] : null;
 
             const parentElem  = this.getRegister(parentReg, registers);
             const iterExpr    = constants[iterIdx];
@@ -988,6 +992,28 @@ export class DriftClientVM {
             const depsRaw     = constants[depsIdx];
             const deps        = new Set<string>(Array.isArray(depsRaw) ? depsRaw : []);
             const forCacheRef: { cache: ItemRecord[] } = { cache: [] };
+
+            /**
+             * Populate a child scope with the current item and index.
+             * BUG-112: prefer the AOT populator emitted by the compiler from the retained
+             * Acorn pattern AST — no runtime string scanning needed.
+             * Falls back to a plain identifier assignment for hand-crafted/legacy modules.
+             */
+            const doPopulate = (childScope: Record<string, any>, itemVal: any, indexVal: number): void => {
+              if (itemPopulatorConst) {
+                const populate = evaluateExpression(itemPopulatorConst, childScope, vm.declaredVars);
+                if (typeof populate === 'function') {
+                  populate(itemVal, indexVal);
+                  return;
+                }
+              }
+              if (itemName !== '__proto__' && itemName !== 'constructor' && itemName !== 'prototype') {
+                childScope[itemName] = itemVal;
+              }
+              if (indexName && indexName !== '__proto__' && indexName !== 'constructor' && indexName !== 'prototype') {
+                childScope[indexName] = indexVal;
+              }
+            };
 
             // iterableDeps: variables whose change requires full list reconciliation.
             // Read directly from the compiler-emitted iterDepsIdx constant — no heuristics.
@@ -1073,14 +1099,14 @@ export class DriftClientVM {
                 (itemVal, indexVal) => {
                   if (keyExpr) {
                     const itemScope = Object.create(scope);
-                    populateItemScope(itemScope, itemName, itemVal, indexName, indexVal);
+                    doPopulate(itemScope, itemVal, indexVal);
                     return evaluateExpression(keyExpr, itemScope, vm.declaredVars);
                   }
                   return indexVal;
                 },
                 (itemVal, indexVal, refNode) => {
                   const childScope = Object.create(scope);
-                  populateItemScope(childScope, itemName, itemVal, indexName, indexVal);
+                  doPopulate(childScope, itemVal, indexVal);
 
                   const { fragment: frag, createdRegions: childRegions, registers: rowRegisters } = vm.runSubModule(bodyMod, childScope);
                   const nodes: Node[] = frag
@@ -1126,7 +1152,7 @@ export class DriftClientVM {
                   };
 
                   const childScope = record.scope || Object.create(scope);
-                  populateItemScope(childScope, itemName, itemVal, indexName, indexVal);
+                  doPopulate(childScope, itemVal, indexVal);
                   record.scope = childScope;
 
                   const equal = itemsEqual(record.itemVal, itemVal) && (!indexName || record.indexVal === indexVal);
@@ -1232,7 +1258,8 @@ export class DriftClientVM {
             };
             this.registerRegion(forRegion);
 
-            pc += 10;
+            // opcode(1) + 10 operands (parentReg iterIdx itemNameIdx idxNameIdx keyIdx bodyIdx depsIdx iterDepsIdx rowDepsIdx itemPopulatorIdx)
+            pc += 11;
             break;
           }
 

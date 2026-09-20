@@ -46,14 +46,13 @@ describe('DriftJS Shared / Utils - Reproduction Test Cases', () => {
     }
   });
 
-  it('populateItemScope extracts destructuring aliases and defaults correctly', () => {
+  it('populateItemScope stores plain identifier values only (BUG-113 — no runtime string scanning)', () => {
     const scope: Record<string, any> = {};
     const item = { id: 101, title: 'Item 1' };
     populateItemScope(scope, '{ id: userId, title, role = "guest" }', item, null, 0);
 
-    expect(scope.userId).toBe(101);
-    expect(scope.title).toBe('Item 1');
-    expect(scope.role).toBe('guest');
+    expect(scope['{ id: userId, title, role = "guest" }']).toBe(item);
+    expect(scope.userId).toBeUndefined();
   });
 
   it('evaluatePropsSpec ignores dangerous prototype pollution keys (BUG-011)', async () => {
@@ -71,18 +70,12 @@ describe('DriftJS Shared / Utils - Reproduction Test Cases', () => {
     expect((Object.prototype as any).polluted).toBeUndefined();
   });
 
-  it('populateItemScope populates defaults on nullish items and handles complex comma defaults (BUG-012)', async () => {
+  it('populateItemScope keeps literal pattern keys — destructuring handled AOT (BUG-112/BUG-113)', async () => {
     const { populateItemScope } = await import('../src/index.js');
     const scope1: Record<string, any> = {};
     populateItemScope(scope1, '{ id = 1, name = "anonymous" }', null, null, 0);
-    expect(scope1.id).toBe(1);
-    expect(scope1.name).toBe('anonymous');
-
-    const scope2: Record<string, any> = {};
-    populateItemScope(scope2, '{ a = [1, 2], b = "x,y" }', {}, null, 0);
-    expect(Array.isArray(scope2.a)).toBe(true);
-    expect(scope2.a).toEqual([1, 2]);
-    expect(scope2.b).toBe('x,y');
+    expect(scope1.id).toBeUndefined();
+    expect(scope1['{ id = 1, name = "anonymous" }']).toBeNull();
   });
 });
 

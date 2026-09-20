@@ -6,8 +6,6 @@ import {
   normalizeStyle,
   pushActiveVM,
   popActiveVM,
-  populateItemScope,
-  populateAsyncScope,
   resolveIterable,
   VOID_ELEMENTS,
   createContext,
@@ -47,6 +45,39 @@ function escapeHtml(str: string): string {
     .replace(/'/g, "&#39;");
 }
 
+const FORBIDDEN_SCOPE_KEYS = new Set(['__proto__', 'constructor', 'prototype', '__drift_mark_dirty__']);
+
+/**
+ * Safely assigns a loop / `@async` alias variable onto a child scope, guarding against
+ * prototype pollution.
+ */
+function setLoopVar(scope: Record<string, any>, key: string, val: any): void {
+  if (!scope || typeof scope !== 'object' || FORBIDDEN_SCOPE_KEYS.has(key)) return;
+  scope[key] = val;
+}
+
+/**
+ * Populates a child scope with a resolved `@async` value, preferring the AOT alias
+ * populator the compiler emits from the retained pattern AST (BUG-115). Falls back to a
+ * plain identifier assignment for hand-crafted/legacy modules.
+ */
+function populateAsyncValue(
+  childScope: Record<string, any>,
+  alias: string,
+  val: any,
+  aliasPopulator: any,
+  declaredVars: Set<string>
+): void {
+  if (aliasPopulator) {
+    const populate = evaluateExpression(aliasPopulator, childScope, declaredVars);
+    if (typeof populate === 'function') {
+      populate(val, 0);
+      return;
+    }
+  }
+  setLoopVar(childScope, alias, val);
+}
+
 const VALID_ATTR_NAME_REGEX = /^[a-zA-Z_:][a-zA-Z0-9_.:-]*$/;
 const VALID_TAG_NAME_REGEX = /^[a-zA-Z_:][a-zA-Z0-9_.:-]*$/;
 
@@ -70,6 +101,8 @@ export class DriftServerVM {
     fallbackMod: any;
     catchMod: any;
     scope: any;
+    aliasPopulator: any;
+    declaredVars: Set<string>;
   }> = [];
   public isStreaming = false;
   private static nextAsyncId = 1;
@@ -320,6 +353,9 @@ export class DriftServerVM {
           const idxNameIdx = bytecode[pc + 4]!;
           const keyIdx = bytecode[pc + 5]!;
           const bodyIdx = bytecode[pc + 6]!;
+          // BUG-112 fix: read itemPopulatorIdx (operand 10) for AOT scope population.
+          const itemPopulatorRawIdx = bytecode[pc + 10] ?? 0xFF;
+          const itemPopulatorConst = itemPopulatorRawIdx !== 0xFF ? constants[itemPopulatorRawIdx] : null;
 
           const parentNode = this.getRegister(parentReg);
           const iterExpr = constants[iterIdx];
@@ -333,7 +369,19 @@ export class DriftServerVM {
           parentNode.children.push({ type: 'comment', content: 'for', children: [] });
           for (let i = 0; i < items.length; i++) {
             const childScope = Object.create(this.scope);
-            populateItemScope(childScope, itemName, items[i], indexName, i);
+            // Prefer the AOT populator; otherwise fall back to plain identifier assignment.
+            if (itemPopulatorConst) {
+              const populate = evaluateExpression(itemPopulatorConst, childScope, this.declaredVars);
+              if (typeof populate === 'function') {
+                populate(items[i], i);
+              } else {
+                setLoopVar(childScope, itemName, items[i]);
+                if (indexName) setLoopVar(childScope, indexName, i);
+              }
+            } else {
+              setLoopVar(childScope, itemName, items[i]);
+              if (indexName) setLoopVar(childScope, indexName, i);
+            }
 
             const subVm = new DriftServerVM();
             subVm.parentVM = this;
@@ -341,8 +389,8 @@ export class DriftServerVM {
             if (subResult) parentNode.children.push(subResult);
           }
           parentNode.children.push({ type: 'comment', content: '/for', children: [] });
-          // opcode(1) + parentReg iterIdx itemNameIdx idxNameIdx keyIdx bodyIdx depsIdx iterDepsIdx rowDepsIdx (9 operands)
-          pc += 10;
+          // opcode(1) + parentReg iterIdx itemNameIdx idxNameIdx keyIdx bodyIdx depsIdx iterDepsIdx rowDepsIdx itemPopulatorIdx (10 operands)
+          pc += 11;
           break;
         }
 
@@ -353,6 +401,9 @@ export class DriftServerVM {
           const bodyIdx = bytecode[pc + 4]!;
           const fallbackIdx = bytecode[pc + 5]!;
           const catchIdx = bytecode[pc + 6]!;
+          // BUG-115 fix: read aliasPopulatorIdx (operand 8) for AOT alias scope population.
+          const aliasPopulatorRawIdx = bytecode[pc + 8] ?? 0xFF;
+          const aliasPopulatorConst = aliasPopulatorRawIdx !== 0xFF ? constants[aliasPopulatorRawIdx] : null;
 
           const parentNode = this.getRegister(parentReg);
           const promiseExpr = constants[promiseIdx];
@@ -360,6 +411,11 @@ export class DriftServerVM {
           const bodyMod = constants[bodyIdx];
           const fallbackMod = fallbackIdx !== 0xFF ? constants[fallbackIdx] : null;
           const catchMod = catchIdx !== 0xFF ? constants[catchIdx] : null;
+
+          /** Populate child scope with the resolved async value (AOT alias populator preferred). */
+          const doPopulateAsync = (childScope: Record<string, any>, val: any): void => {
+            populateAsyncValue(childScope, alias, val, aliasPopulatorConst, this.declaredVars);
+          };
 
           const rawPromise = evaluateExpression(promiseExpr, this.scope, this.declaredVars);
           const boundaryId = DriftServerVM.nextAsyncId++;
@@ -384,6 +440,8 @@ export class DriftServerVM {
               fallbackMod,
               catchMod,
               scope: this.scope,
+              aliasPopulator: aliasPopulatorConst,
+              declaredVars: this.declaredVars,
             });
           } else {
             if (rawPromise && typeof rawPromise.then === 'function') {
@@ -399,7 +457,7 @@ export class DriftServerVM {
             } else {
               parentNode.children.push({ type: 'comment', content: `drift-async:${boundaryId}`, children: [] });
               const childScope = Object.create(this.scope);
-              populateAsyncScope(childScope, alias, rawPromise);
+              doPopulateAsync(childScope, rawPromise);
               const subVm = new DriftServerVM();
               subVm.parentVM = this;
               const subResult = subVm.execute(bodyMod, { scope: childScope });
@@ -407,7 +465,8 @@ export class DriftServerVM {
               parentNode.children.push({ type: 'comment', content: `/drift-async:${boundaryId}`, children: [] });
             }
           }
-          pc += 8;
+          // opcode(1) + parentReg promiseIdx aliasIdx bodyIdx fallbackIdx catchIdx depsIdx aliasPopulatorIdx (8 operands)
+          pc += 9;
           break;
         }
 
@@ -563,12 +622,12 @@ export function renderToStream(
         let pendingCount = boundaries.length;
 
         for (const boundary of boundaries) {
-          const { id, promise, alias, bodyMod, catchMod, scope } = boundary;
+          const { id, promise, alias, bodyMod, catchMod, scope, aliasPopulator, declaredVars } = boundary;
           Promise.resolve(promise)
             .then((resolvedVal) => {
               if (isAborted) return;
               const childScope = Object.create(scope);
-              populateAsyncScope(childScope, alias, resolvedVal);
+              populateAsyncValue(childScope, alias, resolvedVal, aliasPopulator, declaredVars);
 
               const subVm = new DriftServerVM();
               const resultNode = subVm.execute(bodyMod, { scope: childScope });
@@ -585,7 +644,7 @@ export function renderToStream(
               if (catchMod) {
                 const childScope = Object.create(scope);
                 if (catchMod.errorVar) {
-                  populateAsyncScope(childScope, catchMod.errorVar, err);
+                  setLoopVar(childScope, catchMod.errorVar, err);
                 }
                 const subVm = new DriftServerVM();
                 const resultNode = subVm.execute(catchMod.module, { scope: childScope });

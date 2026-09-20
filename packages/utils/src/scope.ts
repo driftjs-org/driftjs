@@ -1,6 +1,3 @@
-import { resolveIterable } from './evaluator.js';
-import { splitPatternEntries, findTopLevelChar } from './scanner.js';
-
 /**
  * Sets a variable in scope, updating parent scope if it exists higher in prototype chain.
  */
@@ -94,16 +91,27 @@ export function getScopeValue(scope: any, name: string): any {
   return undefined;
 }
 
-function safeSetScopeProp(scope: Record<string, any>, key: string, val: any): void {
-  if (!scope || typeof scope !== 'object') return;
+/**
+ * Safely sets an own property on a scope object, rejecting prototype pollution keys
+ * and internal engine properties.
+ */
+export function setScopeProp<T = any>(scope: Record<string, any>, key: string, val: T): T {
+  if (!scope || typeof scope !== 'object') return val;
   if (key === '__proto__' || key === 'constructor' || key === 'prototype' || key === '__drift_mark_dirty__') {
-    return;
+    return val;
   }
   scope[key] = val;
+  return val;
 }
 
 /**
- * Populates scope for @for loop items, supporting object and array destructuring patterns with aliasing and defaults.
+ * Populates scope for `@for` loop items.
+ *
+ * Destructuring patterns (`{ a, b = default }`, `[x, y]`, etc.) are NOT handled here.
+ * They are compiled to AOT populator functions at build time (see
+ * `DriftGenerator.buildItemPopulatorFn`) and stored in the constant pool, so no runtime
+ * string parsing ever happens during loop rendering (BUG-112 / BUG-113 / BUG-115).
+ * This helper is only an identifier fallback for hand-crafted / legacy bytecode modules.
  */
 export function populateItemScope(
   scope: Record<string, any>,
@@ -112,98 +120,8 @@ export function populateItemScope(
   indexName: string | null,
   indexVal: number
 ): void {
-  safeSetScopeProp(scope, itemName, itemVal);
-  if (indexName) safeSetScopeProp(scope, indexName, indexVal);
-
-  if (itemName.startsWith('{') && itemName.endsWith('}')) {
-    const safeObj = itemVal && typeof itemVal === 'object' ? itemVal : {};
-    const entries = splitPatternEntries(itemName.slice(1, -1));
-    for (const entry of entries) {
-      const colonIdx = findTopLevelChar(entry, ':');
-      if (colonIdx !== -1) {
-        const propName = entry.slice(0, colonIdx).trim();
-        const target = entry.slice(colonIdx + 1).trim();
-        const eqIdx = findTopLevelChar(target, '=');
-        if (eqIdx !== -1) {
-          const varName = target.slice(0, eqIdx).trim();
-          const defValStr = target.slice(eqIdx + 1).trim();
-          const val = Object.prototype.hasOwnProperty.call(safeObj, propName) ? (safeObj as any)[propName] : undefined;
-          safeSetScopeProp(scope, varName, val !== undefined ? val : parseDefaultValue(defValStr, scope));
-        } else if (target.startsWith('{') || target.startsWith('[')) {
-          const val = Object.prototype.hasOwnProperty.call(safeObj, propName) ? (safeObj as any)[propName] : undefined;
-          populateItemScope(scope, target, val, null, 0);
-        } else {
-          const val = Object.prototype.hasOwnProperty.call(safeObj, propName) ? (safeObj as any)[propName] : undefined;
-          safeSetScopeProp(scope, target, val);
-        }
-      } else {
-        const eqIdx = findTopLevelChar(entry, '=');
-        if (eqIdx !== -1) {
-          const propName = entry.slice(0, eqIdx).trim();
-          const defValStr = entry.slice(eqIdx + 1).trim();
-          const val = Object.prototype.hasOwnProperty.call(safeObj, propName) ? (safeObj as any)[propName] : undefined;
-          safeSetScopeProp(scope, propName, val !== undefined ? val : parseDefaultValue(defValStr, scope));
-        } else {
-          const val = Object.prototype.hasOwnProperty.call(safeObj, entry) ? (safeObj as any)[entry] : undefined;
-          safeSetScopeProp(scope, entry, val);
-        }
-      }
-    }
-  } else if (itemName.startsWith('[') && itemName.endsWith(']')) {
-    const arr = resolveIterable(itemVal);
-    const entries = splitPatternEntries(itemName.slice(1, -1));
-    for (let i = 0; i < entries.length; i++) {
-      const entry = entries[i]!;
-      const eqIdx = findTopLevelChar(entry, '=');
-      if (eqIdx !== -1) {
-        const varName = entry.slice(0, eqIdx).trim();
-        const defValStr = entry.slice(eqIdx + 1).trim();
-        const val = arr[i];
-        safeSetScopeProp(scope, varName, val !== undefined ? val : parseDefaultValue(defValStr, scope));
-      } else if (entry.startsWith('{') || entry.startsWith('[')) {
-        populateItemScope(scope, entry, arr[i], null, 0);
-      } else {
-        safeSetScopeProp(scope, entry, arr[i]);
-      }
-    }
-  }
-}
-
-function parseDefaultValue(defStr: string, scope?: Record<string, any>): any {
-  const trimmed = defStr.trim();
-  if (trimmed === 'true') return true;
-  if (trimmed === 'false') return false;
-  if (trimmed === 'null') return null;
-  if (trimmed === 'undefined') return undefined;
-  if (
-    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
-    (trimmed.startsWith("'") && trimmed.endsWith("'")) ||
-    (trimmed.startsWith('`') && trimmed.endsWith('`'))
-  ) {
-    return trimmed.slice(1, -1);
-  }
-  if (!Number.isNaN(Number(trimmed)) && trimmed !== '') {
-    return Number(trimmed);
-  }
-  try {
-    return JSON.parse(trimmed);
-  } catch {
-    if (scope && inScopeChain(scope, trimmed)) {
-      return getScopeValue(scope, trimmed);
-    }
-    return trimmed;
-  }
-}
-
-/**
- * Populates scope for @async resolution, supporting identifier and destructuring patterns.
- */
-export function populateAsyncScope(
-  scope: Record<string, any>,
-  aliasName: string,
-  resolvedVal: any
-): void {
-  populateItemScope(scope, aliasName, resolvedVal, null, 0);
+  setScopeProp(scope, itemName, itemVal);
+  if (indexName) setScopeProp(scope, indexName, indexVal);
 }
 
 

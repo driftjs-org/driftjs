@@ -194,8 +194,8 @@ describe('DriftClientVM – Zero-Proxy Async Reactivity & Microtask Batching', (
     const mod = {
       bytecode: [
         Opcode.CREATE_ELEMENT, 0, 0, // div (3)
-        // REACTIVE_ASYNC (8)
-        Opcode.REACTIVE_ASYNC, 0, 1, 2, 3, 4, 5, 6,
+        // REACTIVE_ASYNC (9)
+        Opcode.REACTIVE_ASYNC, 0, 1, 2, 3, 4, 5, 6, 0xFF,
         // Dynamic SET_ATTR (5) after REACTIVE_ASYNC
         Opcode.SET_ATTR, 0, 7, 8, 1,
         // Dynamic INTERPOLATE_TEXT (3) after REACTIVE_ASYNC
@@ -207,6 +207,6 @@ describe('DriftClientVM – Zero-Proxy Async Reactivity & Microtask Batching', (
     };
 
     const dynamicPcs = (vm as any).getDynamicPcs(mod);
-    expect(dynamicPcs).toEqual([11, 16]);
+    expect(dynamicPcs).toEqual([12, 17]);
   });
 });

@@ -55,7 +55,18 @@ export interface IfNode extends BaseASTNode {
 
 export interface ForNode extends BaseASTNode {
   readonly type: typeof ASTNodeType.For;
+  /**
+   * Raw text form of the item binding (kept for backward compatibility and debug output).
+   * For complex destructuring patterns, the parsed Acorn AST is available in `pattern`.
+   */
   readonly item: string;
+  /**
+   * Acorn AST node for the item binding pattern (Identifier, ObjectPattern, ArrayPattern, etc.).
+   * Retained from parse-time so the generator can emit an AOT populator function instead of
+   * delegating to the runtime string-parsing scanner.  `null` when the pattern could not be
+   * parsed (should never happen after successful `parseForDirective`).
+   */
+  readonly pattern: any | null;
   readonly index: string | null;
   readonly iterable: string | AcornNode;
   readonly key?: string | AcornNode | null;
@@ -83,7 +94,15 @@ export interface CatchBranch {
 export interface AsyncNode extends BaseASTNode {
   readonly type: typeof ASTNodeType.Async;
   readonly promise: string | AcornNode;
+  /**
+   * Raw text alias (kept for backward compatibility).
+   */
   readonly alias: string;
+  /**
+   * Acorn AST node for the alias pattern, so the generator can emit an AOT populator function
+   * instead of delegating to the runtime string-parsing scanner.
+   */
+  readonly aliasAst: any | null;
   readonly body: readonly TemplateChildNode[];
   readonly fallback: readonly TemplateChildNode[] | null;
   readonly catchBranch: CatchBranch | null;

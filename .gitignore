@@ -8,7 +8,7 @@ examples/
 server.js
 .agents/
 js-framework-benchmark/
-temp/
+temp
 *.vsix
 scratch/
 my-app/

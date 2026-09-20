@@ -22,7 +22,6 @@ import {
 } from '../types/index.js';
 import {
   VOID_ELEMENTS,
-  hasMatchingOuterParens,
 } from 'driftjs-shared';
 
 class ArrayTokenSource implements TokenSource {
@@ -104,6 +103,39 @@ export function decodeHTMLEntities(text: string): string {
     }
     return match;
   });
+}
+
+/**
+ * Checks whether `str` is enclosed in a single matching outer pair of parentheses `(...)`.
+ * Compile-time helper used to unwrap parenthesized directive headers. Tokenized with Acorn
+ * downstream; only balanced-`()` depth (ignoring quotes) is needed here.
+ */
+function hasMatchingOuterParens(str: string): boolean {
+  const trimmed = str.trim();
+  if (!trimmed.startsWith('(') || !trimmed.endsWith(')')) return false;
+
+  let parenDepth = 0;
+  let inQuote: string | null = null;
+  let isEscaped = false;
+
+  for (let i = 0; i < trimmed.length - 1; i++) {
+    const ch = trimmed[i]!;
+    if (inQuote !== null) {
+      if (isEscaped) isEscaped = false;
+      else if (ch === '\\') isEscaped = true;
+      else if (ch === inQuote) inQuote = null;
+      continue;
+    }
+    if (ch === '"' || ch === '\'' || ch === '`') {
+      inQuote = ch;
+      continue;
+    }
+    if (ch === '(') parenDepth++;
+    else if (ch === ')') parenDepth--;
+
+    if (parenDepth === 0) return false;
+  }
+  return parenDepth === 1;
 }
 
 /**
@@ -587,7 +619,7 @@ export class DriftParser {
       item = lhs;
     }
 
-    // Step 1: Validate item binding via Acorn AST inspection
+    // Step 1: Validate item binding via Acorn AST inspection and retain the pattern AST (BUG-112)
     if (item.length === 0) {
       throw new DriftParserError(
         `Expected item identifier in @for target bindings.`,
@@ -596,7 +628,9 @@ export class DriftParser {
         forToken.loc.start.offset
       );
     }
+    let itemPatternAst: any = null;
     try {
+      // Parse `let <item> = 0;` to validate the binding and retain the pattern node.
       const parsed: any = acorn.parse(`let ${item} = 0;`, { ecmaVersion: 'latest' });
       if (
         !parsed ||
@@ -608,6 +642,10 @@ export class DriftParser {
       ) {
         throw new Error();
       }
+      // Retain the Acorn pattern AST (Identifier / ObjectPattern / ArrayPattern / AssignmentPattern).
+      // BUG-112 fix: this is passed to the generator so it can emit an AOT populator function
+      // instead of storing the raw string and delegating to runtime string-scanning.
+      itemPatternAst = parsed.body[0].declarations[0].id;
     } catch {
       throw new DriftParserError(
         `Invalid @for item binding '${item}'. Expected a valid variable identifier or destructuring pattern.`,
@@ -664,12 +702,25 @@ export class DriftParser {
     }
 
     // 4. Parse Optional 'key' Clause
+    // BUG-114 fix: use Acorn's tokenizer to find the `key` keyword token instead of
+    // brittle startsWith('key ') / startsWith('key\t') / startsWith('key\n') checks.
     let key: string | null = null;
-    const remaining = header.slice(iterAst.end).trim();
+    const remainingAfterIter = header.slice(iterAst.end).trim();
 
-    if (remaining.length > 0) {
-      if (remaining.startsWith('key ') || remaining.startsWith('key\t') || remaining.startsWith('key\n')) {
-        const keyRaw = remaining.slice(3).trim();
+    if (remainingAfterIter.length > 0) {
+      // Use Acorn tokenizer to inspect the first real token in the remaining text.
+      let firstTok: any = null;
+      try {
+        const tokenizer = acorn.tokenizer(remainingAfterIter, { ecmaVersion: 'latest' });
+        firstTok = tokenizer.getToken();
+      } catch {
+        // Fall through to error below
+      }
+
+      if (firstTok && firstTok.type === acorn.tokTypes.name && firstTok.value === 'key') {
+        // Advance past the `key` token and parse the expression that follows.
+        const keyExprOffset = firstTok.end;
+        const keyRaw = remainingAfterIter.slice(keyExprOffset).trim();
         try {
           const keyAst = acorn.parseExpressionAt(keyRaw, 0, { ecmaVersion: 'latest' });
           key = keyRaw.slice(0, keyAst.end).trim();
@@ -693,7 +744,7 @@ export class DriftParser {
         }
       } else {
         throw new DriftParserError(
-          `Unexpected token '${remaining}' in @for header. Expected 'key <expression>' or block opening '{'.`,
+          `Unexpected token '${remainingAfterIter}' in @for header. Expected 'key <expression>' or block opening '{'.`,
           forToken.loc.start.line,
           forToken.loc.start.column,
           forToken.loc.start.offset
@@ -710,6 +761,7 @@ export class DriftParser {
     return {
       type: ASTNodeType.For,
       item,
+      pattern: itemPatternAst,
       index,
       iterable,
       key,
@@ -717,6 +769,7 @@ export class DriftParser {
       loc: { start: startLoc, end: endBlockToken.loc.end },
     };
   }
+
 
   private parseSwitchDirective(): SwitchNode {
     const switchToken = this.consume(TokenType.DirectiveSwitch, 'Expected @switch directive');
@@ -796,11 +849,43 @@ export class DriftParser {
     const remaining = header.slice(promiseAst.end).trim();
 
     let alias = 'data';
+    let aliasAst: any = null;
+
     if (remaining.length > 0) {
-      if (remaining.startsWith('as ') || remaining.startsWith('as\t') || remaining.startsWith('as\n')) {
-        alias = remaining.slice(2).trim();
-        while (hasMatchingOuterParens(alias)) {
-          alias = alias.slice(1, -1).trim();
+      // BUG-114 fix: use Acorn's tokenizer to find the `as` keyword instead of
+      // brittle startsWith('as ') / startsWith('as\t') / startsWith('as\n') checks.
+      let firstTok: any = null;
+      try {
+        const tokenizer = acorn.tokenizer(remaining, { ecmaVersion: 'latest' });
+        firstTok = tokenizer.getToken();
+      } catch {
+        // Fall through to error below
+      }
+
+      if (firstTok && firstTok.type === acorn.tokTypes.name && firstTok.value === 'as') {
+        // Advance past the `as` token and extract the alias pattern text.
+        let aliasRaw = remaining.slice(firstTok.end).trim();
+        while (hasMatchingOuterParens(aliasRaw)) {
+          aliasRaw = aliasRaw.slice(1, -1).trim();
+        }
+        alias = aliasRaw;
+
+        // BUG-115 fix: parse the alias pattern with Acorn and retain the AST node.
+        // The generator uses this to emit an AOT populator instead of the runtime string scanner.
+        try {
+          const aliasPatternParsed: any = acorn.parse(`let ${aliasRaw} = 0;`, { ecmaVersion: 'latest' });
+          if (
+            aliasPatternParsed &&
+            Array.isArray(aliasPatternParsed.body) &&
+            aliasPatternParsed.body.length === 1 &&
+            aliasPatternParsed.body[0].type === 'VariableDeclaration' &&
+            Array.isArray(aliasPatternParsed.body[0].declarations) &&
+            aliasPatternParsed.body[0].declarations.length === 1
+          ) {
+            aliasAst = aliasPatternParsed.body[0].declarations[0].id;
+          }
+        } catch {
+          // aliasAst remains null; the generator will fall back to the raw string alias.
         }
       } else {
         throw new DriftParserError(
@@ -884,12 +969,14 @@ export class DriftParser {
       type: ASTNodeType.Async,
       promise,
       alias,
+      aliasAst,
       body,
       fallback,
       catchBranch,
       loc: { start: startLoc, end: endToken.loc.end },
     };
   }
+
 
   private skipWhitespaceTokens(): void {
     while (this.check(TokenType.Text) && this.peek().value.trim().length === 0) {

@@ -120,18 +120,19 @@ export default compiledModule;
  * Vite plugin that transforms `.drift` template files into ESM modules.
  *
  * Each `.drift` file is compiled at build / serve time through the DriftJS
- * pipeline and emitted as an ESM module exposing `render()`, `mount()`, and
- * the raw `compiledModule`.
+ * pipeline and emitted as an ESM module exposing the `CompiledModule`
+ * as its default export.
  *
  * @example
  * // vite.config.ts
- * import { driftPlugin } from '@driftjs/vite-plugin';
+ * import { driftPlugin } from 'driftjs-vite-plugin';
  * export default defineConfig({ plugins: [driftPlugin()] });
  *
  * @example
  * // app.ts
- * import { mount } from './hero.drift';
- * mount(document.getElementById('app')!, { title: 'Hello' });
+ * import { mount } from 'driftjs-dom';
+ * import App from './hero.drift';
+ * mount(App, document.getElementById('app')!, { props: { title: 'Hello' } });
  */
 export function driftPlugin(options: DriftPluginOptions = {}): Plugin {
   const { debug = false } = options;

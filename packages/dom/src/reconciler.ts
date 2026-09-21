@@ -156,11 +156,14 @@ export function reconcileKeyedList(
     const s2 = i;
     const e2 = oldEnd;
 
-    const keyToNewIndexMap = new Map<unknown, number>();
+    const keyToNewIndexMap = new Map<unknown, number[]>();
     for (let k = s1; k <= e1; k++) {
       const kKey = newCache[k]!.key;
-      if (!keyToNewIndexMap.has(kKey)) {
-        keyToNewIndexMap.set(kKey, k);
+      const existing = keyToNewIndexMap.get(kKey);
+      if (existing) {
+        existing.push(k);
+      } else {
+        keyToNewIndexMap.set(kKey, [k]);
       }
     }
 
@@ -174,8 +177,9 @@ export function reconcileKeyedList(
 
     for (let k = s2; k <= e2; k++) {
       const oldRec = oldCache[k]!;
-      const newIndex = keyToNewIndexMap.get(oldRec.key);
-      if (newIndex === undefined || sources[newIndex - s1] !== -1) {
+      const queue = keyToNewIndexMap.get(oldRec.key);
+      const newIndex = queue && queue.length > 0 ? queue.shift()! : undefined;
+      if (newIndex === undefined) {
         removeRecordNodes(oldRec);
       } else {
         const newIndexInSources = newIndex - s1;

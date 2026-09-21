@@ -357,6 +357,7 @@ export class DriftClientVM {
     this.pendingDirtyVars.clear();
     this.depToDerived.clear();
     this.derivedCache.clear();
+    this.delegatedEvents.clear();
     this.isUpdateScheduled = false;
     this.scope = {};
     this.module = null;

@@ -77,10 +77,30 @@ export function scaffoldProject(options: ScaffoldOptions): void {
   }
 }
 
-export function sanitizeDependencies(deps?: Record<string, string>, targetVersion: string = '^0.0.14'): void {
+function getPackageVersion(): string {
+  const pkgJsonPath = new URL('../package.json', import.meta.url);
+  if (!fs.existsSync(pkgJsonPath)) {
+    throw new Error(`[create-drift] Cannot resolve CLI package.json at: ${pkgJsonPath.pathname}`);
+  }
+  const raw = fs.readFileSync(pkgJsonPath, 'utf8');
+  let pkg: any;
+  try {
+    pkg = JSON.parse(raw);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(`[create-drift] Failed to parse CLI package.json at ${pkgJsonPath.pathname}: ${msg}`);
+  }
+  if (!pkg || typeof pkg.version !== 'string' || pkg.version.trim() === '') {
+    throw new Error(`[create-drift] Missing or invalid "version" field in: ${pkgJsonPath.pathname}`);
+  }
+  return pkg.version.trim();
+}
+
+export function sanitizeDependencies(deps?: Record<string, string>, targetVersion?: string): void {
   if (!deps) return;
-  const bareVersion = targetVersion.replace(/^[\^~]/, '');
-  const defaultCaret = targetVersion.startsWith('^') ? targetVersion : `^${bareVersion}`;
+  const version = targetVersion ?? getPackageVersion();
+  const bareVersion = version.replace(/^[\^~]/, '');
+  const defaultCaret = version.startsWith('^') ? version : `^${bareVersion}`;
   for (const [key, value] of Object.entries(deps)) {
     if (typeof value === 'string' && value.startsWith('workspace:')) {
       const cleanVersion = value.replace('workspace:', '').trim();

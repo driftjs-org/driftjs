@@ -1080,7 +1080,8 @@ export function astToJS(node: any, locals?: Set<string>): string {
   switch (node.type) {
     case 'Identifier':
       if (locals && locals.has(node.name)) return node.name;
-      return `(typeof getScopeValue === 'function' ? getScopeValue(scope, ${JSON.stringify(node.name)}) : (typeof inScopeChain === 'function' && inScopeChain(scope, ${JSON.stringify(node.name)}) ? scope[${JSON.stringify(node.name)}] : (typeof globalThis !== 'undefined' && globalThis && (${JSON.stringify(node.name)} in globalThis) ? globalThis[${JSON.stringify(node.name)}] : (scope || {})[${JSON.stringify(node.name)}])))`;
+      if (node.name === 'undefined') return 'undefined';
+      return `getScopeValue(scope, ${JSON.stringify(node.name)})`;
 
     case 'Literal':
       if (typeof node.raw === 'string') return node.raw;

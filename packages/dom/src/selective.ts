@@ -242,11 +242,7 @@ export function hydrateOnInteraction(
     return vmInstance;
   };
 
-  function handleInteraction(e: Event): void {
-    if ((e as any).__drift_replayed__) {
-      return;
-    }
-
+  function handleInteraction(_e: Event): void {
     cleanupPending();
     doHydrate();
   }

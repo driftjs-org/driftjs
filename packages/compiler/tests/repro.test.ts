@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { compile, DriftLexer, DriftParser, DriftTransformer, DriftGenerator, astToJS } from '../src/index.js';
 import { decodeHTMLEntities } from '../src/parser.js';
 import { ASTNodeType, Opcode } from '../types/index.js';
+import { getScopeValue } from 'driftjs-shared';
 
 describe('DriftJS Compiler - Reproduction Test Cases', () => {
   it('correctly parses @for iterables that contain the word "key" in expressions', () => {
@@ -139,15 +140,19 @@ describe('DriftJS Compiler - Reproduction Test Cases', () => {
   });
 
   it('identifier scoping in astToJS resolves globals on prototype chain', () => {
-    const identifierNode = { type: 'Identifier', name: 'fetch' };
+    const identifierNode = { type: 'Identifier', name: 'customProtoGlobal' };
     const code = astToJS(identifierNode);
 
-    const globalContext = Object.create({ fetch: () => 'mock-fetch' });
+    (globalThis as any).__proto__.customProtoGlobal = () => 'mock-fetch';
+    try {
+      const evalFn = new Function('scope', 'declaredVars', 'setScopeValue', 'inScopeChain', 'resolveIterable', 'getScopeValue', `return (${code})`);
+      const result = evalFn({}, null, null, null, null, getScopeValue);
 
-    const evalFn = new Function('scope', 'inScopeChain', 'globalThis', `return (${code})`);
-    const result = evalFn({}, null, globalContext);
-
-    expect(typeof result).toBe('function');
+      expect(typeof result).toBe('function');
+      expect(result()).toBe('mock-fetch');
+    } finally {
+      delete (globalThis as any).__proto__.customProtoGlobal;
+    }
   });
 
   it('lexer does not treat literal "}" in text inside element as directive block close', () => {
@@ -194,7 +199,7 @@ describe('DriftJS Compiler - Reproduction Test Cases', () => {
     const scriptAst = compiled.constants[0];
     if (typeof scriptAst === 'object' && scriptAst.__drift_fn__) {
       const fn = new Function('return (' + scriptAst.__drift_fn__ + ')')();
-      fn(scope, null, (s: any, k: string, v: any) => { s[k] = v; return v; });
+      fn(scope, null, (s: any, k: string, v: any) => { s[k] = v; return v; }, null, null, getScopeValue);
     }
 
     expect(scope.callCount).toBe(1);
@@ -248,7 +253,7 @@ describe('DriftJS Compiler - Reproduction Test Cases', () => {
     const scriptAst = compiled.constants[0];
     if (typeof scriptAst === 'object' && scriptAst.__drift_fn__) {
       const fn = new Function('return (' + scriptAst.__drift_fn__ + ')')();
-      fn(scope, null, (s: any, k: string, v: any) => { s[k] = v; return v; }, (s: any, k: string) => k in s);
+      fn(scope, null, (s: any, k: string, v: any) => { s[k] = v; return v; }, (s: any, k: string) => k in s, null, getScopeValue);
     }
     expect(scope.extracted).toBe('hello world');
   });
@@ -292,7 +297,7 @@ describe('DriftJS Compiler - Reproduction Test Cases', () => {
     const scriptAst = compiled.constants[0];
     if (typeof scriptAst === 'object' && scriptAst.__drift_fn__) {
       const fn = new Function('return (' + scriptAst.__drift_fn__ + ')')();
-      fn(scope, null, (s: any, k: string, v: any) => { s[k] = v; return v; }, null, (iter: any) => Array.from(iter));
+      fn(scope, null, (s: any, k: string, v: any) => { s[k] = v; return v; }, null, (iter: any) => Array.from(iter), getScopeValue);
     }
     expect(scope.a).toBe('first');
     expect(scope.b).toBe('second');
@@ -466,7 +471,7 @@ describe('DriftJS Compiler - Reproduction Test Cases', () => {
     const scriptAst = compiled.constants[0];
     if (typeof scriptAst === 'object' && scriptAst.__drift_fn__) {
       const fn = new Function('return (' + scriptAst.__drift_fn__ + ')')();
-      fn(scope);
+      fn(scope, null, (s: any, k: string, v: any) => { s[k] = v; return v; }, null, null, getScopeValue);
     }
     expect(scope.name).toBe('Alice');
     expect(scope.firstScore).toBe(95);

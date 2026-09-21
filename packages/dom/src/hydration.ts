@@ -71,29 +71,7 @@ export class HydrationCursor {
     );
   }
 
-  public claimComponentAnchor(name: string, doc: Document): Comment {
-    const expectedVariants = new Set([
-      `comp:${name}`,
-      `drift-island:${name}`,
-      `island:${name}`,
-    ]);
-    return this.claimNode(
-      (n) => n.nodeType === 8 && expectedVariants.has((n as Comment).data.trim()),
-      () => doc.createComment(`comp:${name}`)
-    );
-  }
 
-  public claimComponentEndAnchor(name: string, doc: Document): Comment {
-    const expectedVariants = new Set([
-      `/comp:${name}`,
-      `/drift-island:${name}`,
-      `/island:${name}`,
-    ]);
-    return this.claimNode(
-      (n) => n.nodeType === 8 && expectedVariants.has((n as Comment).data.trim()),
-      () => doc.createComment(`/comp:${name}`)
-    );
-  }
 
   public peek(): Node | null {
     return this.current;

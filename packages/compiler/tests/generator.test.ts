@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { compile } from '../src/index.js';
+import { compile, astToJS } from '../src/index.js';
 import { Opcode } from '../types/index.js';
 
 describe('DriftGenerator', () => {
@@ -627,6 +627,26 @@ describe('DriftGenerator', () => {
         expect(fn).not.toContain('(() => { const _res =');
         expect(fn).not.toContain('setScopeValue(scope, "list", scope["list"])');
       }
+    });
+
+    it('BUG-118: emits simplified getScopeValue without 4-tier ternary fallback for identifiers', () => {
+      const src = `<div>{count + offset}</div>`;
+      const module = compile(src);
+      const exprConst = module.constants.find((c: any) => c && typeof c === 'object' && typeof c.__drift_fn__ === 'string');
+      expect(exprConst).toBeDefined();
+      const fnStr = exprConst.__drift_fn__;
+
+      expect(fnStr).toContain('getScopeValue(scope, "count")');
+      expect(fnStr).toContain('getScopeValue(scope, "offset")');
+      expect(fnStr).not.toContain('typeof getScopeValue');
+      expect(fnStr).not.toContain('inScopeChain(scope,');
+      expect(fnStr).not.toContain('typeof globalThis');
+    });
+
+    it('BUG-118: astToJS generates direct getScopeValue or local variable references', () => {
+      expect(astToJS({ type: 'Identifier', name: 'count' })).toBe('getScopeValue(scope, "count")');
+      expect(astToJS({ type: 'Identifier', name: 'undefined' })).toBe('undefined');
+      expect(astToJS({ type: 'Identifier', name: 'item' }, new Set(['item']))).toBe('item');
     });
   });
 });

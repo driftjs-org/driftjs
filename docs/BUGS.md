@@ -8,7 +8,7 @@ This document tracks identified architectural shortcuts, LLM-generated code hack
 
 | Bug ID                                                                                    | Component            | Severity |  Status  | Summary                                                                                                               |
 | :---------------------------------------------------------------------------------------- | :------------------- | :------: | :------: | :-------------------------------------------------------------------------------------------------------------------- |
-| [BUG-117](#bug-117-generator-omits-loop-alias-variables-from-sub-module-reactive-bindings) | `driftjs-compiler`   |  Medium  | **Open** | Compiler omits `@for` loop alias variables from `reactiveBindings`, causing duplicate runtime scanner              |
+| [BUG-117](#bug-117-generator-omits-loop-alias-variables-from-sub-module-reactive-bindings) | `driftjs-compiler`   |  Medium  | **Fixed** | Compiler omits `@for` loop alias variables from `reactiveBindings`, causing duplicate runtime scanner              |
 | [BUG-118](#bug-118-redundant-4-tier-nested-ternary-fallback-in-asttojs-identifier-codegen) | `driftjs-compiler`   |  Medium  | **Fixed** | Every variable identifier emits a 4-tier ternary fallback chain, introducing runtime overhead and constant pool bloat |
 
 ---
@@ -93,7 +93,7 @@ This document tracks identified architectural shortcuts, LLM-generated code hack
 
 * **Package:** `packages/compiler/src/generator.ts` (lines 477–528, 756–767, 781–792) & `packages/dom/src/index.ts` (lines 600–659)
 * **Severity:** Medium
-* **Status:** **Open**
+* **Status:** **Fixed**
 * **Description:**
   When compiling `@for (item, index) in list` loop bodies, `compileNodesToSubModule()` runs with `this.declaredVars` populated only with top-level script variables. Loop aliases (`node.item`, `node.index`) are never registered in the compiler's declared variable set.
 
@@ -119,14 +119,14 @@ This document tracks identified architectural shortcuts, LLM-generated code hack
      Inner row expressions like `{item.name}` receive an empty `deps: []` array.
 * **Impact:**
 
-  - Because `bodyMod.reactiveBindings` lacks entries for loop items, the client VM reconciler cannot determine which bytecode PCs to execute when row data updates.
-  - To compensate, an ad-hoc runtime scanner [`getDynamicPcs()`](file:///home/hrutav-modha/Documents/driftjs/packages/dom/src/index.ts#L600) was introduced into `driftjs-dom`. This duplicates the variable-length instruction set decoder in the client runtime.
-  - Furthermore, in [`updateRowRegisters()`](file:///home/hrutav-modha/Documents/driftjs/packages/dom/src/index.ts#L665), looping over `dynamicPcs` and calling `executeFrom(pc, ..., VMMode.UPDATE)` cascades down to `RETURN` on every iteration, re-executing subsequent dynamic instructions multiple times for every row.
-* **Recommended Fix:**
+  - Because `bodyMod.reactiveBindings` lacked entries for loop items, the client VM reconciler could not determine which bytecode PCs to execute when row data updates.
+  - To compensate, an ad-hoc runtime scanner `getDynamicPcs()` was introduced into `driftjs-dom`. This duplicated the variable-length instruction set decoder in the client runtime.
+* **Resolution:**
 
-  1. In `DriftGenerator.compileNodesToSubModule()`, pass in or temporarily extend `this.declaredVars` with the loop's alias names (`node.item`, `node.index`) so `recordBindingPositions` records `{ variable: 'item', positions: [...] }` in `bodyMod.reactiveBindings`.
-  2. Alternatively or additionally, have the compiler emit a static `dynamicPcs: readonly number[]` array on sub-modules at build time.
-  3. Remove `getDynamicPcs` and its duplicate `switch (opcode)` block from `DriftClientVM`, and update `updateRowRegisters` to execute row updates directly using compiler-emitted metadata.
+  1. In `DriftGenerator.compileForNode()`, loop aliases (`node.item`, `node.pattern` identifiers via `extractBindingNames()`, and `node.index`) are registered in `this.declaredVars` during `compileNodesToSubModule(node.body)`, properly recording their dynamic bytecode positions into `bodyMod.reactiveBindings`.
+  2. In `compileForNode()`, `rowDepsSet` filters out loop aliases (`!loopAliases.has(binding.variable)`) so parent component change detection only tracks outer scope dependencies.
+  3. Removed `getDynamicPcs()` and `dynamicPcsCache` from `DriftClientVM`, and updated `updateRowRegisters()` to execute dynamic instructions directly using `bodyMod.reactiveBindings`.
+
 
 ---
 

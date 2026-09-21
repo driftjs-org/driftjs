@@ -475,8 +475,36 @@ export class DriftGenerator {
   }
 
   private compileForNode(node: ForNode, parentReg: number): void {
+    // Extract loop-local alias names (item identifier or destructured pattern names, and index)
+    const loopAliases = new Set<string>();
+    if (node.pattern) {
+      for (const name of extractBindingNames(node.pattern)) {
+        loopAliases.add(name);
+      }
+    } else if (node.item) {
+      loopAliases.add(node.item);
+    }
+    if (node.index !== null) {
+      loopAliases.add(node.index);
+    }
+
+    // Register loop aliases in declaredVars so sub-module expressions and dynamic instructions
+    // record these variables in bodyMod.reactiveBindings and their expression deps.
+    const addedAliases: string[] = [];
+    for (const alias of loopAliases) {
+      if (!this.declaredVars.has(alias)) {
+        this.declaredVars.add(alias);
+        addedAliases.push(alias);
+      }
+    }
+
     // Build body sub-module
     const bodyMod = this.compileNodesToSubModule(node.body);
+
+    for (const alias of addedAliases) {
+      this.declaredVars.delete(alias);
+    }
+
     const bodyIdx = this.addConstant(bodyMod);
 
     const iterIdx = this.addExpressionConstant(node.iterable);
@@ -509,10 +537,10 @@ export class DriftGenerator {
     const iterDepsIdx = this.addConstant([...iterDepsSet]);
 
     // rowDeps: outer declared variables referenced inside the row body that are NOT already
-    // in iterDeps. A change here only needs per-row in-place patching — no reconciliation.
+    // in iterDeps and NOT loop-local variables. A change here only needs per-row in-place patching — no reconciliation.
     const rowDepsSet = new Set<string>();
     for (const binding of bodyMod.reactiveBindings) {
-      if (!iterDepsSet.has(binding.variable)) {
+      if (!iterDepsSet.has(binding.variable) && !loopAliases.has(binding.variable)) {
         rowDepsSet.add(binding.variable);
       }
     }

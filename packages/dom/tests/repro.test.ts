@@ -79,6 +79,9 @@ describe('DriftClientVM (DOM Engine) - Reproduction Test Cases', () => {
         'checked',
         { __drift_fn__: '(scope) => scope.item.done' },
       ],
+      reactiveBindings: [
+        { variable: 'item', positions: [3, 8] },
+      ],
     };
 
     const initialScope = { item: { text: 'Initial Text', done: false } };
@@ -398,6 +401,9 @@ describe('DriftClientVM (DOM Engine) - Reproduction Test Cases', () => {
         'class',
         { __drift_fn__: '(scope) => scope.item.btnClass' },
       ],
+      reactiveBindings: [
+        { variable: 'item', positions: [12] },
+      ],
     };
 
     const initialScope = { item: { btnClass: 'btn-primary' } };
@@ -433,6 +439,9 @@ describe('DriftClientVM (DOM Engine) - Reproduction Test Cases', () => {
         { __drift_fn__: '(scope) => scope.item.dtClass' },
         'dd',
         { __drift_fn__: '(scope) => scope.item.ddClass' },
+      ],
+      reactiveBindings: [
+        { variable: 'item', positions: [5, 16] },
       ],
     };
 

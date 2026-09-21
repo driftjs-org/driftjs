@@ -648,6 +648,69 @@ describe('DriftGenerator', () => {
       expect(astToJS({ type: 'Identifier', name: 'undefined' })).toBe('undefined');
       expect(astToJS({ type: 'Identifier', name: 'item' }, new Set(['item']))).toBe('item');
     });
+
+    it('BUG-117: records loop alias variables in body sub-module reactiveBindings and expression deps', () => {
+      const src = `
+        <script>
+          let list = [];
+          let prefix = "Item: ";
+        </script>
+        @for (item, index) in list {
+          <li class="{item.active}">{prefix} {item.name} #{index}</li>
+        }
+      `;
+      const module = compile(src);
+      const reactiveForIdx = module.bytecode.indexOf(Opcode.REACTIVE_FOR);
+      expect(reactiveForIdx).toBeGreaterThan(-1);
+
+      const bodyIdx = module.bytecode[reactiveForIdx + 6]!;
+      const bodyMod = module.constants[bodyIdx];
+      expect(bodyMod).toBeDefined();
+
+      const itemBinding = bodyMod.reactiveBindings.find((b: any) => b.variable === 'item');
+      const indexBinding = bodyMod.reactiveBindings.find((b: any) => b.variable === 'index');
+      const prefixBinding = bodyMod.reactiveBindings.find((b: any) => b.variable === 'prefix');
+
+      expect(itemBinding).toBeDefined();
+      expect(itemBinding.positions.length).toBeGreaterThan(0);
+      expect(indexBinding).toBeDefined();
+      expect(indexBinding.positions.length).toBeGreaterThan(0);
+      expect(prefixBinding).toBeDefined();
+
+      // Outer rowDeps should only contain outer variable 'prefix', not loop-local 'item' or 'index'
+      const rowDepsIdx = module.bytecode[reactiveForIdx + 9]!;
+      const rowDeps = module.constants[rowDepsIdx];
+      expect(rowDeps).toContain('prefix');
+      expect(rowDeps).not.toContain('item');
+      expect(rowDeps).not.toContain('index');
+    });
+
+    it('BUG-117: records destructured pattern identifiers in body sub-module reactiveBindings', () => {
+      const src = `
+        <script>
+          let users = [];
+        </script>
+        @for (({ id, name }, i) in users) {
+          <div data-id={id}>{name} - {i}</div>
+        }
+      `;
+      const module = compile(src);
+      const reactiveForIdx = module.bytecode.indexOf(Opcode.REACTIVE_FOR);
+      const bodyIdx = module.bytecode[reactiveForIdx + 6]!;
+      const bodyMod = module.constants[bodyIdx];
+
+      const idBinding = bodyMod.reactiveBindings.find((b: any) => b.variable === 'id');
+      const nameBinding = bodyMod.reactiveBindings.find((b: any) => b.variable === 'name');
+      const iBinding = bodyMod.reactiveBindings.find((b: any) => b.variable === 'i');
+
+      expect(idBinding).toBeDefined();
+      expect(idBinding.positions.length).toBeGreaterThan(0);
+      expect(nameBinding).toBeDefined();
+      expect(nameBinding.positions.length).toBeGreaterThan(0);
+      expect(iBinding).toBeDefined();
+      expect(iBinding.positions.length).toBeGreaterThan(0);
+    });
   });
 });
+
 

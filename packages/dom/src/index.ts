@@ -95,7 +95,6 @@ export class DriftClientVM {
   private isUpdateScheduled = false;
   private isUnmounted = false;
   private static readonly MAX_FLUSH_ITERATIONS = 100;
-  private static dynamicPcsCache = new WeakMap<CompiledModule, number[]>();
   private depToDerived = new Map<string, DerivedBinding[]>();
   private derivedCache = new Map<string, { val: any; isDirty: boolean; exprConst: any }>();
   private effects: RunningEffect[] = [];
@@ -598,71 +597,9 @@ export class DriftClientVM {
     return { fragment, createdRegions, registers: subRegisters };
   }
 
-  private getDynamicPcs(mod: CompiledModule): number[] {
-    let pcs = DriftClientVM.dynamicPcsCache.get(mod);
-    if (pcs) return pcs;
-
-    pcs = [];
-    const bytecode = mod.bytecode;
-    for (let pc = 0; pc < bytecode.length; ) {
-      const opcode = bytecode[pc]!;
-      switch (opcode) {
-        case Opcode.SET_ATTR: {
-          const isDynamic = bytecode[pc + 4]!;
-          if (isDynamic === 1) {
-            pcs.push(pc);
-          }
-          pc += 5;
-          break;
-        }
-        case Opcode.INTERPOLATE_TEXT: {
-          pcs.push(pc);
-          pc += 3;
-          break;
-        }
-        case Opcode.MOUNT_COMPONENT: {
-          pcs.push(pc);
-          pc += 4;
-          break;
-        }
-        case Opcode.CREATE_ELEMENT:
-        case Opcode.CREATE_TEXT:
-        case Opcode.CREATE_COMMENT:
-        case Opcode.APPEND_CHILD:
-          pc += 3;
-          break;
-        case Opcode.CREATE_FRAGMENT:
-        case Opcode.EXEC_SCRIPT:
-          pc += 2;
-          break;
-        case Opcode.REACTIVE_IF:
-        case Opcode.REACTIVE_SWITCH:
-          pc += 6;
-          break;
-        case Opcode.REACTIVE_FOR:
-          // opcode(1) + parentReg iterIdx itemNameIdx idxNameIdx keyIdx bodyIdx depsIdx iterDepsIdx rowDepsIdx itemPopulatorIdx (10 operands)
-          pc += 11;
-          break;
-        case Opcode.REACTIVE_ASYNC:
-          // opcode(1) + parentReg promiseIdx aliasIdx bodyIdx fallbackIdx catchIdx depsIdx aliasPopulatorIdx (8 operands)
-          pc += 9;
-          break;
-        case Opcode.RETURN:
-          pc += 1;
-          break;
-        default:
-          pc = bytecode.length;
-          break;
-      }
-    }
-
-    DriftClientVM.dynamicPcsCache.set(mod, pcs);
-    return pcs;
-  }
-
   /**
    * Fast-path in-place update for reactive list items with persistent register frames.
-   * Jumps directly to dynamic instruction PCs in VMMode.UPDATE on the row's register array.
+   * Executes dynamic instructions recorded in the sub-module's reactiveBindings.
    */
   public updateRowRegisters(
     bodyMod: CompiledModule,
@@ -670,10 +607,18 @@ export class DriftClientVM {
     registers: (Node | any)[],
     childRegions?: ReactiveRegion[]
   ): void {
-    const dynamicPcs = this.getDynamicPcs(bodyMod);
-    for (let i = 0; i < dynamicPcs.length; i++) {
-      const pc = dynamicPcs[i]!;
-      this.executeFrom(pc, bodyMod.bytecode, bodyMod.constants, childScope, VMMode.UPDATE, registers);
+    if (bodyMod.reactiveBindings && bodyMod.reactiveBindings.length > 0) {
+      const executedPcs = new Set<number>();
+      for (let i = 0; i < bodyMod.reactiveBindings.length; i++) {
+        const binding = bodyMod.reactiveBindings[i]!;
+        for (let j = 0; j < binding.positions.length; j++) {
+          const pc = binding.positions[j]!;
+          if (!executedPcs.has(pc)) {
+            executedPcs.add(pc);
+            this.executeFrom(pc, bodyMod.bytecode, bodyMod.constants, childScope, VMMode.UPDATE, registers);
+          }
+        }
+      }
     }
     if (childRegions && childRegions.length > 0) {
       for (let i = 0; i < childRegions.length; i++) {

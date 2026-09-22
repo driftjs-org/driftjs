@@ -188,5 +188,97 @@ describe('DriftClientVM – Zero-Proxy Async Reactivity & Microtask Batching', (
     await Promise.resolve();
     expect(root.textContent).toBe('loaded async');
   });
+
+  it('renders @async directive with fallback and body resolution', async () => {
+    let resolvePromise: (val: string) => void = () => {};
+    const testPromise = new Promise<string>((resolve) => {
+      resolvePromise = resolve;
+    });
+
+    const src = `
+      <script>
+        let p = myPromise;
+      </script>
+      <div class="container">
+        @async (p as msg) {
+          <span class="body-content">{msg}</span>
+        } @fallback {
+          <span class="loading">Loading...</span>
+        }
+      </div>
+    `;
+
+    const mod = compile(src);
+    const vm = new DriftClientVM();
+    const root = vm.execute(mod, {
+      document,
+      scope: { myPromise: testPromise },
+    }) as HTMLElement;
+
+    // Immediately after mount, fallback should be displayed
+    const loadingSpan = root.querySelector('.loading');
+    expect(loadingSpan).not.toBeNull();
+    expect(loadingSpan?.textContent).toBe('Loading...');
+    expect(root.querySelector('.body-content')).toBeNull();
+
+    // Resolve promise
+    resolvePromise('Hello Async World');
+    await testPromise;
+    await Promise.resolve();
+
+    expect(root.querySelector('.loading')).toBeNull();
+    const bodySpan = root.querySelector('.body-content');
+    expect(bodySpan).not.toBeNull();
+    expect(bodySpan?.textContent).toBe('Hello Async World');
+
+    vm.unmount();
+  });
+
+  it('renders @async directive @catch branch upon rejection', async () => {
+    let rejectPromise: (err: any) => void = () => {};
+    const testPromise = new Promise<string>((_, reject) => {
+      rejectPromise = reject;
+    });
+
+    const src = `
+      <script>
+        let p = myPromise;
+      </script>
+      <div class="container">
+        @async (p as msg) {
+          <span class="body-content">{msg}</span>
+        } @fallback {
+          <span class="loading">Loading...</span>
+        } @catch (err) {
+          <span class="error">Failed: {err}</span>
+        }
+      </div>
+    `;
+
+    const mod = compile(src);
+    const vm = new DriftClientVM();
+    const root = vm.execute(mod, {
+      document,
+      scope: { myPromise: testPromise },
+    }) as HTMLElement;
+
+    expect(root.querySelector('.loading')?.textContent).toBe('Loading...');
+
+    rejectPromise('Network timeout');
+    try {
+      await testPromise;
+    } catch {
+      // Expected
+    }
+    await Promise.resolve();
+
+    expect(root.querySelector('.loading')).toBeNull();
+    const errorSpan = root.querySelector('.error');
+    expect(errorSpan).not.toBeNull();
+    expect(errorSpan?.textContent).toBe('Failed: Network timeout');
+
+    vm.unmount();
+  });
 });
+
 

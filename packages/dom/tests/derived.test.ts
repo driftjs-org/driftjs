@@ -172,4 +172,59 @@ describe('derive() Computed / Derived State VM Reactivity', () => {
     vm.unmount();
     document.body.removeChild(container);
   });
+
+  it('updates child component derive() computation when incoming parent props change', async () => {
+    const childComponent = {
+      bytecode: new Uint32Array([
+        1, 0, 0, // CREATE_ELEMENT, 0, tagIdx 0 ('span')
+        7, 1, 1, // INTERPOLATE_TEXT, 1, exprIdx 1 ('doubled')
+        0, // RETURN
+        4, 0, 1, // APPEND_CHILD, 0, 1
+      ]),
+      constants: [
+        'span',
+        { __drift_fn__: '(scope) => scope.doubled' },
+        { __drift_fn__: '(scope) => scope.multiplier * 2' },
+      ],
+      reactiveBindings: [
+        { variable: 'doubled', positions: [3] },
+      ],
+      derived: [
+        { name: 'doubled', deps: ['multiplier'], exprIdx: 2 },
+      ],
+      declaredVars: ['doubled', 'multiplier'],
+      scope: {},
+    };
+
+    const parentComponent = {
+      bytecode: new Uint32Array([
+        15, 0, 0, 1, // MOUNT_COMPONENT, 0, compIdx 0, propsIdx 1
+        0, // RETURN
+      ]),
+      constants: [
+        'ChildComp',
+        { __drift_props__: true, multiplier: { __drift_fn__: '(scope) => scope.factor' } },
+      ],
+      reactiveBindings: [
+        { variable: 'factor', positions: [0] },
+      ],
+      declaredVars: ['ChildComp', 'factor'],
+      scope: {
+        ChildComp: childComponent,
+        factor: 5,
+      },
+    };
+
+    const vm = new DriftClientVM();
+    const root = vm.execute(parentComponent as any, { document }) as HTMLElement;
+
+    expect(root.textContent).toBe('10');
+
+    (vm as any).scope.factor = 25;
+    vm.triggerUpdates(new Set(['factor']));
+
+    expect(root.textContent).toBe('50');
+    vm.unmount();
+  });
 });
+

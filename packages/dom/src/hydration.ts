@@ -66,7 +66,11 @@ export class HydrationCursor {
   public claimComment(expectedContent: string, doc: Document): Comment {
     const trimmedExpected = expectedContent.trim();
     return this.claimNode(
-      (n) => n.nodeType === 8 && (n as Comment).data.trim() === trimmedExpected,
+      (n) => {
+        if (n.nodeType !== 8) return false;
+        const data = (n as Comment).data.trim();
+        return data === trimmedExpected || data.startsWith(trimmedExpected + ':');
+      },
       () => doc.createComment(expectedContent)
     );
   }

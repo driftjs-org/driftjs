@@ -121,5 +121,63 @@ describe('SSR & Hydration End-to-End Integration', () => {
 
     document.body.removeChild(container);
   });
+
+  it('correctly reconciles, moves, and removes SSR-hydrated @for list items upon post-hydration mutations', () => {
+    const src = `
+      <script>
+        let items = ['alpha', 'beta', 'gamma'];
+      </script>
+      <ul class="items-list">
+        @for item in items {
+          <li class="item">{item}</li>
+        }
+      </ul>
+    `;
+
+    const lexer = new DriftLexer(src);
+    const parser = new DriftParser(lexer);
+    const ast = parser.parse();
+    const transformer = new DriftTransformer(ast);
+    const compiledModule = new DriftGenerator(transformer.transform()).generate();
+
+    // 1. SSR HTML
+    const ssrHtml = renderToString(compiledModule);
+    const container = document.createElement('div');
+    container.innerHTML = ssrHtml;
+    document.body.appendChild(container);
+
+    // 2. Hydrate
+    const vm = hydrate(compiledModule, container);
+
+    const initialLis = container.querySelectorAll('.items-list li');
+    expect(initialLis.length).toBe(3);
+    expect(Array.from(initialLis).map((li) => li.textContent)).toEqual(['alpha', 'beta', 'gamma']);
+
+    // 3. Post-hydration removal: remove 'beta'
+    (vm as any).scope.items = ['alpha', 'gamma'];
+    vm.triggerUpdates(new Set(['items']));
+
+    const lisAfterRemoval = container.querySelectorAll('.items-list li');
+    expect(lisAfterRemoval.length).toBe(2);
+    expect(Array.from(lisAfterRemoval).map((li) => li.textContent)).toEqual(['alpha', 'gamma']);
+
+    // 4. Post-hydration reorder / addition: prepend and reorder
+    (vm as any).scope.items = ['delta', 'gamma', 'alpha'];
+    vm.triggerUpdates(new Set(['items']));
+
+    const lisAfterReorder = container.querySelectorAll('.items-list li');
+    expect(lisAfterReorder.length).toBe(3);
+    expect(Array.from(lisAfterReorder).map((li) => li.textContent)).toEqual(['delta', 'gamma', 'alpha']);
+
+    // 5. Clear list completely
+    (vm as any).scope.items = [];
+    vm.triggerUpdates(new Set(['items']));
+
+    const lisAfterClear = container.querySelectorAll('.items-list li');
+    expect(lisAfterClear.length).toBe(0);
+
+    document.body.removeChild(container);
+  });
 });
+
 

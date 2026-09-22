@@ -775,6 +775,11 @@ export class DriftClientVM {
               if (parent && child && typeof parent.appendChild === 'function') {
                 if (!this.cursor || (child.parentNode !== parent && parent.nodeType !== 11)) {
                   parent.appendChild(child);
+                } else if (this.cursor && parent.nodeType === 11) {
+                  if (!(parent as any).__drift_nodes__) {
+                    (parent as any).__drift_nodes__ = [];
+                  }
+                  (parent as any).__drift_nodes__.push(child);
                 }
               }
             }
@@ -1148,13 +1153,15 @@ export class DriftClientVM {
                   doPopulate(childScope, itemVal, indexVal);
 
                   const { fragment: frag, createdRegions: childRegions, registers: rowRegisters } = vm.runSubModule(bodyMod, childScope);
-                  const nodes: Node[] = frag
-                    ? frag.nodeType === 11
-                      ? Array.from(frag.childNodes)
-                      : [frag]
-                    : [];
+                  const nodes: Node[] = (frag as any)?.__drift_nodes__
+                    ? (frag as any).__drift_nodes__
+                    : frag
+                      ? frag.nodeType === 11
+                        ? Array.from(frag.childNodes)
+                        : [frag]
+                      : [];
 
-                  if (frag) {
+                  if (frag && (!vm.cursor || (frag.childNodes && frag.childNodes.length > 0))) {
                     if (refNode && refNode.parentNode) {
                       refNode.parentNode.insertBefore(frag, refNode);
                     } else {
@@ -1302,6 +1309,145 @@ export class DriftClientVM {
             break;
           }
 
+          case Opcode.REACTIVE_ASYNC: {
+            const parentReg            = bytecode[pc + 1]!;
+            const promiseIdx           = bytecode[pc + 2]!;
+            const aliasIdx             = bytecode[pc + 3]!;
+            const bodyIdx              = bytecode[pc + 4]!;
+            const fallbackIdx          = bytecode[pc + 5]!;
+            const catchIdx             = bytecode[pc + 6]!;
+            const depsIdx              = bytecode[pc + 7]!;
+            const aliasPopulatorRawIdx = bytecode[pc + 8] ?? 0xFF;
+            const aliasPopulatorConst  = aliasPopulatorRawIdx !== 0xFF ? constants[aliasPopulatorRawIdx] : null;
+
+            const parentElem = this.getRegister(parentReg, registers);
+            const promiseExpr = constants[promiseIdx];
+            const alias = constants[aliasIdx] as string;
+            const bodyMod = constants[bodyIdx];
+            const fallbackMod = fallbackIdx !== 0xFF ? constants[fallbackIdx] : null;
+            const catchData = catchIdx !== 0xFF ? constants[catchIdx] as { errorVar?: string; module: CompiledModule } : null;
+            const depsRaw = constants[depsIdx];
+            const deps = new Set<string>(Array.isArray(depsRaw) ? depsRaw : []);
+
+            const startAnchor = this.cursor ? this.cursor.claimComment('drift-async', doc) : doc.createComment('drift-async');
+            if (!startAnchor.parentNode || startAnchor.parentNode !== parentElem) {
+              parentElem.appendChild(startAnchor);
+            }
+
+            let actualEndAnchor: Comment = !this.cursor ? doc.createComment('/drift-async') : (null as any);
+            if (actualEndAnchor) {
+              parentElem.appendChild(actualEndAnchor);
+            }
+
+            const vm = this;
+            let childRegions: ReactiveRegion[] = [];
+            let asyncRegion: ReactiveRegion | null = null;
+            let currentPromiseToken = 0;
+
+            const doPopulateAsync = (childScope: Record<string, any>, val: any): void => {
+              if (aliasPopulatorConst) {
+                const populate = evaluateExpression(aliasPopulatorConst, childScope, vm.declaredVars);
+                if (typeof populate === 'function') {
+                  populate(val, 0);
+                  return;
+                }
+              }
+              if (alias && alias !== '__proto__' && alias !== 'constructor' && alias !== 'prototype') {
+                childScope[alias] = val;
+              }
+            };
+
+            const clearAsyncContent = () => {
+              for (const r of childRegions) {
+                vm.removeRegion(r);
+              }
+              childRegions = [];
+              if (actualEndAnchor && startAnchor.parentNode) {
+                clearBetweenAnchors(startAnchor, actualEndAnchor, vm);
+              }
+            };
+
+            const mountSubTree = (subMod: CompiledModule, subScope: Record<string, any>) => {
+              clearAsyncContent();
+              const { fragment, createdRegions } = vm.runSubModule(subMod, subScope);
+              childRegions = createdRegions;
+              if (fragment) {
+                if (actualEndAnchor && actualEndAnchor.parentNode) {
+                  actualEndAnchor.parentNode.insertBefore(fragment, actualEndAnchor);
+                } else {
+                  parentElem.appendChild(fragment);
+                }
+              }
+              if (asyncRegion) {
+                asyncRegion.childRegions = childRegions;
+              }
+            };
+
+            const renderAsync = () => {
+              const promiseToken = ++currentPromiseToken;
+              const rawPromise = evaluateExpression(promiseExpr, scope, vm.declaredVars);
+
+              if (rawPromise && typeof (rawPromise as any).then === 'function') {
+                if (fallbackMod) {
+                  const fallbackScope = Object.create(scope);
+                  mountSubTree(fallbackMod, fallbackScope);
+                } else {
+                  clearAsyncContent();
+                }
+
+                (rawPromise as Promise<any>).then(
+                  (resolvedVal) => {
+                    if (vm.isUnmounted || currentPromiseToken !== promiseToken) return;
+                    const bodyScope = Object.create(scope);
+                    doPopulateAsync(bodyScope, resolvedVal);
+                    mountSubTree(bodyMod, bodyScope);
+                  },
+                  (err) => {
+                    if (vm.isUnmounted || currentPromiseToken !== promiseToken) return;
+                    if (catchData && catchData.module) {
+                      const catchScope = Object.create(scope);
+                      if (catchData.errorVar && catchData.errorVar !== '__proto__' && catchData.errorVar !== 'constructor') {
+                        catchScope[catchData.errorVar] = err;
+                      }
+                      mountSubTree(catchData.module, catchScope);
+                    } else {
+                      clearAsyncContent();
+                    }
+                  }
+                );
+              } else {
+                const bodyScope = Object.create(scope);
+                doPopulateAsync(bodyScope, rawPromise);
+                mountSubTree(bodyMod, bodyScope);
+              }
+            };
+
+            renderAsync();
+
+            if (this.cursor) {
+              actualEndAnchor = this.cursor.claimComment('/drift-async', doc);
+              if (!actualEndAnchor.parentNode || actualEndAnchor.parentNode !== parentElem) {
+                parentElem.appendChild(actualEndAnchor);
+              }
+            }
+
+            asyncRegion = {
+              deps,
+              reRender: () => {
+                renderAsync();
+              },
+              childRegions,
+              parentNode: parentElem,
+              startAnchor,
+              endAnchor: actualEndAnchor,
+            };
+            this.registerRegion(asyncRegion);
+
+            // opcode(1) + 8 operands (parentReg promiseIdx aliasIdx bodyIdx fallbackIdx catchIdx depsIdx aliasPopulatorIdx)
+            pc += 9;
+            break;
+          }
+
           default:
             throw new Error(`Unknown Opcode ${opcode} at PC ${pc}`);
         }
@@ -1429,13 +1575,24 @@ export class DriftClientVM {
   public triggerUpdates(changedVars: Set<string>): void {
     if (changedVars.size === 0) return;
 
+    const allChangedVars = new Set<string>(changedVars);
     for (const varName of changedVars) {
+      this.invalidateDerived(varName);
+    }
+    if (this.pendingDirtyVars.size > 0) {
+      for (const dirtyVar of this.pendingDirtyVars) {
+        allChangedVars.add(dirtyVar);
+      }
+      this.pendingDirtyVars.clear();
+    }
+
+    for (const varName of allChangedVars) {
       this.invalidateEffects(varName);
     }
 
     if (this.reactiveBindingsMap.size > 0 && this.module) {
       this.updatedPcs.clear();
-      for (const varName of changedVars) {
+      for (const varName of allChangedVars) {
         const positions = this.reactiveBindingsMap.get(varName);
         if (!positions) continue;
 
@@ -1450,7 +1607,7 @@ export class DriftClientVM {
 
     // 2. Re-render reactive @if / @for regions whose deps intersect changedVars in O(1) time
     const candidateRegions = new Set<ReactiveRegion>();
-    for (const varName of changedVars) {
+    for (const varName of allChangedVars) {
       const indexed = this.reactiveRegionsIndex.get(varName);
       if (indexed) {
         for (const region of indexed) {
@@ -1461,8 +1618,12 @@ export class DriftClientVM {
 
     for (const region of candidateRegions) {
       if (this.reactiveRegions.has(region)) {
-        region.reRender(changedVars);
+        region.reRender(allChangedVars);
       }
+    }
+
+    if (this.pendingEffects.size > 0) {
+      this.flushPendingEffects();
     }
   }
 }

@@ -433,4 +433,67 @@ describe('effect() Reactive Side-Effects & Lifecycle in DriftClientVM', () => {
     delete (globalThis as any).__log_a__;
     delete (globalThis as any).__log_b__;
   });
+
+  it('runs child component effect() when incoming parent props change', async () => {
+    let capturedVal: number | null = null;
+    (globalThis as any).__capture_prop_effect__ = (val: number) => {
+      capturedVal = val;
+    };
+
+    const childComponent = {
+      bytecode: new Uint32Array([
+        1, 0, 0, // CREATE_ELEMENT, 0, 'span'
+        7, 1, 1, // INTERPOLATE_TEXT, 1, val
+        0, // RETURN
+        4, 0, 1, // APPEND_CHILD, 0, 1
+      ]),
+      constants: [
+        'span',
+        { __drift_fn__: '(scope) => scope.val' },
+        { __drift_fn__: '(scope) => { globalThis.__capture_prop_effect__(scope.val); }' },
+      ],
+      reactiveBindings: [
+        { variable: 'val', positions: [3] },
+      ],
+      effects: [
+        { deps: ['val'], exprIdx: 2 },
+      ],
+      declaredVars: ['val'],
+      scope: {},
+    };
+
+    const parentComponent = {
+      bytecode: new Uint32Array([
+        15, 0, 0, 1, // MOUNT_COMPONENT, 0, compIdx 0, propsIdx 1
+        0, // RETURN
+      ]),
+      constants: [
+        'ChildComp',
+        { __drift_props__: true, val: { __drift_fn__: '(scope) => scope.num' } },
+      ],
+      reactiveBindings: [
+        { variable: 'num', positions: [0] },
+      ],
+      declaredVars: ['ChildComp', 'num'],
+      scope: {
+        ChildComp: childComponent,
+        num: 7,
+      },
+    };
+
+    const vm = new DriftClientVM();
+    const root = vm.execute(parentComponent as any, { document }) as HTMLElement;
+
+    expect(capturedVal).toBe(7);
+
+    (vm as any).scope.num = 99;
+    vm.triggerUpdates(new Set(['num']));
+
+    expect(capturedVal).toBe(99);
+    expect(root.textContent).toBe('99');
+
+    vm.unmount();
+    delete (globalThis as any).__capture_prop_effect__;
+  });
 });
+

@@ -140,4 +140,55 @@ describe('Custom Component Children Slot Reactivity ({children})', () => {
     vm.unmount();
     document.body.removeChild(container);
   });
+
+  it('cleans up and unmounts slotted childrenVM when component subtree is unmounted', async () => {
+    const cardSfc = `
+      <div class="card">
+        {children}
+      </div>
+    `;
+
+    const appSfc = `
+      <script>
+        import Card from './Card.drift';
+        let show = true;
+      </script>
+      <div>
+        @if show {
+          <Card>
+            <span class="slot-text">Slotted Content</span>
+          </Card>
+        }
+      </div>
+    `;
+
+    const cardModule = compile(cardSfc);
+    const appModule = compile(appSfc);
+
+    const vm = new DriftClientVM();
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+
+    const root = vm.execute(appModule, {
+      scope: { Card: cardModule },
+      document,
+    });
+    if (root) container.appendChild(root);
+
+    // Initial mount: mountedChildVMs should track childVM and childrenVM
+    expect((vm as any).mountedChildVMs.size).toBe(2);
+    expect(container.querySelector('.slot-text')?.textContent).toBe('Slotted Content');
+
+    // Switch show to false to trigger unmountSubtree
+    (vm as any).scope.show = false;
+    vm.triggerUpdates(new Set(['show']));
+
+    expect(container.querySelector('.slot-text')).toBeNull();
+    // Both childVM and childrenVM must be unmounted and removed from mountedChildVMs
+    expect((vm as any).mountedChildVMs.size).toBe(0);
+
+    vm.unmount();
+    document.body.removeChild(container);
+  });
 });
+

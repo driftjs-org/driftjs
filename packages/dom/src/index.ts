@@ -241,6 +241,10 @@ export class DriftClientVM {
         this.mountedChildVMs.delete(entry.vm);
         entry.vm.unmount();
       }
+      if (entry.childrenVM) {
+        this.mountedChildVMs.delete(entry.childrenVM);
+        entry.childrenVM.unmount();
+      }
       if (entry.nodes) {
         for (const n of entry.nodes) {
           this.childVMs.delete(n);

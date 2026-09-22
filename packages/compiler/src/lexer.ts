@@ -215,7 +215,7 @@ export class DriftLexer {
       return this.createToken(TokenType.BlockClose, '}', startLoc);
     }
 
-    if (this.peek() === '@') {
+    if (this.isDirectiveAhead()) {
       return this.readDirectiveToken(startLoc);
     }
 
@@ -1008,7 +1008,7 @@ export class DriftLexer {
 
     while (!this.isAtEnd()) {
       const ch = this.peek();
-      if (ch === '<' || ch === '{' || ch === '@' || (ch === '}' && isAtDirectiveBlockLevel())) {
+      if (ch === '<' || ch === '{' || (ch === '@' && this.isDirectiveAhead()) || (ch === '}' && isAtDirectiveBlockLevel())) {
         break;
       }
       text += this.advance();
@@ -1187,8 +1187,51 @@ export class DriftLexer {
       (code >= 48 && code <= 57) ||
       code === 95 ||
       code === 36 ||
-      code === 45
+      code === 45 ||
+      code === 58
     );
+  }
+
+  private isDirectiveAhead(): boolean {
+    if (this.peek() !== '@') return false;
+
+    // Directives cannot be part of an email or attached to a word like user@example.com
+    if (this.offset > 0) {
+      const prevChar = this.source.charCodeAt(this.offset - 1);
+      if (
+        (prevChar >= 65 && prevChar <= 90) ||
+        (prevChar >= 97 && prevChar <= 122) ||
+        (prevChar >= 48 && prevChar <= 57) ||
+        prevChar === 95 ||
+        prevChar === 36 ||
+        prevChar === 45
+      ) {
+        return false;
+      }
+    }
+
+    const rest = this.source.slice(this.offset + 1);
+
+    // 1. Check known directives:
+    for (const dir of KNOWN_DIRECTIVES) {
+      if (rest.startsWith(dir)) {
+        const nextChar = rest.charAt(dir.length);
+        if (!nextChar || !/[a-zA-Z0-9_$]/.test(nextChar)) {
+          return true;
+        }
+      }
+    }
+
+    // 2. Check if this is an attempted directive block (e.g. @unknownDirective { ... } or @unknown (params) { ... } or @unknown:)
+    const match = rest.match(/^([a-zA-Z][a-zA-Z0-9_$]*)/);
+    if (match && match[1]) {
+      const afterIdent = rest.slice(match[1].length);
+      if (/^\s*(\([^\)]*\)\s*)?\{/.test(afterIdent) || /^\s*:/.test(afterIdent)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   private isRawTextClosingTagAhead(closingSequence: string): boolean {

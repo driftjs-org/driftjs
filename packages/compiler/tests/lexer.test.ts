@@ -294,5 +294,27 @@ describe('DriftLexer', () => {
       expect(interp?.value).toBe(' (() => { return /* comment */ /test[0-9]+/i; })() ');
     });
   });
+
+  it('correctly lexes XML and SVG namespaced attributes with colons', () => {
+    const lexer = new DriftLexer('<use xlink:href="#icon" xml:space="preserve" />');
+    const tokens = collectTokens(lexer);
+    const idents = tokens.filter((t) => t.type === TokenType.Identifier).map((t) => t.value);
+    expect(idents).toEqual(['use', 'xlink:href', 'xml:space']);
+  });
+
+  it('lexes email addresses and handles containing "@" as plain text instead of unknown directives', () => {
+    const lexer = new DriftLexer('<p>Contact us at support@example.com or ping @driftjs on social media</p>');
+    const tokens = collectTokens(lexer);
+    const textToken = tokens.find((t) => t.type === TokenType.Text);
+    expect(textToken?.value).toBe('Contact us at support@example.com or ping @driftjs on social media');
+  });
+
+  it('correctly distinguishes plain text "@" from actual directives', () => {
+    const lexer = new DriftLexer('<div>Email: test@example.com @if true { <span>Yes</span> }</div>');
+    const tokens = collectTokens(lexer);
+    const textTokens = tokens.filter((t) => t.type === TokenType.Text).map((t) => t.value);
+    expect(textTokens).toContain('Email: test@example.com ');
+    expect(tokens.some((t) => t.type === TokenType.DirectiveIf)).toBe(true);
+  });
 });
 

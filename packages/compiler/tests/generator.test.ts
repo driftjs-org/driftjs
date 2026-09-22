@@ -710,6 +710,20 @@ describe('DriftGenerator', () => {
       expect(iBinding).toBeDefined();
       expect(iBinding.positions.length).toBeGreaterThan(0);
     });
+
+    it('compiles templates containing XML namespaced attributes and emails without error', () => {
+      const src = `
+        <svg xmlns:xlink="http://www.w3.org/1999/xlink">
+          <use xlink:href="#icon-id" xml:space="preserve" />
+        </svg>
+        <p>Support: help@driftjs.com, Ping: @driftjs</p>
+      `;
+      const module = compile(src);
+      expect(module.constants).toContain('xlink:href');
+      expect(module.constants).toContain('#icon-id');
+      expect(module.constants).toContain('xml:space');
+      expect(module.constants).toContain('Support: help@driftjs.com, Ping: @driftjs');
+    });
   });
 });
 

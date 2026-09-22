@@ -1,7 +1,15 @@
 /**
+ * Converts camelCase property names to kebab-case (e.g., backgroundColor -> background-color).
+ */
+export function camelToKebab(str: string): string {
+  if (str.startsWith('--')) return str;
+  return str.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`);
+}
+
+/**
  * List of CSS properties that are unitless numbers.
  */
-const UNITLESS_PROPERTIES = new Set([
+const BASE_UNITLESS_PROPERTIES = [
   'animationIterationCount',
   'borderImageOutset',
   'borderImageSlice',
@@ -44,14 +52,12 @@ const UNITLESS_PROPERTIES = new Set([
   'strokeMiterlimit',
   'strokeOpacity',
   'strokeWidth',
-]);
+];
 
-/**
- * Converts camelCase property names to kebab-case (e.g., backgroundColor -> background-color).
- */
-export function camelToKebab(str: string): string {
-  if (str.startsWith('--')) return str;
-  return str.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`);
+const UNITLESS_PROPERTIES = new Set<string>();
+for (const prop of BASE_UNITLESS_PROPERTIES) {
+  UNITLESS_PROPERTIES.add(prop);
+  UNITLESS_PROPERTIES.add(camelToKebab(prop));
 }
 
 /**
@@ -84,7 +90,9 @@ export function normalizeStyle(value: any): string {
 
       const propName = camelToKebab(key);
       let propVal = rawVal;
-      if (typeof rawVal === 'number' && rawVal !== 0 && !UNITLESS_PROPERTIES.has(key)) {
+      const isCustomProp = propName.startsWith('--');
+      const isUnitless = isCustomProp || UNITLESS_PROPERTIES.has(key) || UNITLESS_PROPERTIES.has(propName);
+      if (typeof rawVal === 'number' && rawVal !== 0 && !isUnitless) {
         propVal = `${rawVal}px`;
       }
       parts.push(`${propName}: ${propVal}`);

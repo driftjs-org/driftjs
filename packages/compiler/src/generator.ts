@@ -992,21 +992,21 @@ function generatePatternAssignments(
       } else if (prop.type === 'RestElement') {
         const varName = prop.argument?.name || astToJS(prop.argument, locals);
         if (varName) {
-          // BUG-116 fix: emit native ES2018 object rest destructuring instead of the
-          // `delete` operator IIFE which de-optimises V8 hidden classes.
-          const knownProps = (pattern.properties || [])
-            .filter((p: any) => p.type === 'Property')
-            .map((p: any) => {
-              const k = p.key?.name !== undefined ? p.key.name : (typeof p.key?.value === 'string' ? p.key.value : null);
-              return k != null ? JSON.stringify(k) : null;
-            })
-            .filter(Boolean);
-          // Build a destructuring parameter list: ({ knownProp1, knownProp2, ...rest }) => rest
+          // Build a destructuring parameter list: ({ "knownProp1": _d0, "knownProp2": _d1, ...rest }) => rest
           const knownParams = (pattern.properties || [])
             .filter((p: any) => p.type === 'Property')
             .map((p: any) => {
-              const k = p.key?.name !== undefined ? p.key.name : (typeof p.key?.value === 'string' ? p.key.value : null);
-              return k != null ? String(k) : null;
+              const dummy = `_d${tmpCounterRef.count++}`;
+              if (p.computed) {
+                return `[${astToJS(p.key, locals)}]: ${dummy}`;
+              }
+              const k = p.key?.name !== undefined
+                ? p.key.name
+                : (typeof p.key?.value === 'string' || typeof p.key?.value === 'number'
+                    ? p.key.value
+                    : null);
+              if (k == null) return null;
+              return `${JSON.stringify(k)}: ${dummy}`;
             })
             .filter(Boolean)
             .join(', ');

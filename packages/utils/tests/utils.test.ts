@@ -139,6 +139,23 @@ describe('driftjs-shared Module', () => {
       expect(normalizeStyle(style)).toBe('opacity: 0.85; z-index: 100; flex: 1; line-height: 1.5; font-weight: 600');
     });
 
+    it('respects kebab-case unitless CSS properties and CSS variables', () => {
+      const style = {
+        'z-index': 100,
+        'line-height': 1.5,
+        'font-weight': 600,
+        'column-count': 2,
+        'flex-grow': 1,
+        '--custom-scale': 1.25,
+        '--custom-ratio': 2,
+        fontSize: 14,
+        'font-size': 16,
+      };
+      expect(normalizeStyle(style)).toBe(
+        'z-index: 100; line-height: 1.5; font-weight: 600; column-count: 2; flex-grow: 1; --custom-scale: 1.25; --custom-ratio: 2; font-size: 14px; font-size: 16px'
+      );
+    });
+
     it('ignores null, undefined, empty, and false values in style objects', () => {
       const style = {
         color: 'red',

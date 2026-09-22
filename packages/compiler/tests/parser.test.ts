@@ -358,6 +358,18 @@ describe('DriftParser', () => {
     expect(forNode.key).toBe('id');
   });
 
+  it('correctly parses unparenthesized object destructuring pattern in @for without index', () => {
+    const parser = new DriftParser(
+      new DriftLexer('@for { id, title } in posts key id { <div>{title}</div> }')
+    );
+    const ast = parser.parse();
+    const forNode = ast.body[0] as any;
+    expect(forNode.item).toBe('{ id, title }');
+    expect(forNode.index).toBeNull();
+    expect(forNode.iterable).toBe('posts');
+    expect(forNode.key).toBe('id');
+  });
+
   it('correctly tracks depth inside template literals containing in keyword', () => {
     const parser = new DriftParser(
       new DriftLexer('@for item in list.filter(x => `${x in y ? "a" : "b"}`) key item.id { <div>{item}</div> }')

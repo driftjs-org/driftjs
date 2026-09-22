@@ -419,7 +419,10 @@ export class DriftLexer {
       }
 
       if (ch === '{') {
-        const isPatternStart = /\b(as|catch)\s*$/.test(headerContent);
+        const cleanHeader = headerContent.replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '').trim();
+        const isPatternStart =
+          /\b(as|catch)\s*$/.test(cleanHeader) ||
+          (type === TokenType.DirectiveFor && /^(?:let|const|var)?\s*$/.test(cleanHeader));
         if (!isPatternStart && parenDepth === 0 && bracketDepth === 0 && braceDepth === 0 && templateStack.length === 0) {
           this.blockDepth++;
           this.blockElementDepthStack.push(this.elementDepth);

@@ -388,6 +388,28 @@ describe('DriftGenerator', () => {
     expect(module.declaredVars).toContain('restObj');
   });
 
+  it('correctly compiles object rest destructuring with hyphenated keys without syntax error', () => {
+    const src = `
+      <script>
+        const { 'content-type': contentType, ...restHeaders } = headers;
+      </script>
+      <div>{contentType}</div>
+    `;
+    const module = compile(src);
+    expect(module.declaredVars).toContain('contentType');
+    expect(module.declaredVars).toContain('restHeaders');
+    const scriptConst = module.constants.find((c: any) => c && typeof c === 'object' && '__drift_fn__' in c);
+    expect(scriptConst).toBeDefined();
+    const fnStr = (scriptConst as any).__drift_fn__;
+    expect(() => new Function('return ' + fnStr)()).not.toThrow();
+
+    const scope: any = { headers: { 'content-type': 'application/json', authorization: 'Bearer token', host: 'localhost' } };
+    const fn = new Function('return ' + fnStr)();
+    fn(scope, ['contentType', 'restHeaders'], (s: any, k: string, v: any) => { s[k] = v; }, null, null, (s: any, k: string) => s[k]);
+    expect(scope.contentType).toBe('application/json');
+    expect(scope.restHeaders).toEqual({ authorization: 'Bearer token', host: 'localhost' });
+  });
+
   it('BUG-027: unified destructuring assignments support nested objects, arrays, and defaults in expressions and statements', () => {
     const src = `
       <script>

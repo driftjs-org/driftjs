@@ -316,5 +316,17 @@ describe('DriftLexer', () => {
     expect(textTokens).toContain('Email: test@example.com ');
     expect(tokens.some((t) => t.type === TokenType.DirectiveIf)).toBe(true);
   });
+
+  it('correctly lexes @for header with unparenthesized object destructuring', () => {
+    const tokens = collectTokens(new DriftLexer('@for { id, name } in items { <div>{id}</div> }'));
+    expect(tokens[0]?.type).toBe(TokenType.DirectiveFor);
+    expect(tokens[0]?.value).toBe('{ id, name } in items');
+  });
+
+  it('correctly lexes @for header with unparenthesized nested object destructuring', () => {
+    const tokens = collectTokens(new DriftLexer('@for { id, meta: { title } } in items { <div>{title}</div> }'));
+    expect(tokens[0]?.type).toBe(TokenType.DirectiveFor);
+    expect(tokens[0]?.value).toBe('{ id, meta: { title } } in items');
+  });
 });
 

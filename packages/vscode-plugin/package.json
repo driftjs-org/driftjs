@@ -1,5 +1,5 @@
 {
-  "name": "driftjs-vscode",
+  "name": "driftjs-vscode-plugin",
   "displayName": "DriftJS VSCode Extension",
   "private": true,
   "description": "Language server, IntelliSense, diagnostics, and syntax highlighting for DriftJS (.drift) Single File Components.",

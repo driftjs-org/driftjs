@@ -40,7 +40,7 @@ if (connection) {
   });
 }
 
-function validateTextDocument(textDocument: TextDocument): void {
+export function validateTextDocument(textDocument: TextDocument): Diagnostic[] {
   const text = textDocument.getText();
   const diagnostics: Diagnostic[] = [];
 
@@ -48,35 +48,50 @@ function validateTextDocument(textDocument: TextDocument): void {
     compile(text);
   } catch (err: any) {
     const msg = String(err?.message || err);
-    // Ignore transient typing syntax errors to prevent intrusive red squiggles while typing
-    const isTransientError = /unclosed|unexpected eof|unterminated|expected/i.test(msg);
+    let lineNum = Number(err?.line ?? err?.loc?.line ?? 1);
+    let colNum = Number(err?.column ?? err?.loc?.column ?? 1);
 
-    if (!isTransientError) {
-      if (err && typeof err === 'object' && ('line' in err || 'column' in err)) {
-        const line = Math.max(0, (Number(err.line) || 1) - 1);
-        const col = Math.max(0, (Number(err.column) || 1) - 1);
-
-        diagnostics.push({
-          severity: DiagnosticSeverity.Error,
-          range: {
-            start: { line, character: col },
-            end: { line, character: col + 5 },
-          },
-          message: msg,
-          source: 'DriftJS Compiler',
-        });
+    // If an inner JS parser coordinate is embedded in the message (e.g. "Unexpected token (2:8)")
+    const innerCoord = msg.match(/\((\d+):(\d+)\)/);
+    if (innerCoord && innerCoord[1] && innerCoord[2]) {
+      const innerLine = Number(innerCoord[1]);
+      const innerCol = Number(innerCoord[2]);
+      if (!isNaN(innerLine) && !isNaN(innerCol)) {
+        lineNum = (lineNum - 1) + innerLine;
+        colNum = innerCol;
       }
     }
+
+    const line = Math.max(0, (isNaN(lineNum) ? 1 : lineNum) - 1);
+    const col = Math.max(0, (isNaN(colNum) ? 1 : colNum) - 1);
+
+    diagnostics.push({
+      severity: DiagnosticSeverity.Error,
+      range: {
+        start: { line, character: col },
+        end: { line, character: col + 5 },
+      },
+      message: msg,
+      source: 'DriftJS Compiler',
+    });
   }
 
   if (connection) {
     connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
   }
+
+  return diagnostics;
 }
 
 if (connection) {
   documents.onDidChangeContent((change) => {
     validateTextDocument(change.document);
+  });
+  documents.onDidOpen((event) => {
+    validateTextDocument(event.document);
+  });
+  documents.onDidClose((event) => {
+    connection?.sendDiagnostics({ uri: event.document.uri, diagnostics: [] });
   });
 }
 
@@ -209,24 +224,58 @@ export function extractScriptVars(docText: string): CompletionItem[] {
   return items;
 }
 
-if (connection) {
-  connection.onCompletion((params): CompletionItem[] => {
-  const doc = documents.get(params.textDocument.uri);
-  if (!doc) return [];
+/**
+ * Determines whether the cursor offset is inside a template interpolation `{ ... }`.
+ * Avoids misidentifying directive block braces (`@if (...) {`, `@for ... {`, etc.) as interpolations.
+ */
+export function isInsideInterpolation(text: string, offset: number): boolean {
+  let depth = 0;
+  for (let i = offset - 1; i >= 0; i--) {
+    const ch = text[i];
+    if (ch === '}') {
+      depth++;
+    } else if (ch === '{') {
+      if (depth > 0) {
+        depth--;
+      } else {
+        const textBeforeBrace = text.slice(Math.max(0, i - 120), i);
+        const isDirectiveBlock = /@(?:if|else\s+if|else|for|switch|case|default|async|fallback|catch)\b[^{}]*$/.test(textBeforeBrace);
+        return !isDirectiveBlock;
+      }
+    }
+  }
+  return false;
+}
 
-  const text = doc.getText();
-  const offset = doc.offsetAt(params.position);
+/**
+ * Determines whether the cursor line prefix is inside a directive header before its opening `{`.
+ */
+export function isInsideDirectiveHeader(linePrefix: string): boolean {
+  return /@(?:if|else\s+if|for|switch|case|async|catch)(?:\s+[^{}]*|\s*\([^{}]*)$/.test(linePrefix);
+}
+
+export function computeCompletions(
+  text: string,
+  offset: number,
+  position?: { line: number; character: number }
+): CompletionItem[] {
   const linePrefix = text.slice(Math.max(0, offset - 50), offset);
-  const lookback = text.slice(Math.max(0, offset - 1000), offset);
+  const pos = position ?? (() => {
+    const lines = text.slice(0, offset).split('\n');
+    return {
+      line: Math.max(0, lines.length - 1),
+      character: lines[lines.length - 1]?.length ?? 0,
+    };
+  })();
 
   const scriptVars = extractScriptVars(text);
 
   // 1. Trigger inside interpolation { ... }, directive header @if ..., or <script> block
-  const isInsideInterpolation = /\{[^{}]*$/.test(lookback);
-  const isInsideDirectiveHeader = /@(?:if|else\s+if|for|switch)\b[^{}]*$/.test(linePrefix);
+  const insideInterp = isInsideInterpolation(text, offset);
+  const insideDirHeader = isInsideDirectiveHeader(linePrefix);
   const isInsideScript = /<script[^>]*>(?:(?!<\/script>)[\s\S])*$/i.test(text.slice(0, offset));
 
-  if (isInsideInterpolation || isInsideDirectiveHeader || isInsideScript) {
+  if (insideInterp || insideDirHeader || isInsideScript) {
     return scriptVars;
   }
 
@@ -439,14 +488,14 @@ if (connection) {
 
   if (matchBefore && matchBefore[1] !== undefined) {
     const typedWordLen = matchBefore[1].length;
-    const startChar = params.position.character - typedWordLen;
+    const startChar = pos.character - typedWordLen;
     const endChar = hasTrailingGt
-      ? params.position.character + 1
-      : params.position.character;
+      ? pos.character + 1
+      : pos.character;
 
     replaceRange = Range.create(
-      { line: params.position.line, character: startChar },
-      { line: params.position.line, character: endChar }
+      { line: pos.line, character: startChar },
+      { line: pos.line, character: endChar }
     );
   }
 
@@ -470,7 +519,17 @@ if (connection) {
     }),
     ...scriptVars,
   ];
-});
+}
+
+if (connection) {
+  connection.onCompletion((params): CompletionItem[] => {
+    const doc = documents.get(params.textDocument.uri);
+    if (!doc) return [];
+
+    const text = doc.getText();
+    const offset = doc.offsetAt(params.position);
+    return computeCompletions(text, offset, params.position);
+  });
 
   connection.onCompletionResolve((item: CompletionItem): CompletionItem => {
     return item;

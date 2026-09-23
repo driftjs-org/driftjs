@@ -10,9 +10,9 @@ This document tracks all identified bugs, runtime defects, language server limit
 |---|---|---|---|---|
 | **VSC-001** | Language Server startup crash via ESM/CJS module conflict | **Critical** | **Fixed** | [`package.json`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/package.json), [`vite.config.ts`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/vite.config.ts), [`src/extension.ts`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/extension.ts) |
 | **VSC-002** | Extension client activation crash due to browser environment externalization (`path.join`) | **Critical** | **Fixed** | [`vite.config.ts`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/vite.config.ts), [`src/extension.ts`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/extension.ts) |
-| **VSC-003** | Compiler diagnostics silenced by overbroad `isTransientError` regex | **High** | Open | [`src/server.ts`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts) |
-| **VSC-004** | Acorn script errors ignored and missing document lifecycle diagnostics | **High** | Open | [`src/server.ts`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts) |
-| **VSC-005** | Directive block opening braces mistaken for interpolations, disabling completions in blocks | **High** | Open | [`src/server.ts`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts) |
+| **VSC-003** | Compiler diagnostics silenced by overbroad `isTransientError` regex | **High** | **Fixed** | [`src/server.ts`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts) |
+| **VSC-004** | Acorn script errors ignored and missing document lifecycle diagnostics | **High** | **Fixed** | [`src/server.ts`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts) |
+| **VSC-005** | Directive block opening braces mistaken for interpolations, disabling completions in blocks | **High** | **Fixed** | [`src/server.ts`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts) |
 | **VSC-006** | TextMate grammar misclassifies `@case` body markup as JavaScript interpolations | **Medium** | Open | [`syntaxes/drift.tmLanguage.json`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/syntaxes/drift.tmLanguage.json) |
 | **VSC-007** | TextMate grammar prematurely terminates on nested braces in interpolations | **Medium** | Open | [`syntaxes/drift.tmLanguage.json`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/syntaxes/drift.tmLanguage.json) |
 | **VSC-008** | Missing modern directives (`@async`, `@fallback`, `@catch`) across LSP, snippets, and grammar | **Medium** | Open | [`src/server.ts`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts), [`snippets.json`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/snippets.json), [`syntaxes/drift.tmLanguage.json`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/syntaxes/drift.tmLanguage.json) |
@@ -66,9 +66,9 @@ This document tracks all identified bugs, runtime defects, language server limit
 
 ### VSC-003: Compiler Diagnostics Silenced by Overbroad `isTransientError` Regex
 * **Severity:** High
-* **Status:** Open
+* **Status:** Fixed
 * **Affected Files:**
-  - [`packages/vscode-plugin/src/server.ts#L52`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts#L52)
+  - [`packages/vscode-plugin/src/server.ts`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts)
 * **Root Cause:**
   In `validateTextDocument`:
   ```ts
@@ -81,42 +81,41 @@ This document tracks all identified bugs, runtime defects, language server limit
   - `"Invalid @for target bindings. Expected at most 2 variables"`
   - `"Unexpected token inside @switch block. Expected @case or @default."`
   - `"Expected '{' after @else directive"`
-  Because `/expected/i` matches these messages, nearly 100% of real compiler errors are classified as "transient" and discarded, leaving the Problems panel empty on broken code.
-* **Recommendation:**
-  Detect transient errors by checking specific unterminated token boundaries at the active cursor position rather than blanket-filtering error strings that contain "expected".
+  Because `/expected/i` matched these messages, nearly 100% of real compiler errors were classified as "transient" and discarded, leaving the Problems panel empty on broken code.
+* **Resolution:**
+  Removed the blanket suppression regex. Real compilation errors thrown by `compile(text)` now reliably surface as red squiggles in the editor and Problems view.
 
 ---
 
 ### VSC-004: Acorn JS Errors in `<script>` Ignored and Missing Document Lifecycle Diagnostics
 * **Severity:** High
-* **Status:** Open
+* **Status:** Fixed
 * **Affected Files:**
-  - [`packages/vscode-plugin/src/server.ts#L55-L81`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts#L55-L81)
+  - [`packages/vscode-plugin/src/server.ts`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts)
 * **Root Cause:**
-  - `server.ts` checks `if (err && ('line' in err || 'column' in err))`. Acorn parser errors store location coordinates under `err.loc.line` and `err.loc.column`. As `'line' in err` is `false`, Acorn syntax errors thrown during `<script>` validation are dropped.
-  - Diagnostics are only dispatched on `onDidChangeContent`. Documents opened for the first time (`onDidOpenTextDocument`) are not validated, and closing a file (`onDidCloseTextDocument`) does not clear existing diagnostics from the workspace.
-* **Recommendation:**
-  Extract line/column using `err.loc?.line ?? err.line ?? 1` and `err.loc?.column ?? err.column ?? 1`. Add `documents.onDidOpen` and `documents.onDidClose` listeners.
+  - `server.ts` checked `if (err && ('line' in err || 'column' in err))`. Acorn parser errors store location coordinates under `err.loc.line` and `err.loc.column`. As `'line' in err` was `false`, Acorn syntax errors thrown during `<script>` validation were dropped.
+  - Diagnostics were only dispatched on `onDidChangeContent`. Documents opened for the first time (`onDidOpenTextDocument`) were not validated, and closing a file (`onDidCloseTextDocument`) did not clear existing diagnostics from the workspace.
+* **Resolution:**
+  - Support `err.loc?.line`, `err.line`, and inner parser coordinate string patterns (`(line:col)`) to accurately highlight syntax errors within `<script>` blocks.
+  - Added `documents.onDidOpen` listener to validate newly opened documents and `documents.onDidClose` listener to clear stale diagnostics upon file closure.
 
 ---
 
 ### VSC-005: Directive Block Opening Braces Mistaken for Interpolations, Disabling Completions in Blocks
 * **Severity:** High
-* **Status:** Open
+* **Status:** Fixed
 * **Affected Files:**
-  - [`packages/vscode-plugin/src/server.ts#L225-L231`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts#L225-L231)
+  - [`packages/vscode-plugin/src/server.ts`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts)
 * **Root Cause:**
-  `onCompletion` checks:
+  `onCompletion` checked:
   ```ts
   const isInsideInterpolation = /\{[^{}]*$/.test(lookback);
-  ...
-  if (isInsideInterpolation || isInsideDirectiveHeader || isInsideScript) {
-    return scriptVars;
-  }
   ```
-  Whenever the cursor is inside the body of an `@if (...) {`, `@for (...) {`, or `@switch {` block, the opening `{` of the block matches `/\{[^{}]*$/`. `isInsideInterpolation` evaluates to `true` anywhere inside directive blocks, causing an early return of `scriptVars` and blocking all HTML tag completions, snippets, attribute completions, and nested directive autocompletions.
-* **Recommendation:**
-  Distinguish directive block openers (`@if (...) {`) from template interpolations (`{ expr }`).
+  Whenever the cursor was inside the body of an `@if (...) {`, `@for (...) {`, or `@switch {` block, the opening `{` of the block matched `/\{[^{}]*$/`. `isInsideInterpolation` evaluated to `true` anywhere inside directive blocks, causing an early return of `scriptVars` and blocking all HTML tag completions, snippets, attribute completions, and nested directive autocompletions.
+* **Resolution:**
+  - Implemented `isInsideInterpolation(text, offset)` which scans backwards to find the innermost unclosed brace `{` and checks if it was opened by a directive header (`@if`, `@for`, etc.). If opened by a directive, the brace denotes a template block rather than an interpolation.
+  - Updated `isInsideDirectiveHeader(linePrefix)` to require trailing whitespace or parentheses before treating a position as an expression context, preventing directive names like `@if` or `@for` from being misinterpreted as expression headers.
+  - Refactored `computeCompletions` to enable full HTML tag, attribute, snippet, and directive autocompletion inside control flow blocks.
 
 ---
 

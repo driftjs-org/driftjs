@@ -538,7 +538,82 @@ describe('DriftParser', () => {
       `;
       expect(() => new DriftParser(new DriftLexer(src)).parse()).toThrow('Duplicate @fallback');
     });
+
+    it('BUG-1: parses @if, @else if, and @else with HTML comments between blocks', () => {
+      const src = `
+        @if (a) {
+          <span>A</span>
+        }
+        <!-- check secondary condition -->
+        @else if (b) {
+          <span>B</span>
+        }
+        <!-- fallback default -->
+        @else {
+          <span>C</span>
+        }
+      `;
+      const ast = new DriftParser(new DriftLexer(src)).parse();
+      const ifNode = ast.body.find((n: any) => n.type === ASTNodeType.If) as any;
+      expect(ifNode).toBeDefined();
+      expect(ifNode.test).toBe('(a)');
+      expect(ifNode.alternate).toBeDefined();
+      expect(ifNode.alternate.type).toBe(ASTNodeType.If);
+      expect(ifNode.alternate.test).toBe('(b)');
+      expect(Array.isArray(ifNode.alternate.alternate)).toBe(true);
+      const span = ifNode.alternate.alternate.find((n: any) => n.tagName === 'span');
+      expect(span).toBeDefined();
+    });
+
+    it('BUG-1: parses @switch with HTML comments before, between, and after cases', () => {
+      const src = `
+        @switch (type) {
+          <!-- before first case -->
+          @case ('foo') {
+            <span>Foo</span>
+          }
+          <!-- between cases -->
+          @case ('bar') {
+            <span>Bar</span>
+          }
+          <!-- before default -->
+          @default {
+            <span>Default</span>
+          }
+          <!-- after default -->
+        }
+      `;
+      const ast = new DriftParser(new DriftLexer(src)).parse();
+      const switchNode = ast.body.find((n: any) => n.type === ASTNodeType.Switch) as any;
+      expect(switchNode).toBeDefined();
+      expect(switchNode.cases).toHaveLength(3);
+      expect(switchNode.cases[0].expression).toBe("('foo')");
+      expect(switchNode.cases[1].expression).toBe("('bar')");
+      expect(switchNode.cases[2].expression).toBeNull();
+    });
+
+    it('BUG-1: parses @async with HTML comments between @async, @fallback, and @catch', () => {
+      const src = `
+        @async fetchData() as res {
+          <div>{res}</div>
+        }
+        <!-- loading placeholder -->
+        @fallback {
+          <div>Loading...</div>
+        }
+        <!-- error handler -->
+        @catch err {
+          <div>Error: {err}</div>
+        }
+      `;
+      const ast = new DriftParser(new DriftLexer(src)).parse();
+      const asyncNode = ast.body.find((n: any) => n.type === ASTNodeType.Async) as any;
+      expect(asyncNode).toBeDefined();
+      expect(asyncNode.fallback).toBeDefined();
+      expect(asyncNode.catchBranch).toBeDefined();
+    });
   });
 });
+
 
 

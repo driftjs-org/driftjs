@@ -557,15 +557,54 @@ export class DriftGenerator {
 
 
   private compileAsyncNode(node: AsyncNode, parentReg: number): void {
+    const asyncAliases = new Set<string>();
+    if (node.aliasAst) {
+      for (const name of extractBindingNames(node.aliasAst)) {
+        asyncAliases.add(name);
+      }
+    } else if (node.alias) {
+      asyncAliases.add(node.alias);
+    }
+
+    const addedAliases: string[] = [];
+    for (const alias of asyncAliases) {
+      if (!this.declaredVars.has(alias)) {
+        this.declaredVars.add(alias);
+        addedAliases.push(alias);
+      }
+    }
+
     const bodyMod = this.compileNodesToSubModule(node.body);
+
+    for (const alias of addedAliases) {
+      this.declaredVars.delete(alias);
+    }
+
     const bodyIdx = this.addConstant(bodyMod);
 
     const fallbackMod = node.fallback ? this.compileNodesToSubModule(node.fallback) : null;
     const fallbackIdx = fallbackMod ? this.addConstant(fallbackMod) : 0xFF;
 
     let catchIdx = 0xFF;
+    const catchAliases = new Set<string>();
     if (node.catchBranch) {
+      if (node.catchBranch.errorVar) {
+        catchAliases.add(node.catchBranch.errorVar);
+      }
+      const addedCatch: string[] = [];
+      for (const alias of catchAliases) {
+        if (!this.declaredVars.has(alias)) {
+          this.declaredVars.add(alias);
+          addedCatch.push(alias);
+        }
+      }
+
       const catchMod = this.compileNodesToSubModule(node.catchBranch.body);
+
+      for (const alias of addedCatch) {
+        this.declaredVars.delete(alias);
+      }
+
       catchIdx = this.addConstant({
         errorVar: node.catchBranch.errorVar,
         module: catchMod,
@@ -584,11 +623,15 @@ export class DriftGenerator {
 
     const depsSet = new Set<string>();
     for (const dep of this.collectDepsFromSubModule(bodyMod, node.promise)) {
-      depsSet.add(dep);
+      if (!asyncAliases.has(dep) && !catchAliases.has(dep)) {
+        depsSet.add(dep);
+      }
     }
     if (fallbackMod) {
       for (const dep of this.collectDepsFromSubModule(fallbackMod)) {
-        depsSet.add(dep);
+        if (!asyncAliases.has(dep) && !catchAliases.has(dep)) {
+          depsSet.add(dep);
+        }
       }
     }
     const depsIdx = this.addConstant(Array.from(depsSet));
@@ -822,7 +865,7 @@ export class DriftGenerator {
   private addScriptConstant(ast: any): number {
     const codeStr = astToJS(ast);
     const fnVal = {
-      __drift_fn__: `(scope, declaredVars, setScopeValue, inScopeChain, resolveIterable, getScopeValue) => { ${codeStr}; }`
+      __drift_fn__: `(scope, declaredVars, setScopeValue, inScopeChain, resolveIterable, getScopeValue, setScopeProp) => { ${codeStr}; }`
     };
     return this.addConstant(fnVal);
   }
@@ -925,17 +968,24 @@ function emitAssign(varName: string, expr: string, locals?: Set<string>): string
   return `(typeof setScopeValue === 'function' && scope ? setScopeValue(scope, ${JSON.stringify(varName)}, ${expr}) : ((scope || {})[${JSON.stringify(varName)}] = ${expr}))`;
 }
 
+function emitLocalAssign(varName: string, expr: string): string {
+  return `(typeof setScopeProp === 'function' && scope ? setScopeProp(scope, ${JSON.stringify(varName)}, ${expr}) : ((scope || {})[${JSON.stringify(varName)}] = ${expr}))`;
+}
+
 function generatePatternAssignments(
   pattern: any,
   sourceVar: string,
   locals?: Set<string>,
-  tmpCounterRef = { count: 0 }
+  tmpCounterRef = { count: 0 },
+  customAssign?: (varName: string, expr: string) => string
 ): string[] {
   const stmts: string[] = [];
   if (!pattern) return stmts;
 
+  const assignFn = customAssign || ((v: string, e: string) => emitAssign(v, e, locals));
+
   if (pattern.type === 'Identifier') {
-    stmts.push(emitAssign(pattern.name, sourceVar, locals));
+    stmts.push(assignFn(pattern.name, sourceVar));
     return stmts;
   }
 
@@ -943,11 +993,11 @@ function generatePatternAssignments(
     const defaultVal = astToJS(pattern.right, locals);
     const valExpr = `((${sourceVar} !== undefined) ? ${sourceVar} : ${defaultVal})`;
     if (pattern.left?.type === 'Identifier') {
-      stmts.push(emitAssign(pattern.left.name, valExpr, locals));
+      stmts.push(assignFn(pattern.left.name, valExpr));
     } else {
       const tmp = `_t${tmpCounterRef.count++}`;
       stmts.push(`const ${tmp} = ${valExpr}`);
-      stmts.push(...generatePatternAssignments(pattern.left, tmp, locals, tmpCounterRef));
+      stmts.push(...generatePatternAssignments(pattern.left, tmp, locals, tmpCounterRef, customAssign));
     }
     return stmts;
   }
@@ -966,27 +1016,27 @@ function generatePatternAssignments(
 
         if (prop.value?.type === 'Identifier') {
           const expr = `(${sourceVar} ? ${sourceVar}[${keyExpr}] : undefined)`;
-          stmts.push(emitAssign(prop.value.name, expr, locals));
+          stmts.push(assignFn(prop.value.name, expr));
         } else if (prop.value?.type === 'AssignmentPattern') {
           const defaultVal = astToJS(prop.value.right, locals);
           const valExpr = `((${sourceVar} && ${sourceVar}[${keyExpr}] !== undefined) ? ${sourceVar}[${keyExpr}] : ${defaultVal})`;
           if (prop.value.left?.type === 'Identifier') {
-            stmts.push(emitAssign(prop.value.left.name, valExpr, locals));
+            stmts.push(assignFn(prop.value.left.name, valExpr));
           } else {
             const tmp = `_t${tmpCounterRef.count++}`;
             stmts.push(`const ${tmp} = ${valExpr}`);
-            stmts.push(...generatePatternAssignments(prop.value.left, tmp, locals, tmpCounterRef));
+            stmts.push(...generatePatternAssignments(prop.value.left, tmp, locals, tmpCounterRef, customAssign));
           }
         } else if (prop.value?.type === 'ObjectPattern' || prop.value?.type === 'ArrayPattern') {
           const tmp = `_t${tmpCounterRef.count++}`;
           const valExpr = `(${sourceVar} ? ${sourceVar}[${keyExpr}] : undefined)`;
           stmts.push(`const ${tmp} = ${valExpr}`);
-          stmts.push(...generatePatternAssignments(prop.value, tmp, locals, tmpCounterRef));
+          stmts.push(...generatePatternAssignments(prop.value, tmp, locals, tmpCounterRef, customAssign));
         } else {
           const varName = prop.value?.name || astToJS(prop.value, locals);
           if (varName) {
             const expr = `(${sourceVar} ? ${sourceVar}[${keyExpr}] : undefined)`;
-            stmts.push(emitAssign(varName, expr, locals));
+            stmts.push(assignFn(varName, expr));
           }
         }
       } else if (prop.type === 'RestElement') {
@@ -1014,7 +1064,7 @@ function generatePatternAssignments(
             ? `{ ${knownParams}, ...${varName} }`
             : `{ ...${varName} }`;
           const expr = `(((${restParam}) => ${varName})(${sourceVar} ?? {}))`;
-          stmts.push(emitAssign(varName, expr, locals));
+          stmts.push(assignFn(varName, expr));
         }
 
       }
@@ -1031,28 +1081,28 @@ function generatePatternAssignments(
       if (!el) continue;
       if (el.type === 'Identifier') {
         const expr = `(${tmpArr} ? ${tmpArr}[${i}] : undefined)`;
-        stmts.push(emitAssign(el.name, expr, locals));
+        stmts.push(assignFn(el.name, expr));
       } else if (el.type === 'AssignmentPattern') {
         const defaultVal = astToJS(el.right, locals);
         const valExpr = `((${tmpArr} && ${tmpArr}[${i}] !== undefined) ? ${tmpArr}[${i}] : ${defaultVal})`;
         if (el.left?.type === 'Identifier') {
-          stmts.push(emitAssign(el.left.name, valExpr, locals));
+          stmts.push(assignFn(el.left.name, valExpr));
         } else {
           const tmp = `_t${tmpCounterRef.count++}`;
           stmts.push(`const ${tmp} = ${valExpr}`);
-          stmts.push(...generatePatternAssignments(el.left, tmp, locals, tmpCounterRef));
+          stmts.push(...generatePatternAssignments(el.left, tmp, locals, tmpCounterRef, customAssign));
         }
       } else if (el.type === 'RestElement') {
         const varName = el.argument?.name || astToJS(el.argument, locals);
         if (varName) {
           const expr = `((${tmpArr} && typeof ${tmpArr}.slice === 'function') ? ${tmpArr}.slice(${i}) : [])`;
-          stmts.push(emitAssign(varName, expr, locals));
+          stmts.push(assignFn(varName, expr));
         }
       } else if (el.type === 'ObjectPattern' || el.type === 'ArrayPattern') {
         const tmp = `_t${tmpCounterRef.count++}`;
         const valExpr = `(${tmpArr} ? ${tmpArr}[${i}] : undefined)`;
         stmts.push(`const ${tmp} = ${valExpr}`);
-        stmts.push(...generatePatternAssignments(el, tmp, locals, tmpCounterRef));
+        stmts.push(...generatePatternAssignments(el, tmp, locals, tmpCounterRef, customAssign));
       }
     }
     return stmts;
@@ -1083,17 +1133,17 @@ function buildItemPopulatorFn(pattern: any, indexName: string | null): { __drift
   const stmts: string[] = [];
 
   // Assign item pattern from the `_item` local variable
-  const itemStmts = generatePatternAssignments(pattern, '_item', undefined, { count: 0 });
+  const itemStmts = generatePatternAssignments(pattern, '_item', undefined, { count: 0 }, emitLocalAssign);
   stmts.push(...itemStmts);
 
   // Assign index if present
   if (indexName) {
-    stmts.push(emitAssign(indexName, '_index', undefined));
+    stmts.push(emitLocalAssign(indexName, '_index'));
   }
 
   const body = stmts.join('; ');
   return {
-    __drift_fn__: `(scope, declaredVars, setScopeValue, inScopeChain, resolveIterable, getScopeValue) => (_item, _index) => { ${body}; }`,
+    __drift_fn__: `(scope, declaredVars, setScopeValue, inScopeChain, resolveIterable, getScopeValue, setScopeProp) => (_item, _index) => { ${body}; }`,
   };
 }
 
@@ -1156,6 +1206,10 @@ export function astToJS(node: any, locals?: Set<string>): string {
         }
         if (node.operator === '=') {
           return `(typeof setScopeValue === 'function' ? setScopeValue(scope, ${JSON.stringify(name)}, ${valJS}) : ((scope || {})[${JSON.stringify(name)}] = ${valJS}))`;
+        } else if (node.operator === '||=' || node.operator === '&&=' || node.operator === '??=') {
+          const logicOp = node.operator.slice(0, 2);
+          const assignExpr = `(typeof setScopeValue === 'function' ? setScopeValue(scope, ${JSON.stringify(name)}, ${valJS}) : ((scope || {})[${JSON.stringify(name)}] = ${valJS}))`;
+          return `((scope[${JSON.stringify(name)}]) ${logicOp} ${assignExpr})`;
         } else {
           const op = node.operator.slice(0, -1);
           return `(typeof setScopeValue === 'function' ? setScopeValue(scope, ${JSON.stringify(name)}, (scope[${JSON.stringify(name)}] ${op} ${valJS})) : ((scope || {})[${JSON.stringify(name)}] ${node.operator} ${valJS}))`;
@@ -1506,12 +1560,18 @@ export function astToJS(node: any, locals?: Set<string>): string {
         for (const d of node.declarations) {
           if (d.id?.type === 'ObjectPattern' || d.id?.type === 'ArrayPattern') {
             const valJS = d.init ? astToJS(d.init, locals) : 'undefined';
-            const setCalls = generatePatternAssignments(d.id, '_init', locals);
+            const setCalls = generatePatternAssignments(
+              d.id,
+              '_init',
+              locals,
+              { count: 0 },
+              (varName, expr) => (locals && locals.has(varName) ? `(${varName} = ${expr})` : emitLocalAssign(varName, expr))
+            );
             declsArr.push(`((_init) => { ${setCalls.join('; ')}; return _init; })(${valJS})`);
           } else {
             const name = d.id?.name || astToJS(d.id, locals);
             const valJS = d.init ? astToJS(d.init, locals) : 'undefined';
-            declsArr.push(`((scope || {})[${JSON.stringify(name)}] = ${valJS})`);
+            declsArr.push(locals && locals.has(name) ? `(${name} = ${valJS})` : emitLocalAssign(name, valJS));
           }
         }
       }

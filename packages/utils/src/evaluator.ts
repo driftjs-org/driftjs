@@ -1,4 +1,4 @@
-import { setScopeValue, inScopeChain, getScopeValue } from './scope.js';
+import { setScopeValue, inScopeChain, getScopeValue, setScopeProp } from './scope.js';
 
 /**
  * Safely resolves an iterable object or array.
@@ -16,13 +16,13 @@ export function resolveIterable(rawIter: any): any[] {
  */
 export function executePrecompiledFn(node: any, scope: Record<string, any>, declaredVars?: Set<string>): any {
   if (typeof node === 'function') {
-    return node(scope, declaredVars, setScopeValue, inScopeChain, resolveIterable, getScopeValue);
+    return node(scope, declaredVars, setScopeValue, inScopeChain, resolveIterable, getScopeValue, setScopeProp);
   }
   if (typeof node.__drift_fn__ === 'function') {
-    return node.__drift_fn__(scope, declaredVars, setScopeValue, inScopeChain, resolveIterable, getScopeValue);
+    return node.__drift_fn__(scope, declaredVars, setScopeValue, inScopeChain, resolveIterable, getScopeValue, setScopeProp);
   }
   if (typeof node._executableFn === 'function') {
-    return node._executableFn(scope, declaredVars, setScopeValue, inScopeChain, resolveIterable, getScopeValue);
+    return node._executableFn(scope, declaredVars, setScopeValue, inScopeChain, resolveIterable, getScopeValue, setScopeProp);
   }
   return undefined;
 }
@@ -34,7 +34,7 @@ export function evaluateExpression(node: any, scope: Record<string, any>, declar
   if (node === null || node === undefined) return node;
 
   if (typeof node === 'function') {
-    return node(scope, declaredVars, setScopeValue, inScopeChain, resolveIterable, getScopeValue);
+    return node(scope, declaredVars, setScopeValue, inScopeChain, resolveIterable, getScopeValue, setScopeProp);
   }
 
   if (typeof node === 'object' && node !== null) {

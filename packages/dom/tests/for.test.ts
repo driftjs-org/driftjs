@@ -559,6 +559,121 @@ describe('DriftJS @for Directive Integration Suite', () => {
 
     document.body.removeChild(container);
   });
+
+  describe('BUG-0: Scope Isolation in @for Loops', () => {
+    it('does NOT overwrite parent scope variable with plain identifier loop item', () => {
+      const src = `
+        <script>
+          let item = 'outer-item';
+          let items = ['a', 'b', 'c'];
+        </script>
+        <div>
+          <div id="parent-before">{item}</div>
+          <ul>
+            @for item in items {
+              <li class="row">{item}</li>
+            }
+          </ul>
+          <div id="parent-after">{item}</div>
+        </div>
+      `;
+
+      const mod = compile(src);
+      const vm = new DriftClientVM();
+      const container = document.createElement('div');
+      document.body.appendChild(container);
+      const root = vm.execute(mod, { document });
+      if (root) container.appendChild(root);
+
+      expect(container.querySelector('#parent-before')?.textContent).toBe('outer-item');
+      expect(container.querySelector('#parent-after')?.textContent).toBe('outer-item');
+      expect(vm.scope.item).toBe('outer-item');
+
+      const rows = container.querySelectorAll('.row');
+      expect(rows).toHaveLength(3);
+      expect(rows[0]?.textContent).toBe('a');
+      expect(rows[1]?.textContent).toBe('b');
+      expect(rows[2]?.textContent).toBe('c');
+
+      document.body.removeChild(container);
+    });
+
+    it('does NOT overwrite parent scope variable with destructured loop item', () => {
+      const src = `
+        <script>
+          let name = 'parent-name';
+          let users = [
+            { id: 1, name: 'Alice' },
+            { id: 2, name: 'Bob' }
+          ];
+        </script>
+        <div>
+          <span id="parent-name">{name}</span>
+          <ul>
+            @for { id, name } in users {
+              <li class="user-row">{id}: {name}</li>
+            }
+          </ul>
+          <span id="parent-name-after">{name}</span>
+        </div>
+      `;
+
+      const mod = compile(src);
+      const vm = new DriftClientVM();
+      const container = document.createElement('div');
+      document.body.appendChild(container);
+      const root = vm.execute(mod, { document });
+      if (root) container.appendChild(root);
+
+      expect(container.querySelector('#parent-name')?.textContent).toBe('parent-name');
+      expect(container.querySelector('#parent-name-after')?.textContent).toBe('parent-name');
+      expect(vm.scope.name).toBe('parent-name');
+
+      const rows = container.querySelectorAll('.user-row');
+      expect(rows).toHaveLength(2);
+      expect(rows[0]?.textContent).toBe('1: Alice');
+      expect(rows[1]?.textContent).toBe('2: Bob');
+
+      document.body.removeChild(container);
+    });
+
+    it('does NOT overwrite parent scope variable with loop index variable', () => {
+      const src = `
+        <script>
+          let idx = 999;
+          let list = ['x', 'y'];
+        </script>
+        <div>
+          <span id="outer-idx">{idx}</span>
+          <ul>
+            @for (val, idx) in list {
+              <li class="idx-row">{idx}-{val}</li>
+            }
+          </ul>
+          <span id="outer-idx-after">{idx}</span>
+        </div>
+      `;
+
+      const mod = compile(src);
+      const vm = new DriftClientVM();
+      const container = document.createElement('div');
+      document.body.appendChild(container);
+      const root = vm.execute(mod, { document });
+      if (root) container.appendChild(root);
+
+      expect(container.querySelector('#outer-idx')?.textContent).toBe('999');
+      expect(container.querySelector('#outer-idx-after')?.textContent).toBe('999');
+      expect(vm.scope.idx).toBe(999);
+
+      const rows = container.querySelectorAll('.idx-row');
+      expect(rows).toHaveLength(2);
+      expect(rows[0]?.textContent).toBe('0-x');
+      expect(rows[1]?.textContent).toBe('1-y');
+
+      document.body.removeChild(container);
+    });
+  });
 });
+
 
 

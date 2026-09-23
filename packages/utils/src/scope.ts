@@ -100,7 +100,16 @@ export function setScopeProp<T = any>(scope: Record<string, any>, key: string, v
   if (key === '__proto__' || key === 'constructor' || key === 'prototype' || key === '__drift_mark_dirty__') {
     return val;
   }
-  scope[key] = val;
+  try {
+    scope[key] = val;
+  } catch {
+    Object.defineProperty(scope, key, {
+      value: val,
+      writable: true,
+      enumerable: true,
+      configurable: true,
+    });
+  }
   return val;
 }
 

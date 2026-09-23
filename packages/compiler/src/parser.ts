@@ -979,7 +979,10 @@ export class DriftParser {
 
 
   private skipWhitespaceTokens(): void {
-    while (this.check(TokenType.Text) && this.peek().value.trim().length === 0) {
+    while (
+      (this.check(TokenType.Text) && this.peek().value.trim().length === 0) ||
+      this.check(TokenType.Comment)
+    ) {
       this.advance();
     }
   }

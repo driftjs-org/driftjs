@@ -746,7 +746,83 @@ describe('DriftGenerator', () => {
       expect(module.constants).toContain('xml:space');
       expect(module.constants).toContain('Support: help@driftjs.com, Ping: @driftjs');
     });
+
+    it('BUG-2: compileAsyncNode excludes async alias and catch error variable from outer reactive deps', () => {
+      const src = `
+        <script>
+          let user = null;
+          let err = null;
+        </script>
+        @async fetchUser() as user {
+          <div>{user.name}</div>
+        }
+        @catch err {
+          <div>{err.message}</div>
+        }
+      `;
+      const module = compile(src);
+      const reactiveAsyncIdx = Array.from(module.bytecode).indexOf(Opcode.REACTIVE_ASYNC);
+      expect(reactiveAsyncIdx).not.toBe(-1);
+
+      // REACTIVE_ASYNC parentReg promiseIdx aliasIdx bodyIdx fallbackIdx catchIdx depsIdx aliasPopulatorIdx
+      const depsIdx = module.bytecode[reactiveAsyncIdx + 7]!;
+      const deps = module.constants[depsIdx] as string[];
+      expect(deps).toBeDefined();
+      expect(deps).not.toContain('user');
+      expect(deps).not.toContain('err');
+    });
+
+    it('BUG-3: astToJS generates short-circuiting logical assignments for ||=, &&=, and ??=', () => {
+      const src = `
+        <script>
+          let a = 'initial';
+          let b = '';
+          let c = null;
+          let called = false;
+          function sideEffect() {
+            called = true;
+            return 'side-effect';
+          }
+          function run() {
+            a ||= sideEffect();
+            b &&= sideEffect();
+            c ??= 'fallback';
+          }
+        </script>
+        <button onclick={run}>Run</button>
+      `;
+      const module = compile(src);
+      const scriptConst = module.constants.find((c: any) => c && typeof c === 'object' && '__drift_fn__' in c);
+      expect(scriptConst).toBeDefined();
+      const fnStr = (scriptConst as any).__drift_fn__;
+
+      expect(fnStr).toContain('scope["a"]')
+      expect(fnStr).toContain('||');
+      expect(fnStr).toContain('&&');
+      expect(fnStr).toContain('??');
+
+      // Test execution: evaluating with a truthy 'a' should NOT invoke sideEffect
+      const scope: any = {
+        a: 'truthy',
+        b: '',
+        c: null,
+        called: false,
+        sideEffect: () => { scope.called = true; return 'from-effect'; },
+      };
+      const fn = new Function('return ' + fnStr)();
+      fn(scope, ['a', 'b', 'c', 'called', 'sideEffect', 'run'], (s: any, k: string, v: any) => { s[k] = v; }, () => true, null, (s: any, k: string) => s[k]);
+
+      // Call run()
+      scope.run();
+
+      // a ||= sideEffect() must NOT call sideEffect() because a is already truthy
+      expect(scope.called).toBe(false);
+      expect(scope.a).toBe('initial');
+      // c ??= 'fallback' should set fallback because c was null
+      expect(scope.c).toBe('fallback');
+    });
   });
 });
+
 
 

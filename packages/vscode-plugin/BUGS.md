@@ -16,9 +16,9 @@ This document tracks all identified bugs, runtime defects, language server limit
 | **VSC-006** | TextMate grammar misclassifies `@case` body markup as JavaScript interpolations | **Medium** | **Fixed** | [`syntaxes/drift.tmLanguage.json`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/syntaxes/drift.tmLanguage.json) |
 | **VSC-007** | TextMate grammar prematurely terminates on nested braces in interpolations | **Medium** | **Fixed** | [`syntaxes/drift.tmLanguage.json`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/syntaxes/drift.tmLanguage.json) |
 | **VSC-008** | Missing modern directives (`@async`, `@fallback`, `@catch`) across LSP, snippets, and grammar | **Medium** | **Fixed** | [`src/server.ts`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts), [`snippets.json`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/snippets.json), [`syntaxes/drift.tmLanguage.json`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/syntaxes/drift.tmLanguage.json) |
-| **VSC-009** | VSCode schema violation in `language-configuration.json` for `lineComment` | **Medium** | Open | [`language-configuration.json`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/language-configuration.json) |
-| **VSC-010** | State variable hover false positives on plain HTML text and element tag names | **Medium** | Open | [`src/server.ts`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts) |
-| **VSC-011** | HTML attribute autocompletion ineffective on multiline tags | **Medium** | Open | [`src/server.ts`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts) |
+| **VSC-009** | VSCode schema violation in `language-configuration.json` for `lineComment` | **Medium** | **Fixed** | [`language-configuration.json`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/language-configuration.json) |
+| **VSC-010** | State variable hover false positives on plain HTML text and element tag names | **Medium** | **Fixed** | [`src/server.ts`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts) |
+| **VSC-011** | HTML attribute autocompletion ineffective on multiline tags | **Medium** | **Fixed** | [`src/server.ts`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts) |
 | **VSC-012** | Inconsistent directive snippet syntax between `snippets.json` and `server.ts` | **Low** | Open | [`snippets.json`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/snippets.json), [`src/server.ts`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts) |
 | **VSC-013** | VSCode extension test suite omitted from root `vitest.config.ts` | **Low** | Open | [`vitest.config.ts`](file:///home/hrutav-modha/Documents/driftjs/vitest.config.ts) |
 
@@ -165,11 +165,11 @@ This document tracks all identified bugs, runtime defects, language server limit
 
 ### VSC-009: VSCode Schema Violation in `language-configuration.json` for `lineComment`
 * **Severity:** Medium
-* **Status:** Open
+* **Status:** Fixed
 * **Affected Files:**
-  - [`packages/vscode-plugin/language-configuration.json#L4-L7`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/language-configuration.json#L4-L7)
+  - [`packages/vscode-plugin/language-configuration.json`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/language-configuration.json)
 * **Root Cause:**
-  `lineComment` is defined as an object:
+  `lineComment` was defined as an object:
   ```json
   "lineComment": {
     "comment": "//",
@@ -177,32 +177,34 @@ This document tracks all identified bugs, runtime defects, language server limit
   }
   ```
   The VSCode `LanguageConfiguration` schema defines `lineComment` strictly as a `string` (`"lineComment": "//"`). Supplying an object causes schema validation errors in VSCode and breaks line comment toggling (Ctrl+/).
-* **Recommendation:**
-  Change `"lineComment"` to `"//"`.
+* **Resolution:**
+  Changed `"lineComment"` to string `"//"`, conforming to VSCode's `LanguageConfiguration` schema specification.
 
 ---
 
 ### VSC-010: State Variable Hover False Positives on Plain HTML Text and Element Tag Names
 * **Severity:** Medium
-* **Status:** Open
+* **Status:** Fixed
 * **Affected Files:**
-  - [`packages/vscode-plugin/src/server.ts#L505-L524`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts#L505-L524)
+  - [`packages/vscode-plugin/src/server.ts`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts)
 * **Root Cause:**
-  `onHover` scans all identifiers on the line with `/([a-zA-Z0-9_$]+)/g` and matches against declared script variables without checking if the hovered token is inside an interpolation `{ ... }` or `<script>` block. If a script declares a common name like `div`, `title`, or `count`, hovering over `<div ...>`, attribute `title="..."`, or plain text inside a `<p>` displays state variable documentation.
-* **Recommendation:**
-  Verify that the hovered cursor offset is inside an interpolation or `<script>` block before displaying variable tooltips.
+  `computeHover` matched all identifiers on the line with `/([a-zA-Z0-9_$]+)/g` against declared script variables without checking if the hovered token was inside a JavaScript expression context. If a component script declared a common variable name like `div`, `title`, or `count`, hovering over `<div ...>`, attribute `title="..."`, or plain template text inside a `<p>` falsely displayed state variable documentation.
+* **Resolution:**
+  - Added `isInsideScriptBlock`, `isInsideDirectiveExpression`, and unified `isExpressionContext` helper functions.
+  - Guarded state variable hover resolution in `computeHover` with `isExpressionContext(text, cursorOffset)`, ensuring state variable documentation is only surfaced when hovering inside `<script>` blocks, template interpolations `{...}`, or directive expression headers (`@if (...)`, etc.).
 
 ---
 
 ### VSC-011: HTML Attribute Autocompletion Ineffective on Multiline Tags
 * **Severity:** Medium
-* **Status:** Open
+* **Status:** Fixed
 * **Affected Files:**
-  - [`packages/vscode-plugin/src/server.ts#L309`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts#L309)
+  - [`packages/vscode-plugin/src/server.ts`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts)
 * **Root Cause:**
-  `linePrefix` is tested with `/<[a-zA-Z0-9_-]+\s+[^>]*$/.test(linePrefix)`. Because `.` and `[^>]` do not match newlines by default, multiline opening tags spanning across newlines fail the regex test, preventing attribute suggestions.
-* **Recommendation:**
-  Use multiline tag scanning or stateful lookback that tracks unclosed `<` across line boundaries.
+  Attribute autocompletion used a 50-character `linePrefix` tested against `/<[a-zA-Z0-9_-]+\s+[^>]*$/`. When an HTML opening tag spanned across newlines or exceeded 50 characters, `linePrefix` truncated the opening tag `<tagName` and failed the regex match. Consequently, pressing autocompletion on multiline tags failed to suggest HTML attributes.
+* **Resolution:**
+  - Implemented `getTagContext(text, offset): TagContext` that accurately detects opening tags, handles multiline tag bodies, balances quotes and interpolations, and extracts active attribute names (`attrName`).
+  - Rewrote attribute autocompletion in `computeCompletions` to use `getTagContext`, providing robust attribute suggestions across arbitrary multiline tags and properly suppressing attribute name suggestions while inside quoted attribute values.
 
 ---
 

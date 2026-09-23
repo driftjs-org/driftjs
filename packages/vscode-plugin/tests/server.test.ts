@@ -6,6 +6,10 @@ import {
   isInsideDirectiveHeader,
   computeCompletions,
   computeHover,
+  getTagContext,
+  isInsideScriptBlock,
+  isInsideDirectiveExpression,
+  isExpressionContext,
 } from "../src/server.js";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
@@ -335,3 +339,110 @@ describe("VSCode Language Server - Modern Directives @async, @fallback, @catch (
     expect(isInsideDirectiveHeader(insideCatchHeader)).toBe(true);
   });
 });
+
+describe("Language Configuration - Comments Schema (BUG-009)", () => {
+  it("defines lineComment as a valid string conforming to VSCode schema", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const configPath = path.resolve(__dirname, "../language-configuration.json");
+    const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+
+    expect(typeof config.comments.lineComment).toBe("string");
+    expect(config.comments.lineComment).toBe("//");
+    expect(Array.isArray(config.comments.blockComment)).toBe(true);
+    expect(config.comments.blockComment).toEqual(["<!--", "-->"]);
+  });
+});
+
+describe("VSCode Language Server - Hover False Positive Prevention (BUG-010)", () => {
+  it("prevents state variable hover false positives on plain HTML text and tag names", () => {
+    const sfc = `<script>\nlet div = 1;\nlet title = "App Title";\nlet count = 42;\n</script>\n<div title="main">\n  <p>The total count is visible</p>\n  <span>{count}</span>\n</div>`;
+
+    // 1. Hover on `<div` (tag name): must NOT trigger state variable hover for `div`
+    const hoverDivTag = computeHover(sfc, { line: 5, character: 2 }); // `<div`
+    expect(hoverDivTag).toBeNull();
+
+    // 2. Hover on `title="main"` (attribute name): must NOT trigger hover for `title`
+    const hoverTitleAttr = computeHover(sfc, { line: 5, character: 7 }); // `title=`
+    expect(hoverTitleAttr).toBeNull();
+
+    // 3. Hover on `count` in plain text `The total count is visible`: must NOT trigger hover
+    const hoverPlainText = computeHover(sfc, { line: 6, character: 15 }); // `count`
+    expect(hoverPlainText).toBeNull();
+
+    // 4. Hover on `{count}` inside interpolation: MUST trigger hover
+    const hoverInterp = computeHover(sfc, { line: 7, character: 10 }); // `{count}`
+    expect(hoverInterp).not.toBeNull();
+    expect((hoverInterp?.contents as any).value).toContain("count");
+
+    // 5. Hover inside <script> declaration: MUST trigger hover
+    const hoverScript = computeHover(sfc, { line: 3, character: 5 }); // `let count`
+    expect(hoverScript).not.toBeNull();
+    expect((hoverScript?.contents as any).value).toContain("count");
+  });
+
+  it("allows hover on state variables inside directive expression headers", () => {
+    const sfc = `<script>\nlet threshold = 10;\n</script>\n@if (threshold > 0) {\n  <div>Positive</div>\n}`;
+
+    const hoverDirective = computeHover(sfc, { line: 3, character: 7 }); // `threshold`
+    expect(hoverDirective).not.toBeNull();
+    expect((hoverDirective?.contents as any).value).toContain("threshold");
+  });
+});
+
+describe("VSCode Language Server - Multiline Tag Attribute Autocompletion (BUG-011)", () => {
+  it("correctly identifies tag context across multiple lines", () => {
+    const multilineTag = `<button\n  id="primary"\n  class="btn"\n  `;
+    const tagCtx = getTagContext(multilineTag, multilineTag.length);
+
+    expect(tagCtx.insideTag).toBe(true);
+    expect(tagCtx.tagName).toBe("button");
+    expect(tagCtx.insideAttrValue).toBe(false);
+  });
+
+  it("suggests HTML attributes for multiline tags", () => {
+    const text = `<button\n  id="primary"\n  class="btn"\n  \n>`;
+    const offset = text.indexOf("class=\"btn\"\n  ") + "class=\"btn\"\n  ".length;
+    const items = computeCompletions(text, offset);
+    const labels = items.map((i) => i.label);
+
+    expect(labels).toContain("style");
+    expect(labels).toContain("onclick");
+    expect(labels).toContain("disabled");
+    expect(labels).toContain("type");
+  });
+
+  it("suggests type attribute values inside multiline type=\"", () => {
+    const text = `<input\n  class="form-control"\n  type="\n>`;
+    const offset = text.indexOf("type=\"") + "type=\"".length;
+    const items = computeCompletions(text, offset);
+    const labels = items.map((i) => i.label);
+
+    expect(labels).toContain("text");
+    expect(labels).toContain("password");
+    expect(labels).toContain("checkbox");
+    expect(labels).toContain("radio");
+    expect(labels).not.toContain("onclick");
+  });
+
+  it("suppresses attribute name suggestions inside other attribute string values", () => {
+    const text = `<div\n  id="main"\n  class="container \n>`;
+    const offset = text.indexOf("class=\"container ") + "class=\"container ".length;
+    const items = computeCompletions(text, offset);
+
+    expect(items).toEqual([]);
+  });
+
+  it("does not suggest attributes after closing > in multiline tags", () => {
+    const text = `<button\n  class="btn"\n>\n  \n</button>`;
+    const offset = text.indexOf(">\n  ") + ">\n  ".length;
+    const items = computeCompletions(text, offset);
+    const labels = items.map((i) => i.label);
+
+    // After `>`, should suggest HTML element tags, not attributes
+    expect(labels).toContain("span");
+    expect(labels).toContain("div");
+    expect(labels).not.toContain("onclick");
+  });
+});
+

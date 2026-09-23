@@ -254,6 +254,131 @@ export function isInsideDirectiveHeader(linePrefix: string): boolean {
   return /@(?:if|else\s+if|for|switch|case|async|catch)(?:\s+[^{}]*|\s*\([^{}]*)$/.test(linePrefix);
 }
 
+/**
+ * Determines whether the cursor offset is inside a <script> block.
+ */
+export function isInsideScriptBlock(text: string, offset: number): boolean {
+  const lastScriptOpen = text.lastIndexOf('<script', offset);
+  if (lastScriptOpen === -1) return false;
+  const lastScriptClose = text.lastIndexOf('</script>', offset);
+  return lastScriptClose < lastScriptOpen;
+}
+
+/**
+ * Determines whether the cursor offset is inside a directive expression header before its opening `{`.
+ */
+export function isInsideDirectiveExpression(text: string, offset: number): boolean {
+  for (let i = offset - 1; i >= 0; i--) {
+    const ch = text[i];
+    if (ch === '}' || ch === '{') {
+      return false;
+    }
+    if (ch === '@') {
+      const remaining = text.slice(i, offset);
+      if (/@(?:if|else\s+if|for|switch|case|async|catch)\b/.test(remaining)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * Determines whether the cursor offset is in a JavaScript expression context
+ * (<script> block, template interpolation `{...}`, or directive expression header).
+ */
+export function isExpressionContext(text: string, offset: number): boolean {
+  return (
+    isInsideScriptBlock(text, offset) ||
+    isInsideInterpolation(text, offset) ||
+    isInsideDirectiveExpression(text, offset)
+  );
+}
+
+export interface TagContext {
+  insideTag: boolean;
+  tagName?: string | undefined;
+  insideAttrValue?: boolean | undefined;
+  attrName?: string | undefined;
+}
+
+/**
+ * Determines whether the cursor offset is inside an HTML opening tag,
+ * correctly handling multiline tags, quotes, interpolations, and attribute values.
+ */
+export function getTagContext(text: string, offset: number): TagContext {
+  for (let i = offset - 1; i >= 0; i--) {
+    if (text[i] === '<') {
+      const slice = text.slice(i, offset);
+      if (slice.startsWith('<!--') || slice.startsWith('</')) {
+        return { insideTag: false };
+      }
+      const tagMatch = slice.match(/^<([a-zA-Z0-9_-]+)(\s+[\s\S]*)?$/);
+      if (!tagMatch) {
+        return { insideTag: false };
+      }
+      if (!tagMatch[2]) {
+        // Still typing tag name without trailing whitespace (e.g. `<bu`)
+        return { insideTag: false };
+      }
+      const tagName = tagMatch[1];
+
+      // Scan forward from `i` to `offset` to verify the tag wasn't closed and inspect attribute state
+      let inDouble = false;
+      let inSingle = false;
+      let inBrace = 0;
+      let tagClosed = false;
+
+      for (let j = i; j < offset; j++) {
+        const c = text[j];
+        const prev = j > i ? text[j - 1] : '';
+        const isEscaped = prev === '\\';
+
+        if (!isEscaped) {
+          if (c === '"' && !inSingle && inBrace === 0) {
+            inDouble = !inDouble;
+          } else if (c === "'" && !inDouble && inBrace === 0) {
+            inSingle = !inSingle;
+          } else if (c === '{' && !inDouble && !inSingle) {
+            inBrace++;
+          } else if (c === '}' && !inDouble && !inSingle) {
+            if (inBrace > 0) inBrace--;
+          }
+        }
+
+        if (!inDouble && !inSingle && inBrace === 0) {
+          if (c === '>') {
+            tagClosed = true;
+            break;
+          }
+        }
+      }
+
+      if (tagClosed) {
+        return { insideTag: false };
+      }
+
+      const insideAttrValue = inDouble || inSingle;
+      let attrName: string | undefined;
+      if (insideAttrValue) {
+        const attrMatch = text.slice(i, offset).match(/([a-zA-Z0-9_:-]+)\s*=\s*["'][^"']*$/);
+        if (attrMatch) {
+          attrName = attrMatch[1];
+        }
+      }
+
+      return {
+        insideTag: true,
+        tagName,
+        insideAttrValue,
+        attrName,
+      };
+    }
+  }
+
+  return { insideTag: false };
+}
+
 export function computeCompletions(
   text: string,
   offset: number,
@@ -272,8 +397,8 @@ export function computeCompletions(
 
   // 1. Trigger inside interpolation { ... }, directive header @if ..., or <script> block
   const insideInterp = isInsideInterpolation(text, offset);
-  const insideDirHeader = isInsideDirectiveHeader(linePrefix);
-  const isInsideScript = /<script[^>]*>(?:(?!<\/script>)[\s\S])*$/i.test(text.slice(0, offset));
+  const insideDirHeader = isInsideDirectiveHeader(linePrefix) || isInsideDirectiveExpression(text, offset);
+  const isInsideScript = isInsideScriptBlock(text, offset);
 
   if (insideInterp || insideDirHeader || isInsideScript) {
     return scriptVars;
@@ -387,11 +512,12 @@ export function computeCompletions(
     ];
   }
 
-  // 3. Trigger HTML attribute completion inside tag `<button |>`
-  if (/<[a-zA-Z0-9_-]+\s+[^>]*$/.test(linePrefix)) {
+  // 3. Trigger HTML attribute completion inside tag `<button ...>` (supports multiline tags)
+  const tagCtx = getTagContext(text, offset);
+  if (tagCtx.insideTag) {
     // If inside an attribute string value (e.g., class="...|"), don't suggest attribute names
-    if (/=\s*"[^"]*$/.test(linePrefix) || /=\s*'[^']*$/.test(linePrefix)) {
-      if (/type=\s*["'][^"']*$/.test(linePrefix)) {
+    if (tagCtx.insideAttrValue) {
+      if (tagCtx.attrName === 'type') {
         return [
           { label: 'text', kind: CompletionItemKind.Value },
           { label: 'password', kind: CompletionItemKind.Value },
@@ -574,6 +700,19 @@ export function computeHover(
         },
       };
     }
+  }
+
+  // Calculate cursor offset in full document
+  let lineStart = 0;
+  for (let i = 0; i < position.line; i++) {
+    lineStart += (lines[i]?.length ?? 0) + 1;
+  }
+  const cursorOffset = lineStart + charInLine;
+
+  // Check state variable hover under cursor ONLY when inside an expression context:
+  // (<script> block, template interpolation `{...}`, or directive expression header)
+  if (!isExpressionContext(text, cursorOffset)) {
+    return null;
   }
 
   // Check state variable hover under cursor

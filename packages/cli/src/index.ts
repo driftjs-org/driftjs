@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { fileURLToPath } from 'node:url';
 import { execFileSync, spawn } from 'node:child_process';
 import type { ScaffoldOptions } from '../types/index.js';
 
@@ -27,14 +28,37 @@ export function scaffoldProject(options: ScaffoldOptions): void {
     fs.mkdirSync(targetDir, { recursive: true });
   }
 
+  const shouldInstallLint = options.installLintTools !== false;
+
   // Copy template files recursively
   fs.cpSync(templateDir, targetDir, {
     recursive: true,
     filter: (src) => {
       const base = path.basename(src);
-      return base !== 'node_modules' && base !== 'dist';
+      if (base === 'node_modules' || base === 'dist') return false;
+      if (!shouldInstallLint && (base === 'eslint.config.js' || base === '.prettierrc')) return false;
+      return true;
     },
   });
+
+  // If lint tools are requested, ensure static config files exist (copy from default template if custom templateDir lacked them)
+  if (shouldInstallLint) {
+    const defaultTemplateDir = fileURLToPath(new URL('../template', import.meta.url));
+    const targetEslint = path.join(targetDir, 'eslint.config.js');
+    if (!fs.existsSync(targetEslint)) {
+      const defaultEslint = path.join(defaultTemplateDir, 'eslint.config.js');
+      if (fs.existsSync(defaultEslint)) {
+        fs.copyFileSync(defaultEslint, targetEslint);
+      }
+    }
+    const targetPrettier = path.join(targetDir, '.prettierrc');
+    if (!fs.existsSync(targetPrettier)) {
+      const defaultPrettier = path.join(defaultTemplateDir, '.prettierrc');
+      if (fs.existsSync(defaultPrettier)) {
+        fs.copyFileSync(defaultPrettier, targetPrettier);
+      }
+    }
+  }
 
   // Update target package.json with custom project name and rendering dependencies
   const targetPkgPath = path.join(targetDir, 'package.json');
@@ -56,9 +80,46 @@ export function scaffoldProject(options: ScaffoldOptions): void {
       }
     }
 
-    // Sanitize workspace:* protocols so npm/yarn/bun/pnpm work seamlessly
-    sanitizeDependencies(pkgData.dependencies);
-    sanitizeDependencies(pkgData.devDependencies);
+    const version = getPackageVersion();
+    const bareVersion = version.replace(/^[\^~]/, '');
+    const defaultCaret = version.startsWith('^') ? version : `^${bareVersion}`;
+
+    if (shouldInstallLint) {
+      pkgData.devDependencies = pkgData.devDependencies || {};
+      pkgData.devDependencies['driftjs-eslint-plugin'] = pkgData.devDependencies['driftjs-eslint-plugin'] || defaultCaret;
+      pkgData.devDependencies['driftjs-prettier-plugin'] = pkgData.devDependencies['driftjs-prettier-plugin'] || defaultCaret;
+      pkgData.devDependencies['eslint'] = pkgData.devDependencies['eslint'] || '^9.20.0';
+      pkgData.devDependencies['prettier'] = pkgData.devDependencies['prettier'] || '^3.5.0';
+
+      pkgData.scripts = pkgData.scripts || {};
+      pkgData.scripts['lint'] = pkgData.scripts['lint'] || 'eslint .';
+      pkgData.scripts['format'] = pkgData.scripts['format'] || 'prettier --write .';
+      pkgData.scripts['format:check'] = pkgData.scripts['format:check'] || 'prettier --check .';
+    } else {
+      if (pkgData.devDependencies) {
+        delete pkgData.devDependencies['driftjs-eslint-plugin'];
+        delete pkgData.devDependencies['driftjs-prettier-plugin'];
+        delete pkgData.devDependencies['eslint'];
+        delete pkgData.devDependencies['prettier'];
+      }
+      if (pkgData.scripts) {
+        delete pkgData.scripts['lint'];
+        delete pkgData.scripts['format'];
+        delete pkgData.scripts['format:check'];
+      }
+      const eslintFile = path.join(targetDir, 'eslint.config.js');
+      if (fs.existsSync(eslintFile)) {
+        fs.rmSync(eslintFile, { force: true });
+      }
+      const prettierFile = path.join(targetDir, '.prettierrc');
+      if (fs.existsSync(prettierFile)) {
+        fs.rmSync(prettierFile, { force: true });
+      }
+    }
+
+    // Sanitize any remaining workspace:* protocols so npm/yarn/bun/pnpm work seamlessly
+    sanitizeDependencies(pkgData.dependencies, defaultCaret);
+    sanitizeDependencies(pkgData.devDependencies, defaultCaret);
 
     fs.writeFileSync(targetPkgPath, JSON.stringify(pkgData, null, 2), 'utf8');
   }

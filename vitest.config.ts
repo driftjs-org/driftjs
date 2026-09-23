@@ -48,6 +48,30 @@ export default defineConfig({
         },
       },
       {
+        test: {
+          name: 'eslint-plugin',
+          include: ['packages/eslint-plugin/tests/**/*.test.ts'],
+          exclude: ['packages/eslint-plugin/dist'],
+          environment: 'node',
+        },
+      },
+      {
+        test: {
+          name: 'prettier-plugin',
+          include: ['packages/prettier-plugin/tests/**/*.test.ts'],
+          exclude: ['packages/prettier-plugin/dist'],
+          environment: 'node',
+        },
+      },
+      {
+        test: {
+          name: 'vscode-plugin',
+          include: ['packages/vscode-plugin/tests/**/*.test.ts'],
+          exclude: ['packages/vscode-plugin/dist'],
+          environment: 'node',
+        },
+      },
+      {
         plugins: [driftPlugin()],
         test: {
           name: 'dom',

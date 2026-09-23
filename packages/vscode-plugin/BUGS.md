@@ -19,8 +19,8 @@ This document tracks all identified bugs, runtime defects, language server limit
 | **VSC-009** | VSCode schema violation in `language-configuration.json` for `lineComment` | **Medium** | **Fixed** | [`language-configuration.json`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/language-configuration.json) |
 | **VSC-010** | State variable hover false positives on plain HTML text and element tag names | **Medium** | **Fixed** | [`src/server.ts`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts) |
 | **VSC-011** | HTML attribute autocompletion ineffective on multiline tags | **Medium** | **Fixed** | [`src/server.ts`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts) |
-| **VSC-012** | Inconsistent directive snippet syntax between `snippets.json` and `server.ts` | **Low** | Open | [`snippets.json`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/snippets.json), [`src/server.ts`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts) |
-| **VSC-013** | VSCode extension test suite omitted from root `vitest.config.ts` | **Low** | Open | [`vitest.config.ts`](file:///home/hrutav-modha/Documents/driftjs/vitest.config.ts) |
+| **VSC-012** | Inconsistent directive snippet syntax between `snippets.json` and `server.ts` | **Low** | **Fixed** | [`snippets.json`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/snippets.json), [`src/server.ts`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts) |
+| **VSC-013** | VSCode extension test suite omitted from root `vitest.config.ts` | **Low** | **Fixed** | [`vitest.config.ts`](file:///home/hrutav-modha/Documents/driftjs/vitest.config.ts) |
 
 ---
 
@@ -210,23 +210,26 @@ This document tracks all identified bugs, runtime defects, language server limit
 
 ### VSC-012: Inconsistent Directive Snippet Syntax Between `snippets.json` and `server.ts`
 * **Severity:** Low
-* **Status:** Open
+* **Status:** Fixed
 * **Affected Files:**
-  - [`packages/vscode-plugin/snippets.json#L5, #L12`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/snippets.json#L5)
-  - [`packages/vscode-plugin/src/server.ts#L241`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts#L241)
+  - [`packages/vscode-plugin/snippets.json`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/snippets.json)
+  - [`packages/vscode-plugin/src/server.ts`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts)
 * **Root Cause:**
-  `snippets.json` defines `@if` without parentheses (`@if ${1:condition} {`) and uses prefix `"@elseif"`, while `server.ts` emits `@if (${1:condition}) {\n\t$0\n}` and `@else if`.
-* **Recommendation:**
-  Standardize both files to use canonical DriftJS syntax with consistent prefix triggers.
+  `snippets.json` defined `@if` without parentheses (`@if ${1:condition} {`) and used prefix `"@elseif"`, while `server.ts` emitted `@if (${1:condition}) {\n\t$0\n}` and `@else if`.
+* **Resolution:**
+  - Standardized `snippets.json` and `server.ts` to use canonical DriftJS syntax with parentheses for condition headers: `@if (${1:condition}) {` and `@else if (${1:condition}) {`.
+  - Added support for both `"@else if"` and `"@elseif"` prefixes in `snippets.json` (`prefix: ["@else if", "@elseif"]`).
+  - Added `@elseif` completion item and updated `@else if` completion in `server.ts` with `filterText: '@else if @elseif'` to support both prefix variants seamlessly in the Language Server.
 
 ---
 
 ### VSC-013: VSCode Extension Test Suite Omitted from Root `vitest.config.ts`
 * **Severity:** Low
-* **Status:** Open
+* **Status:** Fixed
 * **Affected Files:**
-  - [`vitest.config.ts#L8-L84`](file:///home/hrutav-modha/Documents/driftjs/vitest.config.ts#L8-L84)
+  - [`vitest.config.ts`](file:///home/hrutav-modha/Documents/driftjs/vitest.config.ts)
 * **Root Cause:**
-  The root Vitest configuration project list includes `compiler`, `utils`, `ssr`, `vite-plugin`, `cli`, `dom`, and `router`, but omits `packages/vscode-plugin/tests/**/*.test.ts`. Running root `pnpm test` skips testing the VSCode extension.
-* **Recommendation:**
-  Add a `vscode-plugin` project entry to root `vitest.config.ts`.
+  The root Vitest configuration project list included `compiler`, `utils`, `ssr`, `vite-plugin`, `cli`, `dom`, and `router`, but omitted `packages/vscode-plugin/tests/**/*.test.ts`. Running root `pnpm test` skipped testing the VSCode extension.
+* **Resolution:**
+  - Added a `vscode-plugin` project entry to root `vitest.config.ts` targeting `packages/vscode-plugin/tests/**/*.test.ts` in the `node` environment.
+  - Root `pnpm test` now automatically includes all 31 tests in `driftjs-vscode-plugin`, raising monorepo test coverage to 35 test files and 512 total unit tests.

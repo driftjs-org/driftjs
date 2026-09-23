@@ -20,8 +20,14 @@ export default defineConfig({
       external: [
         'eslint',
         'driftjs-compiler',
+        'driftjs-shared',
+        'acorn',
+        'acorn-walk',
         /^node:/,
       ],
+      output: {
+        exports: 'named',
+      },
     },
   },
 });

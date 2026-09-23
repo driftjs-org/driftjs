@@ -31,7 +31,10 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "driftjs-compiler": "workspace:*"
+    "acorn": "^8.17.0",
+    "acorn-walk": "^8.3.4",
+    "driftjs-compiler": "workspace:*",
+    "driftjs-shared": "workspace:*"
   },
   "peerDependencies": {
     "eslint": ">=8.57.0"

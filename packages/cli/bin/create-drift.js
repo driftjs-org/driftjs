@@ -30,7 +30,9 @@ Usage:
   npx @driftjs/cli <project-directory> [options]
 
 Options:
-  -y, --yes    Automatically use defaults (CSR mode, auto-install, auto-start server)
+  -y, --yes    Automatically use defaults (CSR mode, auto-install, auto-start server, ESLint & Prettier)
+  --lint       Install ESLint & Prettier plugins (default)
+  --no-lint    Skip installing ESLint & Prettier plugins
   -h, --help   Display this help message
 
 Examples:
@@ -122,6 +124,25 @@ Examples:
     renderMode = modeSelect;
   }
 
+  // Prompt ESLint & Prettier plugins
+  let installLintTools = true;
+  if (args.includes('--no-lint')) {
+    installLintTools = false;
+  } else if (args.includes('--lint')) {
+    installLintTools = true;
+  } else if (!isYes) {
+    const lintConfirm = await p.confirm({
+      message: 'Would you like to install ESLint & Prettier plugins for DriftJS?',
+      initialValue: true,
+    });
+
+    if (p.isCancel(lintConfirm)) {
+      p.cancel('Scaffolding cancelled.');
+      process.exit(0);
+    }
+    installLintTools = lintConfirm;
+  }
+
   // Prompt auto install & auto run
   let autoRun = isYes;
   if (!isYes) {
@@ -150,6 +171,7 @@ Examples:
       templateDir,
       renderMode: renderMode,
       overwriteMode: overwriteMode,
+      installLintTools,
     });
 
     s.stop(`Scaffolded project files in ${pc.yellow(targetDir)}`);

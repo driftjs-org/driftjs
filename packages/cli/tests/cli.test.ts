@@ -1,7 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { scaffoldProject, detectPackageManager, sanitizeDependencies } from '../src/index.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 describe('DriftJS CLI Scaffolder', () => {
   const testDir = path.resolve(process.cwd(), 'scratch/cli-test-temp');
@@ -202,5 +205,87 @@ describe('DriftJS CLI Scaffolder', () => {
     expect(deps['driftjs-compiler']).toBe('^0.0.7');
     expect(deps['driftjs-shared']).toBe('~0.0.7');
     expect(deps['driftjs-router']).toBe('^0.0.5');
+  });
+
+  it('should install ESLint and Prettier plugins and configurations by default', () => {
+    scaffoldProject({
+      projectName: 'lint-enabled-app',
+      targetDir,
+      templateDir,
+      installLintTools: true,
+    });
+
+    expect(fs.existsSync(path.join(targetDir, 'eslint.config.js'))).toBe(true);
+    expect(fs.existsSync(path.join(targetDir, '.prettierrc'))).toBe(true);
+
+    const pkgData = JSON.parse(fs.readFileSync(path.join(targetDir, 'package.json'), 'utf8'));
+    expect(pkgData.devDependencies['driftjs-eslint-plugin']).toBeDefined();
+    expect(pkgData.devDependencies['driftjs-prettier-plugin']).toBeDefined();
+    expect(pkgData.devDependencies['eslint']).toBeDefined();
+    expect(pkgData.devDependencies['prettier']).toBeDefined();
+
+    // Verify zero workspace:* specifiers in package.json
+    for (const [name, version] of Object.entries({
+      ...pkgData.dependencies,
+      ...pkgData.devDependencies,
+    })) {
+      expect(version).not.toContain('workspace:');
+    }
+
+    expect(pkgData.scripts['lint']).toBe('eslint .');
+    expect(pkgData.scripts['format']).toBe('prettier --write .');
+    expect(pkgData.scripts['format:check']).toBe('prettier --check .');
+  });
+
+  it('should omit ESLint and Prettier plugins and configurations when installLintTools is false', () => {
+    // Add dummy config files to templateDir to ensure they are omitted/cleaned up
+    fs.writeFileSync(path.join(templateDir, 'eslint.config.js'), '// lint');
+    fs.writeFileSync(path.join(templateDir, '.prettierrc'), '{}');
+
+    scaffoldProject({
+      projectName: 'lint-disabled-app',
+      targetDir,
+      templateDir,
+      installLintTools: false,
+    });
+
+    expect(fs.existsSync(path.join(targetDir, 'eslint.config.js'))).toBe(false);
+    expect(fs.existsSync(path.join(targetDir, '.prettierrc'))).toBe(false);
+
+    const pkgData = JSON.parse(fs.readFileSync(path.join(targetDir, 'package.json'), 'utf8'));
+    expect(pkgData.devDependencies?.['driftjs-eslint-plugin']).toBeUndefined();
+    expect(pkgData.devDependencies?.['driftjs-prettier-plugin']).toBeUndefined();
+    expect(pkgData.devDependencies?.['eslint']).toBeUndefined();
+    expect(pkgData.devDependencies?.['prettier']).toBeUndefined();
+    expect(pkgData.scripts?.['lint']).toBeUndefined();
+    expect(pkgData.scripts?.['format']).toBeUndefined();
+    expect(pkgData.scripts?.['format:check']).toBeUndefined();
+  });
+
+  it('should scaffold successfully from the canonical template directory with clean semver', () => {
+    const canonicalTemplateDir = path.resolve(__dirname, '../template');
+
+    scaffoldProject({
+      projectName: 'canonical-app',
+      targetDir,
+      templateDir: canonicalTemplateDir,
+    });
+
+    expect(fs.existsSync(path.join(targetDir, 'eslint.config.js'))).toBe(true);
+    expect(fs.existsSync(path.join(targetDir, '.prettierrc'))).toBe(true);
+
+    const pkgData = JSON.parse(fs.readFileSync(path.join(targetDir, 'package.json'), 'utf8'));
+    expect(pkgData.name).toBe('canonical-app');
+    expect(pkgData.devDependencies['driftjs-eslint-plugin']).toBeDefined();
+    expect(pkgData.devDependencies['driftjs-prettier-plugin']).toBeDefined();
+
+    // Verify absolutely no workspace:* remains in dependencies or devDependencies
+    const allDeps = {
+      ...(pkgData.dependencies || {}),
+      ...(pkgData.devDependencies || {}),
+    };
+    for (const [dep, version] of Object.entries(allDeps)) {
+      expect(version).not.toContain('workspace:');
+    }
   });
 });

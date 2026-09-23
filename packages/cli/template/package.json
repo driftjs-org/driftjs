@@ -8,16 +8,23 @@
     "dev": "vite",
     "serve": "node server.js",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
+    "driftjs-eslint-plugin": "^0.0.15",
+    "driftjs-prettier-plugin": "^0.0.15",
+    "driftjs-vite-plugin": "^0.0.15",
+    "eslint": "^9.20.0",
+    "prettier": "^3.5.0",
     "typescript": "^7.0.2",
-    "vite": "^8.1.5",
-    "driftjs-vite-plugin": "workspace:*"
+    "vite": "^8.1.5"
   },
   "dependencies": {
-    "driftjs-compiler": "workspace:*",
-    "driftjs-dom": "workspace:*",
-    "driftjs-ssr": "workspace:*"
+    "driftjs-compiler": "^0.0.15",
+    "driftjs-dom": "^0.0.15",
+    "driftjs-ssr": "^0.0.15"
   }
 }

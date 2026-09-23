@@ -420,6 +420,7 @@ export function computeCompletions(
       },
       {
         label: '@else if',
+        filterText: '@else if @elseif',
         kind: CompletionItemKind.Snippet,
         detail: 'DriftJS Else-If Directive',
         insertTextFormat: InsertTextFormat.Snippet,
@@ -427,6 +428,17 @@ export function computeCompletions(
         documentation: {
           kind: MarkupKind.Markdown,
           value: 'Adds an alternate conditional branch to an existing `@if` block.',
+        },
+      },
+      {
+        label: '@elseif',
+        kind: CompletionItemKind.Snippet,
+        detail: 'DriftJS Else-If Directive (alias)',
+        insertTextFormat: InsertTextFormat.Snippet,
+        insertText: '@else if (${1:condition}) {\n\t$0\n}',
+        documentation: {
+          kind: MarkupKind.Markdown,
+          value: 'Alias for `@else if`. Adds an alternate conditional branch to an existing `@if` block.',
         },
       },
       {

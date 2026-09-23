@@ -7,4 +7,5 @@ export interface ScaffoldOptions {
   autoInstall?: boolean;
   autoRun?: boolean;
   packageManager?: 'pnpm' | 'npm' | 'yarn' | 'bun';
+  installLintTools?: boolean;
 }

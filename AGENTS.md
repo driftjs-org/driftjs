@@ -129,6 +129,35 @@ driftjs/
 │   │   ├── package.json
 │   │   └── tsconfig.json
 │   │
+│   ├── eslint-plugin/     # driftjs-eslint-plugin — ESLint Plugin & Parser for .drift
+│   │   ├── index.ts       # Package entry: re-exports src/ and types/
+│   │   ├── src/           # Implementation logic (parser, processor, rules, configs)
+│   │   │   ├── index.ts   # Barrel: parser, processor, rules, configs, default plugin
+│   │   │   ├── parser.ts  # parseForESLint(), template scope tracking
+│   │   │   ├── processor.ts # driftProcessor for SFC script extraction
+│   │   │   ├── rules/     # Custom rules (no-duplicate-script, no-undef-in-template, etc.)
+│   │   │   └── configs/   # recommended, all, base configs
+│   │   ├── types/
+│   │   │   └── index.ts   # DriftParserServices, DriftRuleModule, DriftPluginConfig
+│   │   ├── tests/
+│   │   │   └── plugin.test.ts
+│   │   ├── package.json
+│   │   └── tsconfig.json
+│   │
+│   ├── prettier-plugin/   # driftjs-prettier-plugin — Prettier Formatter for .drift
+│   │   ├── index.ts       # Package entry: re-exports src/ and types/
+│   │   ├── src/           # Implementation logic (languages, parsers, printers, options)
+│   │   │   ├── index.ts   # Barrel: languages, parsers, printers, options
+│   │   │   ├── parser.ts  # Drift SFC parser for Prettier
+│   │   │   ├── printer.ts # Prettier AST Doc printer with embedded Babel/CSS formatting
+│   │   │   └── options.ts # Drift Prettier options (driftScriptIndent, etc.)
+│   │   ├── types/
+│   │   │   └── index.ts   # DriftPrettierOptions, DriftParserOptions
+│   │   ├── tests/
+│   │   │   └── plugin.test.ts
+│   │   ├── package.json
+│   │   └── tsconfig.json
+│   │
 │   └── vscode-plugin/     # driftjs-vscode — VSCode Extension & Language Server
 │       ├── src/
 │       │   ├── extension.ts # VSCode extension activation & LSP client
@@ -336,6 +365,8 @@ DriftJS VM instructions are variable-length byte streams operating on 256 intern
 | `packages/ssr/tests/context.test.ts`          | `driftjs-ssr`         | Server-side context propagation                                   |
 | `packages/vite-plugin/tests/plugin.test.ts`   | `driftjs-vite-plugin` | `.drift` SFC to ESM module transformation                       |
 | `packages/cli/tests/cli.test.ts`              | `create-drift`        | Scaffolding, dependency sanitization, CSR/SSR template selection  |
+| `packages/eslint-plugin/tests/plugin.test.ts` | `driftjs-eslint-plugin` | ESLint parser, template variable tracking, custom Drift rules   |
+| `packages/prettier-plugin/tests/plugin.test.ts`| `driftjs-prettier-plugin`| Prettier SFC formatting, embedded Babel/CSS, directives        |
 | `packages/utils/tests/utils.test.ts`          | `driftjs-shared`      | Scope traversal, evaluators, iterable resolvers                   |
 
 ---

@@ -293,9 +293,18 @@ importers:
 
   packages/eslint-plugin:
     dependencies:
+      acorn:
+        specifier: ^8.17.0
+        version: 8.18.0
+      acorn-walk:
+        specifier: ^8.3.4
+        version: 8.3.5
       driftjs-compiler:
         specifier: workspace:*
         version: link:../compiler
+      driftjs-shared:
+        specifier: workspace:*
+        version: link:../utils
       eslint:
         specifier: '>=8.57.0'
         version: 10.11.0(supports-color@7.2.0)
@@ -312,9 +321,18 @@ importers:
 
   packages/prettier-plugin:
     dependencies:
+      acorn:
+        specifier: ^8.17.0
+        version: 8.18.0
+      acorn-walk:
+        specifier: ^8.3.4
+        version: 8.3.5
       driftjs-compiler:
         specifier: workspace:*
         version: link:../compiler
+      driftjs-shared:
+        specifier: workspace:*
+        version: link:../utils
       prettier:
         specifier: '>=3.0.0'
         version: 3.9.8

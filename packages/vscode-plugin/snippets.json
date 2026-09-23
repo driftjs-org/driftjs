@@ -2,16 +2,19 @@
   "Drift If Directive": {
     "prefix": "@if",
     "body": [
-      "@if ${1:condition} {",
+      "@if (${1:condition}) {",
       "\t$0",
       "}"
     ],
     "description": "DriftJS @if conditional block"
   },
   "Drift Else If Directive": {
-    "prefix": "@elseif",
+    "prefix": [
+      "@else if",
+      "@elseif"
+    ],
     "body": [
-      "@else if ${1:condition} {",
+      "@else if (${1:condition}) {",
       "\t$0",
       "}"
     ],

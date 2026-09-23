@@ -6,6 +6,7 @@ export default defineConfig({
     target: 'node22',
     outDir: 'dist',
     emptyOutDir: true,
+    ssr: true,
     lib: {
       entry: {
         server: path.resolve(__dirname, 'src/server.ts'),
@@ -14,10 +15,34 @@ export default defineConfig({
       formats: ['cjs'],
     },
     rolldownOptions: {
-      external: ['vscode'],
+      external: [
+        'vscode',
+        'path',
+        'node:path',
+        'fs',
+        'node:fs',
+        'os',
+        'node:os',
+        'crypto',
+        'node:crypto',
+        'util',
+        'node:util',
+        'events',
+        'node:events',
+        'stream',
+        'node:stream',
+        'net',
+        'node:net',
+        'child_process',
+        'node:child_process',
+      ],
       output: {
-        entryFileNames: '[name].js',
+        entryFileNames: '[name].cjs',
+        chunkFileNames: '[name]-[hash].cjs',
       },
     },
+  },
+  ssr: {
+    noExternal: true,
   },
 });

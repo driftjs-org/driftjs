@@ -69,4 +69,20 @@ describe("VSCode Language Server - extractScriptVars", () => {
     expect(labels).not.toContain("calculate");
     expect(labels).not.toContain("base");
   });
+
+  it("verifies built server and extension bundles are valid CommonJS without syntax errors", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const vm = await import("vm");
+
+    const distServer = path.resolve(__dirname, "../dist/server.cjs");
+    const distExtension = path.resolve(__dirname, "../dist/extension.cjs");
+
+    if (fs.existsSync(distServer) && fs.existsSync(distExtension)) {
+      expect(() => {
+        new vm.Script(fs.readFileSync(distServer, "utf-8"));
+        new vm.Script(fs.readFileSync(distExtension, "utf-8"));
+      }).not.toThrow();
+    }
+  });
 });

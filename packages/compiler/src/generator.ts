@@ -1563,15 +1563,15 @@ export function astToJS(node: any, locals?: Set<string>): string {
             const setCalls = generatePatternAssignments(
               d.id,
               '_init',
-              locals,
+              undefined,
               { count: 0 },
-              (varName, expr) => (locals && locals.has(varName) ? `(${varName} = ${expr})` : emitLocalAssign(varName, expr))
+              (varName, expr) => emitLocalAssign(varName, expr)
             );
             declsArr.push(`((_init) => { ${setCalls.join('; ')}; return _init; })(${valJS})`);
           } else {
             const name = d.id?.name || astToJS(d.id, locals);
             const valJS = d.init ? astToJS(d.init, locals) : 'undefined';
-            declsArr.push(locals && locals.has(name) ? `(${name} = ${valJS})` : emitLocalAssign(name, valJS));
+            declsArr.push(emitLocalAssign(name, valJS));
           }
         }
       }

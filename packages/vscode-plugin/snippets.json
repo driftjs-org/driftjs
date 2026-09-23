@@ -49,6 +49,37 @@
     ],
     "description": "DriftJS @switch control block"
   },
+  "Drift Async Directive": {
+    "prefix": "@async",
+    "body": [
+      "@async (${1:promise}) as ${2:data} {",
+      "\t$0",
+      "} @fallback {",
+      "\t<span>Loading...</span>",
+      "} @catch (${3:error}) {",
+      "\t<span>Error: {${3:error}}</span>",
+      "}"
+    ],
+    "description": "DriftJS @async control block"
+  },
+  "Drift Fallback Directive": {
+    "prefix": "@fallback",
+    "body": [
+      "@fallback {",
+      "\t$0",
+      "}"
+    ],
+    "description": "DriftJS @fallback block for @async"
+  },
+  "Drift Catch Directive": {
+    "prefix": "@catch",
+    "body": [
+      "@catch (${1:error}) {",
+      "\t$0",
+      "}"
+    ],
+    "description": "DriftJS @catch block for @async"
+  },
   "Drift Script Tag": {
     "prefix": "script",
     "body": [

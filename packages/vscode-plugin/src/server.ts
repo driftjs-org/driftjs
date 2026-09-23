@@ -351,6 +351,39 @@ export function computeCompletions(
         insertTextFormat: InsertTextFormat.Snippet,
         insertText: '@default {\n\t$0\n}',
       },
+      {
+        label: '@async',
+        kind: CompletionItemKind.Snippet,
+        detail: 'DriftJS Async Directive',
+        insertTextFormat: InsertTextFormat.Snippet,
+        insertText: '@async (${1:promise}) as ${2:data} {\n\t$0\n} @fallback {\n\t<span>Loading...</span>\n} @catch (${3:error}) {\n\t<span>Error: {${3:error}}</span>\n}',
+        documentation: {
+          kind: MarkupKind.Markdown,
+          value: 'Asynchronously resolves a Promise and handles fallback loading and catch states:\n```drift\n@async (fetchUser()) as user {\n  <span>{user.name}</span>\n} @fallback {\n  <span>Loading...</span>\n} @catch (err) {\n  <span>{err.message}</span>\n}\n```',
+        },
+      },
+      {
+        label: '@fallback',
+        kind: CompletionItemKind.Snippet,
+        detail: 'DriftJS Async Fallback Branch',
+        insertTextFormat: InsertTextFormat.Snippet,
+        insertText: '@fallback {\n\t$0\n}',
+        documentation: {
+          kind: MarkupKind.Markdown,
+          value: 'Specifies fallback template rendered while an `@async` Promise is pending.',
+        },
+      },
+      {
+        label: '@catch',
+        kind: CompletionItemKind.Snippet,
+        detail: 'DriftJS Async Catch Branch',
+        insertTextFormat: InsertTextFormat.Snippet,
+        insertText: '@catch (${1:error}) {\n\t$0\n}',
+        documentation: {
+          kind: MarkupKind.Markdown,
+          value: 'Specifies error handling template rendered when an `@async` Promise rejects.',
+        },
+      },
     ];
   }
 
@@ -521,6 +554,51 @@ export function computeCompletions(
   ];
 }
 
+export function computeHover(
+  text: string,
+  position: { line: number; character: number }
+): Hover | null {
+  const lines = text.split('\n');
+  const lineText = lines[position.line] ?? '';
+  const charInLine = position.character;
+
+  // Match directives ONLY when explicitly prefixed with `@`
+  const directiveMatches = Array.from(lineText.matchAll(/@(if|else\s+if|else|for|switch|case|default|async|fallback|catch)\b/g));
+  for (const dm of directiveMatches) {
+    const dirIdx = dm.index ?? 0;
+    if (charInLine >= dirIdx && charInLine <= dirIdx + dm[0].length) {
+      return {
+        contents: {
+          kind: MarkupKind.Markdown,
+          value: `**DriftJS Directive \`${dm[0]}\`**\n\nReactive AOT directive compiled into 32-bit register VM bytecode.`,
+        },
+      };
+    }
+  }
+
+  // Check state variable hover under cursor
+  const words = Array.from(lineText.matchAll(/([a-zA-Z0-9_$]+)/g));
+  for (const w of words) {
+    const start = w.index ?? 0;
+    const end = start + w[0].length;
+    if (charInLine >= start && charInLine <= end) {
+      const word = w[0];
+      const scriptVars = extractScriptVars(text);
+      const matchedVar = scriptVars.find((v) => v.label === word);
+      if (matchedVar) {
+        return {
+          contents: {
+            kind: MarkupKind.Markdown,
+            value: `**${matchedVar.detail}**\n\n${matchedVar.documentation}`,
+          },
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
 if (connection) {
   connection.onCompletion((params): CompletionItem[] => {
     const doc = documents.get(params.textDocument.uri);
@@ -538,50 +616,7 @@ if (connection) {
   connection.onHover((params): Hover | null => {
     const doc = documents.get(params.textDocument.uri);
     if (!doc) return null;
-
-    const text = doc.getText();
-    const offset = doc.offsetAt(params.position);
-
-    const lineStart = text.lastIndexOf('\n', offset - 1) + 1;
-    const lineEnd = text.indexOf('\n', offset);
-    const lineText = text.slice(lineStart, lineEnd === -1 ? text.length : lineEnd);
-    const charInLine = params.position.character;
-
-    // Match `@if`, `@for`, `@switch`, `@else` directives ONLY when explicitly prefixed with `@`
-    const directiveMatches = Array.from(lineText.matchAll(/@(if|else\s+if|else|for|switch|case|default)\b/g));
-    for (const dm of directiveMatches) {
-      const dirIdx = dm.index ?? 0;
-      if (charInLine >= dirIdx && charInLine <= dirIdx + dm[0].length) {
-        return {
-          contents: {
-            kind: MarkupKind.Markdown,
-            value: `**DriftJS Directive \`${dm[0]}\`**\n\nReactive AOT directive compiled into 32-bit register VM bytecode.`,
-          },
-        };
-      }
-    }
-
-    // Check state variable hover under cursor
-    const words = Array.from(lineText.matchAll(/([a-zA-Z0-9_$]+)/g));
-    for (const w of words) {
-      const start = w.index ?? 0;
-      const end = start + w[0].length;
-      if (charInLine >= start && charInLine <= end) {
-        const word = w[0];
-        const scriptVars = extractScriptVars(text);
-        const matchedVar = scriptVars.find((v) => v.label === word);
-        if (matchedVar) {
-          return {
-            contents: {
-              kind: MarkupKind.Markdown,
-              value: `**${matchedVar.detail}**\n\n${matchedVar.documentation}`,
-            },
-          };
-        }
-      }
-    }
-
-    return null;
+    return computeHover(doc.getText(), params.position);
   });
 
   documents.listen(connection);

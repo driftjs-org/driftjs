@@ -5,8 +5,7 @@
   "patterns": [
     { "include": "#script-tag" },
     { "include": "#style-tag" },
-    { "include": "#drift-directive-headers" },
-    { "include": "#drift-directive-blocks" },
+    { "include": "#drift-directives" },
     { "include": "#drift-interpolations" },
     { "include": "#html-comments" },
     { "include": "#html-tags" },
@@ -67,35 +66,38 @@
         }
       ]
     },
-    "drift-directive-headers": {
+    "drift-directives": {
       "patterns": [
         {
-          "begin": "(@if|@else\\s+if|@for|@switch)\\b",
+          "name": "meta.directive.drift",
+          "begin": "(@(if|else\\s+if|else|for|switch|case|default|async|fallback|catch))\\b",
           "beginCaptures": {
             "1": { "name": "keyword.control.directive.drift" }
           },
-          "end": "(?=\\{|$)",
+          "end": "(?<=\\})|(?=@(?:if|else\\s+if|else|for|switch|case|default|async|fallback|catch)\\b)",
           "patterns": [
-            { "include": "source.js" }
+            {
+              "begin": "\\G",
+              "end": "(?=\\{)",
+              "patterns": [
+                { "include": "source.js" }
+              ]
+            },
+            {
+              "begin": "\\{",
+              "beginCaptures": {
+                "0": { "name": "punctuation.section.block.begin.drift" }
+              },
+              "end": "\\}",
+              "endCaptures": {
+                "0": { "name": "punctuation.section.block.end.drift" }
+              },
+              "patterns": [
+                { "include": "$self" }
+              ]
+            }
           ]
-        },
-        {
-          "name": "keyword.control.directive.drift",
-          "match": "@(else|case|default)\\b"
         }
-      ]
-    },
-    "drift-directive-blocks": {
-      "begin": "(?<=\\}|\\b|@else|@default)\\s*(\\{)",
-      "beginCaptures": {
-        "1": { "name": "punctuation.section.block.begin.drift" }
-      },
-      "end": "\\}",
-      "endCaptures": {
-        "0": { "name": "punctuation.section.block.end.drift" }
-      },
-      "patterns": [
-        { "include": "$self" }
       ]
     },
     "drift-interpolations": {
@@ -109,6 +111,21 @@
       },
       "name": "meta.embedded.line.js",
       "patterns": [
+        { "include": "#nested-braces" },
+        { "include": "source.js" }
+      ]
+    },
+    "nested-braces": {
+      "begin": "\\{",
+      "beginCaptures": {
+        "0": { "name": "punctuation.section.embedded.begin.js" }
+      },
+      "end": "\\}",
+      "endCaptures": {
+        "0": { "name": "punctuation.section.embedded.end.js" }
+      },
+      "patterns": [
+        { "include": "#nested-braces" },
         { "include": "source.js" }
       ]
     },

@@ -13,9 +13,9 @@ This document tracks all identified bugs, runtime defects, language server limit
 | **VSC-003** | Compiler diagnostics silenced by overbroad `isTransientError` regex | **High** | **Fixed** | [`src/server.ts`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts) |
 | **VSC-004** | Acorn script errors ignored and missing document lifecycle diagnostics | **High** | **Fixed** | [`src/server.ts`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts) |
 | **VSC-005** | Directive block opening braces mistaken for interpolations, disabling completions in blocks | **High** | **Fixed** | [`src/server.ts`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts) |
-| **VSC-006** | TextMate grammar misclassifies `@case` body markup as JavaScript interpolations | **Medium** | Open | [`syntaxes/drift.tmLanguage.json`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/syntaxes/drift.tmLanguage.json) |
-| **VSC-007** | TextMate grammar prematurely terminates on nested braces in interpolations | **Medium** | Open | [`syntaxes/drift.tmLanguage.json`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/syntaxes/drift.tmLanguage.json) |
-| **VSC-008** | Missing modern directives (`@async`, `@fallback`, `@catch`) across LSP, snippets, and grammar | **Medium** | Open | [`src/server.ts`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts), [`snippets.json`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/snippets.json), [`syntaxes/drift.tmLanguage.json`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/syntaxes/drift.tmLanguage.json) |
+| **VSC-006** | TextMate grammar misclassifies `@case` body markup as JavaScript interpolations | **Medium** | **Fixed** | [`syntaxes/drift.tmLanguage.json`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/syntaxes/drift.tmLanguage.json) |
+| **VSC-007** | TextMate grammar prematurely terminates on nested braces in interpolations | **Medium** | **Fixed** | [`syntaxes/drift.tmLanguage.json`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/syntaxes/drift.tmLanguage.json) |
+| **VSC-008** | Missing modern directives (`@async`, `@fallback`, `@catch`) across LSP, snippets, and grammar | **Medium** | **Fixed** | [`src/server.ts`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts), [`snippets.json`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/snippets.json), [`syntaxes/drift.tmLanguage.json`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/syntaxes/drift.tmLanguage.json) |
 | **VSC-009** | VSCode schema violation in `language-configuration.json` for `lineComment` | **Medium** | Open | [`language-configuration.json`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/language-configuration.json) |
 | **VSC-010** | State variable hover false positives on plain HTML text and element tag names | **Medium** | Open | [`src/server.ts`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts) |
 | **VSC-011** | HTML attribute autocompletion ineffective on multiline tags | **Medium** | Open | [`src/server.ts`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts) |
@@ -121,39 +121,45 @@ This document tracks all identified bugs, runtime defects, language server limit
 
 ### VSC-006: TextMate Grammar Misclassifies `@case` Body Markup as JavaScript Interpolations
 * **Severity:** Medium
-* **Status:** Open
+* **Status:** Fixed
 * **Affected Files:**
-  - [`packages/vscode-plugin/syntaxes/drift.tmLanguage.json#L70-L100`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/syntaxes/drift.tmLanguage.json#L70-L100)
+  - [`packages/vscode-plugin/syntaxes/drift.tmLanguage.json`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/syntaxes/drift.tmLanguage.json)
 * **Root Cause:**
-  In `drift-directive-headers`, `@case` is matched only as a bare keyword. In `@case "value" {`, the expression ends with `"`, which is not followed by a word boundary `\b`. Consequently, `drift-directive-blocks` (`(?<=\\}|\\b|@else|@default)\\s*(\\{)`) fails to match the block opening `{`. The `{` is instead claimed by `drift-interpolations` (`begin: "\\{"`), resulting in the entire HTML markup inside `@case` being scoped as JavaScript code (`source.js`).
-* **Recommendation:**
-  Add a dedicated pattern for `@case <expr> {` in `drift-directive-headers` and `drift-directive-blocks`.
+  In `drift-directive-headers`, `@case` was matched only as a bare keyword. In `@case "value" {`, the expression ended with `"`, which was not followed by a word boundary `\b`. Consequently, `drift-directive-blocks` (`(?<=\\}|\\b|@else|@default)\\s*(\\{)`) failed to match the block opening `{`. The `{` was instead claimed by `drift-interpolations` (`begin: "\\{"`), causing the entire HTML markup inside `@case` to be scoped as JavaScript code (`source.js`). Furthermore, relying on lookbehinds like `(?<=\b)` created false positive directive blocks on template text like `<p>Hello {name}</p>`.
+* **Resolution:**
+  - Replaced fragile header/block split rules with a unified `drift-directives` rule structure where the directive begin pattern (`@(if|else\s+if|else|for|switch|case|default|async|fallback|catch)\b`) cleanly bounds both the expression header (`\G` to `(?=\{)`) and the template body block (`\{` to `\}`).
+  - Directive bodies are explicitly scoped with `$self`, preventing `@case` block contents from falling into interpolation rules.
 
 ---
 
 ### VSC-007: TextMate Grammar Prematurely Closes on Nested Braces in Interpolations
 * **Severity:** Medium
-* **Status:** Open
+* **Status:** Fixed
 * **Affected Files:**
-  - [`packages/vscode-plugin/syntaxes/drift.tmLanguage.json#L101-L114`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/syntaxes/drift.tmLanguage.json#L101-L114)
+  - [`packages/vscode-plugin/syntaxes/drift.tmLanguage.json`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/syntaxes/drift.tmLanguage.json)
 * **Root Cause:**
-  `drift-interpolations` uses a flat `begin: "\\{"` and `end: "\\}"` without nested brace counting. Expressions containing object literals or function blocks (`{ { id: 1 } }` or `{ () => { run(); } }`) terminate at the first inner `}`, corrupting the highlighting of subsequent JavaScript code and the enclosing tag.
-* **Recommendation:**
-  Support recursive balanced brace patterns inside `drift-interpolations`.
+  `drift-interpolations` used a flat `begin: "\\{"` and `end: "\\}"` without nested brace counting. Expressions containing object literals or function blocks (`{ { id: 1 } }` or `{ () => { run(); } }`) terminated at the first inner `}`, corrupting the highlighting of subsequent JavaScript code and the enclosing tag.
+* **Resolution:**
+  - Implemented `#nested-braces` recursive rule in `syntaxes/drift.tmLanguage.json` with matching `punctuation.section.embedded.begin.js` and `punctuation.section.embedded.end.js` captures.
+  - Included `#nested-braces` in `drift-interpolations` and recursively within `#nested-braces` itself to properly track balanced curly brace depth in complex JS expressions.
 
 ---
 
 ### VSC-008: Missing Modern Directives (`@async`, `@fallback`, `@catch`) Across LSP, Snippets, and Grammar
 * **Severity:** Medium
-* **Status:** Open
+* **Status:** Fixed
 * **Affected Files:**
   - [`packages/vscode-plugin/src/server.ts`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/src/server.ts)
   - [`packages/vscode-plugin/snippets.json`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/snippets.json)
   - [`packages/vscode-plugin/syntaxes/drift.tmLanguage.json`](file:///home/hrutav-modha/Documents/driftjs/packages/vscode-plugin/syntaxes/drift.tmLanguage.json)
 * **Root Cause:**
-  The Drift compiler implements `@async`, `@fallback`, and `@catch` (`compiler/src/lexer.ts#L84`), but these directives are missing from the language server autocompletion list, hover regex, code snippets, and TextMate grammar rules.
-* **Recommendation:**
-  Add completion items, hover descriptions, snippets, and syntax grammar rules for `@async`, `@fallback`, and `@catch`.
+  The Drift compiler implements `@async`, `@fallback`, and `@catch` (`compiler/src/lexer.ts#L84`), but these directives were missing from the language server autocompletion list, hover regex, code snippets, and TextMate grammar rules.
+* **Resolution:**
+  - Added `@async`, `@fallback`, and `@catch` completion items with detailed Markdown documentation and snippet templates to `computeCompletions` in `server.ts`.
+  - Added `@async`, `@fallback`, and `@catch` snippets to `snippets.json`.
+  - Updated directive hover inspection (`computeHover`) to recognize `@async`, `@fallback`, and `@catch`.
+  - Updated `isInsideDirectiveHeader` and `isInsideInterpolation` helpers in `server.ts` to recognize `@async` and `@catch` headers and blocks.
+  - Included `@async`, `@fallback`, and `@catch` in `syntaxes/drift.tmLanguage.json`'s unified directive patterns.
 
 ---
 

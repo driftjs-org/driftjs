@@ -5,6 +5,7 @@ import {
   isInsideInterpolation,
   isInsideDirectiveHeader,
   computeCompletions,
+  computeHover,
 } from "../src/server.js";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
@@ -207,5 +208,130 @@ describe("VSCode Language Server - Directive Block and Interpolation Completions
 
     expect(labels).toContain("myCount");
     expect(labels).not.toContain("class");
+  });
+});
+
+describe("TextMate Grammar - @case block and nested braces (BUG-006 & BUG-007)", () => {
+  it("validates drift.tmLanguage.json syntax and structure", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const grammarPath = path.resolve(__dirname, "../syntaxes/drift.tmLanguage.json");
+    const grammar = JSON.parse(fs.readFileSync(grammarPath, "utf-8"));
+
+    expect(grammar.name).toBe("DriftJS");
+    expect(grammar.scopeName).toBe("text.html.drift");
+    expect(grammar.repository["drift-directives"]).toBeDefined();
+    expect(grammar.repository["drift-interpolations"]).toBeDefined();
+    expect(grammar.repository["nested-braces"]).toBeDefined();
+  });
+
+  it("handles @case and all directives with expressions without falling into interpolations (BUG-006)", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const grammarPath = path.resolve(__dirname, "../syntaxes/drift.tmLanguage.json");
+    const grammar = JSON.parse(fs.readFileSync(grammarPath, "utf-8"));
+
+    const dirRule = grammar.repository["drift-directives"].patterns[0];
+    expect(dirRule).toBeDefined();
+
+    // Check that begin matches all 9 directives including @case, @async, @catch
+    const beginRegex = new RegExp(dirRule.begin);
+    expect(beginRegex.test("@if")).toBe(true);
+    expect(beginRegex.test("@else if")).toBe(true);
+    expect(beginRegex.test("@else")).toBe(true);
+    expect(beginRegex.test("@for")).toBe(true);
+    expect(beginRegex.test("@switch")).toBe(true);
+    expect(beginRegex.test("@case")).toBe(true);
+    expect(beginRegex.test("@default")).toBe(true);
+    expect(beginRegex.test("@async")).toBe(true);
+    expect(beginRegex.test("@fallback")).toBe(true);
+    expect(beginRegex.test("@catch")).toBe(true);
+
+    // Rule contains expression pattern and block pattern with $self
+    expect(dirRule.patterns.length).toBe(2);
+    expect(dirRule.patterns[0].patterns[0].include).toBe("source.js");
+    expect(dirRule.patterns[1].patterns[0].include).toBe("$self");
+  });
+
+  it("supports recursive nested braces in interpolations (BUG-007)", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const grammarPath = path.resolve(__dirname, "../syntaxes/drift.tmLanguage.json");
+    const grammar = JSON.parse(fs.readFileSync(grammarPath, "utf-8"));
+
+    const interpRule = grammar.repository["drift-interpolations"];
+    expect(interpRule.patterns.some((p: any) => p.include === "#nested-braces")).toBe(true);
+    expect(interpRule.patterns.some((p: any) => p.include === "source.js")).toBe(true);
+
+    const nestedRule = grammar.repository["nested-braces"];
+    expect(nestedRule.begin).toBe("\\{");
+    expect(nestedRule.end).toBe("\\}");
+    expect(nestedRule.patterns.some((p: any) => p.include === "#nested-braces")).toBe(true);
+    expect(nestedRule.patterns.some((p: any) => p.include === "source.js")).toBe(true);
+  });
+});
+
+describe("VSCode Language Server - Modern Directives @async, @fallback, @catch (BUG-008)", () => {
+  it("suggests @async, @fallback, and @catch in completions", () => {
+    const text = `<script>\nlet data = null;\n</script>\n@`;
+    const offset = text.indexOf("@") + 1;
+    const items = computeCompletions(text, offset);
+    const labels = items.map((i) => i.label);
+
+    expect(labels).toContain("@async");
+    expect(labels).toContain("@fallback");
+    expect(labels).toContain("@catch");
+
+    const asyncItem = items.find((i) => i.label === "@async");
+    expect(asyncItem?.insertText).toContain("@async (${1:promise}) as ${2:data}");
+    expect(asyncItem?.insertText).toContain("@fallback");
+    expect(asyncItem?.insertText).toContain("@catch");
+  });
+
+  it("snippets.json contains valid @async, @fallback, and @catch snippets", async () => {
+    const fs = await import("fs");
+    const path = await import("path");
+    const snippetsPath = path.resolve(__dirname, "../snippets.json");
+    const snippets = JSON.parse(fs.readFileSync(snippetsPath, "utf-8"));
+
+    expect(snippets["Drift Async Directive"]).toBeDefined();
+    expect(snippets["Drift Async Directive"].prefix).toBe("@async");
+    expect(snippets["Drift Fallback Directive"]).toBeDefined();
+    expect(snippets["Drift Fallback Directive"].prefix).toBe("@fallback");
+    expect(snippets["Drift Catch Directive"]).toBeDefined();
+    expect(snippets["Drift Catch Directive"].prefix).toBe("@catch");
+  });
+
+  it("hover displays documentation for @async, @fallback, and @catch directives", () => {
+    const sfc = `@async (fetchData()) as res {\n  <div>{res}</div>\n} @fallback {\n  <span>Loading</span>\n} @catch (err) {\n  <span>{err}</span>\n}`;
+
+    const hoverAsync = computeHover(sfc, { line: 0, character: 3 });
+    expect(hoverAsync).not.toBeNull();
+    expect((hoverAsync?.contents as any).value).toContain("@async");
+
+    const hoverFallback = computeHover(sfc, { line: 2, character: 5 });
+    expect(hoverFallback).not.toBeNull();
+    expect((hoverFallback?.contents as any).value).toContain("@fallback");
+
+    const hoverCatch = computeHover(sfc, { line: 4, character: 5 });
+    expect(hoverCatch).not.toBeNull();
+    expect((hoverCatch?.contents as any).value).toContain("@catch");
+  });
+
+  it("treats braces inside @async, @fallback, @catch as directive blocks, not interpolations", () => {
+    const insideAsyncBlock = `@async (fetchData()) as res {\n  <button `;
+    expect(isInsideInterpolation(insideAsyncBlock, insideAsyncBlock.length)).toBe(false);
+
+    const insideFallbackBlock = `@fallback {\n  <span `;
+    expect(isInsideInterpolation(insideFallbackBlock, insideFallbackBlock.length)).toBe(false);
+
+    const insideCatchBlock = `@catch (err) {\n  <p `;
+    expect(isInsideInterpolation(insideCatchBlock, insideCatchBlock.length)).toBe(false);
+
+    const insideAsyncHeader = `@async (loadUser`;
+    expect(isInsideDirectiveHeader(insideAsyncHeader)).toBe(true);
+
+    const insideCatchHeader = `@catch (err`;
+    expect(isInsideDirectiveHeader(insideCatchHeader)).toBe(true);
   });
 });

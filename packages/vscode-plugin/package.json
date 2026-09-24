@@ -70,7 +70,7 @@
     "build": "vite build",
     "watch": "tsc -w",
     "test": "vitest run --passWithNoTests",
-    "package": "vsce package"
+    "package": "vsce package --no-dependencies"
   },
   "dependencies": {
     "acorn": "^8.17.0",

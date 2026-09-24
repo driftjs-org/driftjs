@@ -412,10 +412,10 @@ export function computeCompletions(
         kind: CompletionItemKind.Snippet,
         detail: 'DriftJS Conditional Directive',
         insertTextFormat: InsertTextFormat.Snippet,
-        insertText: '@if (${1:condition}) {\n\t$0\n}',
+        insertText: '@if ${1:condition} {\n\t$0\n}',
         documentation: {
           kind: MarkupKind.Markdown,
-          value: 'Renders element tree conditionally based on a reactive expression:\n```drift\n@if (count > 0) {\n  <span>Positive</span>\n}\n```',
+          value: 'Renders element tree conditionally based on a reactive expression:\n```drift\n@if count > 0 {\n  <span>Positive</span>\n}\n```',
         },
       },
       {
@@ -424,7 +424,7 @@ export function computeCompletions(
         kind: CompletionItemKind.Snippet,
         detail: 'DriftJS Else-If Directive',
         insertTextFormat: InsertTextFormat.Snippet,
-        insertText: '@else if (${1:condition}) {\n\t$0\n}',
+        insertText: '@else if ${1:condition} {\n\t$0\n}',
         documentation: {
           kind: MarkupKind.Markdown,
           value: 'Adds an alternate conditional branch to an existing `@if` block.',
@@ -435,7 +435,7 @@ export function computeCompletions(
         kind: CompletionItemKind.Snippet,
         detail: 'DriftJS Else-If Directive (alias)',
         insertTextFormat: InsertTextFormat.Snippet,
-        insertText: '@else if (${1:condition}) {\n\t$0\n}',
+        insertText: '@else if ${1:condition} {\n\t$0\n}',
         documentation: {
           kind: MarkupKind.Markdown,
           value: 'Alias for `@else if`. Adds an alternate conditional branch to an existing `@if` block.',

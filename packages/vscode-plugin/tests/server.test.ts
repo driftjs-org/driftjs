@@ -447,32 +447,32 @@ describe("VSCode Language Server - Multiline Tag Attribute Autocompletion (BUG-0
 });
 
 describe("Snippet Consistency - Canonical Syntax (BUG-012)", () => {
-  it("uses canonical DriftJS parentheses syntax consistently in snippets.json and server.ts", async () => {
+  it("uses canonical DriftJS raw condition syntax consistently in snippets.json and server.ts", async () => {
     const fs = await import("fs");
     const path = await import("path");
     const snippetsPath = path.resolve(__dirname, "../snippets.json");
     const snippets = JSON.parse(fs.readFileSync(snippetsPath, "utf-8"));
 
     // Check @if snippet
-    expect(snippets["Drift If Directive"].body[0]).toBe("@if (${1:condition}) {");
+    expect(snippets["Drift If Directive"].body[0]).toBe("@if ${1:condition} {");
     expect(snippets["Drift If Directive"].prefix).toBe("@if");
 
     // Check @else if snippet
-    expect(snippets["Drift Else If Directive"].body[0]).toBe("@else if (${1:condition}) {");
+    expect(snippets["Drift Else If Directive"].body[0]).toBe("@else if ${1:condition} {");
     expect(snippets["Drift Else If Directive"].prefix).toContain("@else if");
     expect(snippets["Drift Else If Directive"].prefix).toContain("@elseif");
 
     // Check server completions
     const items = computeCompletions("@", 1);
     const ifItem = items.find((i) => i.label === "@if");
-    expect(ifItem?.insertText).toBe("@if (${1:condition}) {\n\t$0\n}");
+    expect(ifItem?.insertText).toBe("@if ${1:condition} {\n\t$0\n}");
 
     const elseIfItem = items.find((i) => i.label === "@else if");
-    expect(elseIfItem?.insertText).toBe("@else if (${1:condition}) {\n\t$0\n}");
+    expect(elseIfItem?.insertText).toBe("@else if ${1:condition} {\n\t$0\n}");
 
     const elseIfAlias = items.find((i) => i.label === "@elseif");
     expect(elseIfAlias).toBeDefined();
-    expect(elseIfAlias?.insertText).toBe("@else if (${1:condition}) {\n\t$0\n}");
+    expect(elseIfAlias?.insertText).toBe("@else if ${1:condition} {\n\t$0\n}");
   });
 });
 

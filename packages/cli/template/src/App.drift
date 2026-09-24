@@ -65,18 +65,15 @@
     <div class="badge-container">
       @if count === 0 {
         <span class="badge badge-zero">Zero</span>
-      }
-      @else if count > 0 {
+      } @else if count > 0 {
         <span class="badge badge-positive">Positive</span>
-      }
-      @else {
+      } @else {
         <span class="badge badge-negative">Negative</span>
       }
 
       @if count % 2 === 0 {
         <span class="badge badge-even">Even</span>
-      }
-      @else {
+      } @else {
         <span class="badge badge-odd">Odd</span>
       }
     </div>
@@ -88,8 +85,7 @@
     <button class="btn btn-inc" onclick={increment}>Increment</button>
     @if autoRunning {
       <button class="btn btn-auto btn-auto-stop" onclick={stopAutoIncrement}>Stop Auto Increment</button>
-    }
-    @else {
+    } @else {
       <button class="btn btn-auto" onclick={startAutoIncrement}>Auto Increment</button>
     }
   </div>

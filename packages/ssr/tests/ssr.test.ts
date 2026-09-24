@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { DriftServerVM, renderToString, renderToStream } from '../src/index.js';
+import { DriftServerVM, renderToString, renderToStream, renderIslandToString } from '../src/index.js';
 import { Opcode, type CompiledModule, compile } from 'driftjs-compiler';
 
 describe('DriftServerVM (SSR Engine)', () => {
@@ -606,6 +606,52 @@ describe('DriftServerVM (SSR Engine)', () => {
 
       expect(html).toContain('Fallback Content');
       expect(html).toContain('<!--drift-async:');
+    });
+  });
+
+  describe('renderIslandToString', () => {
+    it('serializes component inside an island container with data-drift-island and trigger attributes', () => {
+      const sfc = `
+        <script>
+          let initial = props.initial || 0;
+        </script>
+        <div class="counter">
+          <button>-</button>
+          <span>{initial}</span>
+          <button>+</button>
+        </div>
+      `;
+      const compiled = compile(sfc);
+      const html = renderIslandToString('Counter', compiled, {
+        trigger: 'idle',
+        props: { initial: 5 },
+      });
+
+      expect(html).toContain('data-drift-island="Counter"');
+      expect(html).toContain('data-drift-trigger="idle"');
+      expect(html).toContain('data-drift-props="{&quot;initial&quot;:5}"');
+      expect(html).toContain('<div class="counter"><button>-</button><span>5</span><button>+</button></div>');
+    });
+
+    it('supports custom island wrapper tag, timeout, and media query attributes', () => {
+      const sfc = `<p>Media Island</p>`;
+      const compiled = compile(sfc);
+      const html = renderIslandToString('MediaIsland', compiled, {
+        islandTag: 'section',
+        trigger: 'media',
+        media: '(max-width: 768px)',
+        timeout: 3000,
+        rootMargin: '200px',
+      });
+
+      expect(html.startsWith('<section ')).toBe(true);
+      expect(html.endsWith('</section>')).toBe(true);
+      expect(html).toContain('data-drift-island="MediaIsland"');
+      expect(html).toContain('data-drift-trigger="media"');
+      expect(html).toContain('data-drift-media="(max-width: 768px)"');
+      expect(html).toContain('data-drift-timeout="3000"');
+      expect(html).toContain('data-drift-root-margin="200px"');
+      expect(html).toContain('<p>Media Island</p>');
     });
   });
 });

@@ -1,0 +1,56 @@
+{
+  "name": "driftjs-ssg",
+  "version": "0.0.15",
+  "description": "Static Site Generation (SSG) meta-framework and islands bundler for DriftJS.",
+  "keywords": [
+    "driftjs",
+    "ssg",
+    "static-site-generator",
+    "islands-architecture",
+    "virtual-machine",
+    "register-vm",
+    "content-collections",
+    "seo"
+  ],
+  "type": "module",
+  "files": [
+    "dist",
+    "bin",
+    "README.md"
+  ],
+  "main": "./dist/index-cjs.js",
+  "module": "./dist/index-es.js",
+  "types": "./src/index.ts",
+  "bin": {
+    "drift-ssg": "./bin/drift-ssg.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./dist/index-es.js",
+      "require": "./dist/index-cjs.js",
+      "default": "./dist/index-es.js"
+    }
+  },
+  "scripts": {
+    "build": "vite build",
+    "test": "vitest run"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "driftjs-compiler": "workspace:*",
+    "driftjs-dom": "workspace:*",
+    "driftjs-ssr": "workspace:*",
+    "driftjs-shared": "workspace:*",
+    "driftjs-vite-plugin": "workspace:*",
+    "gray-matter": "^4.0.3",
+    "marked": "^15.0.7",
+    "path-to-regexp": "^6.3.0",
+    "picocolors": "^1.1.1",
+    "vite": "^8.1.5"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  }
+}

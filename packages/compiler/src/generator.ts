@@ -697,6 +697,8 @@ export class DriftGenerator {
       node.expression.arguments.length > 0
     ) {
       this.pendingEffects.push({ arg: node.expression.arguments[0] });
+    } else if ((node.type === 'ExportNamedDeclaration' || node.type === 'ExportDefaultDeclaration') && node.declaration) {
+      this.extractVarNames(node.declaration);
     } else if ((node.type === 'FunctionDeclaration' || node.type === 'ClassDeclaration') && node.id?.type === 'Identifier') {
       this.declaredVars.add(node.id.name);
     } else if (node.type === 'ImportDeclaration' && Array.isArray(node.specifiers)) {
@@ -1730,6 +1732,10 @@ export function astToJS(node: any, locals?: Set<string>): string {
     case 'ImportDefaultSpecifier':
     case 'ImportNamespaceSpecifier':
       return '';
+
+    case 'ExportNamedDeclaration':
+    case 'ExportDefaultDeclaration':
+      return node.declaration ? astToJS(node.declaration, locals) : '';
 
     case 'ParenthesizedExpression':
     case 'ChainExpression':

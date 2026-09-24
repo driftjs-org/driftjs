@@ -105,6 +105,15 @@ export default defineConfig({
           },
         },
       },
+      {
+        test: {
+          name: 'ssg',
+          include: ['packages/ssg/tests/**/*.test.ts'],
+          exclude: ['packages/ssg/dist'],
+          environment: 'node',
+          setupFiles: ['./packages/ssr/tests/setup.ts'],
+        },
+      },
     ],
   },
 });

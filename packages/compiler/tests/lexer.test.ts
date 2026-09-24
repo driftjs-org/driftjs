@@ -113,6 +113,17 @@ describe('DriftLexer', () => {
     expect(identifiers).toEqual(['custom-button', 'data-test-id', 'class_name', 'custom-button']);
   });
 
+  it('lexes directive attribute names with colons like client:load and client:idle', () => {
+    const lexer = new DriftLexer('<Counter client:load client:idle client:media="(max-width: 768px)" />');
+    const tokens = collectTokens(lexer);
+
+    const identifiers = tokens
+      .filter((token) => token.type === TokenType.Identifier)
+      .map((token) => token.value);
+
+    expect(identifiers).toEqual(['Counter', 'client:load', 'client:idle', 'client:media']);
+  });
+
   it('treats script and style contents as raw text blocks', () => {
     const lexer = new DriftLexer('<script>if (a < b) { console.log("ok"); }</script><style>.x { color: red; }</style>');
     const tokens = collectTokens(lexer);

@@ -595,6 +595,41 @@ export function renderToString(component: CompiledModule, options: SSRExecutionO
 }
 
 /**
+ * Renders a compiled Drift component wrapped in an island container with hydration metadata.
+ */
+export function renderIslandToString(
+  islandName: string,
+  component: CompiledModule,
+  options: IslandRenderOptions = {}
+): string {
+  const tag = options.islandTag || 'div';
+  const trigger = options.trigger || 'idle';
+  let attrs = ` data-drift-island="${escapeHtml(islandName)}"`;
+  if (trigger) {
+    attrs += ` data-drift-trigger="${escapeHtml(trigger)}"`;
+  }
+  if (options.props && Object.keys(options.props).length > 0) {
+    attrs += ` data-drift-props="${escapeHtml(JSON.stringify(options.props))}"`;
+  }
+  if (options.timeout !== undefined) {
+    attrs += ` data-drift-timeout="${options.timeout}"`;
+  }
+  if (options.media) {
+    attrs += ` data-drift-media="${escapeHtml(options.media)}"`;
+  }
+  if (options.rootMargin) {
+    attrs += ` data-drift-root-margin="${escapeHtml(options.rootMargin)}"`;
+  }
+
+  const execScope = options.props
+    ? { ...options.scope, props: options.props, ...options.props }
+    : options.scope;
+
+  const innerHtml = renderToString(component, { ...options, scope: execScope });
+  return `<${tag}${attrs}>${innerHtml}</${tag}>`;
+}
+
+/**
  * Renders a compiled Drift component to a WHATWG ReadableStream with Node.js .pipe() support.
  */
 export function renderToStream(

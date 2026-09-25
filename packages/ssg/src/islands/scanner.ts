@@ -1,8 +1,7 @@
 import { DriftLexer, DriftParser, type ElementNode } from 'driftjs-compiler';
-import type { IslandDescriptor } from '../types/index.js';
-import type { IslandTriggerStrategy } from '../types/config.js';
+import type { IslandDescriptor, IslandTriggerStrategy } from '../../types/index.js';
 
-const CLIENT_DIRECTIVES: Record<string, IslandTriggerStrategy> = {
+export const CLIENT_DIRECTIVES: Record<string, IslandTriggerStrategy> = {
   'client:load': 'eager',
   'client:idle': 'idle',
   'client:visible': 'visible',
@@ -13,7 +12,7 @@ const CLIENT_DIRECTIVES: Record<string, IslandTriggerStrategy> = {
 /**
  * Recursively traverses an AST node tree to find all element nodes with client:* directives.
  */
-function findIslandElements(node: any, results: ElementNode[] = []): ElementNode[] {
+export function findIslandElements(node: any, results: ElementNode[] = []): ElementNode[] {
   if (!node || typeof node !== 'object') return results;
 
   if (node.type === 'Element') {
@@ -99,40 +98,4 @@ export function scanIslands(
   }
 
   return islands;
-}
-
-/**
- * Wraps server-rendered HTML inside an island container element with data-drift-* attributes.
- */
-export function wrapIslandHtml(
-  islandName: string,
-  innerHtml: string,
-  options: {
-    trigger?: IslandTriggerStrategy;
-    props?: Record<string, any>;
-    timeout?: number;
-    media?: string;
-    rootMargin?: string;
-    islandTag?: string;
-  } = {}
-): string {
-  const tag = options.islandTag || 'div';
-  const trigger = options.trigger || 'idle';
-  let attrs = ` data-drift-island="${islandName}" data-drift-trigger="${trigger}"`;
-
-  if (options.props && Object.keys(options.props).length > 0) {
-    const safeProps = JSON.stringify(options.props).replace(/"/g, '&quot;');
-    attrs += ` data-drift-props="${safeProps}"`;
-  }
-  if (options.timeout !== undefined) {
-    attrs += ` data-drift-timeout="${options.timeout}"`;
-  }
-  if (options.media) {
-    attrs += ` data-drift-media="${options.media.replace(/"/g, '&quot;')}"`;
-  }
-  if (options.rootMargin) {
-    attrs += ` data-drift-root-margin="${options.rootMargin.replace(/"/g, '&quot;')}"`;
-  }
-
-  return `<${tag}${attrs}>${innerHtml}</${tag}>`;
 }

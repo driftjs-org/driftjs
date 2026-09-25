@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type { DriftSSGConfig, UserConfig } from '../types/index.js';
+import type { DriftSSGConfig, UserConfig } from '../../types/index.js';
 
 export const DEFAULT_CONFIG: DriftSSGConfig = {
   root: process.cwd(),

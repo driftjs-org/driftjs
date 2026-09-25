@@ -1,22 +1,11 @@
-export interface MetaTag {
-  name?: string;
-  property?: string;
-  content?: string;
-  charset?: string;
-  httpEquiv?: string;
-  [key: string]: any;
-}
+import type { MetaTag, HeadConfig, HeadExtractionResult } from '../../types/index.js';
 
-export interface HeadConfig {
-  title?: string;
-  meta?: MetaTag[];
-  links?: Array<{ rel: string; href: string; [key: string]: any }>;
-}
+export type { MetaTag, HeadConfig };
 
 /**
  * Extracts title and meta tags from an HTML string or head block.
  */
-export function extractHeadTags(html: string): { title?: string | undefined; headHtml: string; bodyHtml: string } {
+export function extractHeadTags(html: string): HeadExtractionResult {
   let title: string | undefined;
   let headContent = '';
   let bodyContent = html;

@@ -2,20 +2,10 @@ import fs from 'node:fs';
 import { compile as compilePathToRegexp } from 'path-to-regexp';
 import { compile, type CompiledModule } from 'driftjs-compiler';
 import { evaluateExpression } from 'driftjs-shared';
-import type { RouteRecord, RouteParams } from '../types/index.js';
-import { normalizePath } from './router.js';
+import type { RouteRecord, RouteParams, StaticPathResult, ResolvedRoutePath } from '../../types/index.js';
+import { normalizePath } from './scanner.js';
 
-export interface StaticPathResult {
-  params: RouteParams;
-  props?: Record<string, any>;
-}
-
-export interface ResolvedRoutePath {
-  route: RouteRecord;
-  pathname: string;
-  params: RouteParams;
-  props: Record<string, any>;
-}
+export type { StaticPathResult, ResolvedRoutePath };
 
 /**
  * Replaces route parameter tokens (:param, :param(.*)) with concrete values.

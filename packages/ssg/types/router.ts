@@ -31,3 +31,22 @@ export interface RouteNode {
   layout?: string | undefined;
   children: Map<string, RouteNode>;
 }
+
+export interface StaticPathResult {
+  params: RouteParams;
+  props?: Record<string, any> | undefined;
+}
+
+export interface ResolvedRoutePath {
+  route: RouteRecord;
+  pathname: string;
+  params: RouteParams;
+  props: Record<string, any>;
+}
+
+export interface RouteScanResult {
+  routes: RouteRecord[];
+  layouts: Map<string, string>;
+  document?: string | undefined;
+  notFound?: RouteRecord | undefined;
+}

@@ -1,28 +1,18 @@
 import http from 'node:http';
 import { createServer as createViteServer, type ViteDevServer } from 'vite';
 import { driftPlugin } from 'driftjs-vite-plugin';
-import pc from 'picocolors';
-import { loadConfig } from './config.js';
-import { scanRoutes, matchRoute } from './router.js';
-import { renderPage } from './renderer.js';
-import { extractStaticPaths } from './paths.js';
+import type { DevServerOptions, DevServerInstance } from '../../types/index.js';
+import { loadConfig } from '../config/index.js';
+import { scanRoutes, matchRoute } from '../router/index.js';
+import { renderPage } from '../render/index.js';
+import { extractStaticPaths } from '../router/index.js';
 
-export interface DevServerOptions {
-  root?: string | undefined;
-  port?: number | undefined;
-  host?: string | undefined;
-  configFile?: string | undefined;
-}
+export type { DevServerOptions, DevServerInstance };
 
 /**
  * Creates and starts an on-demand SSG development server with Vite HMR.
  */
-export async function createDevServer(options: DevServerOptions = {}): Promise<{
-  server: http.Server;
-  vite: ViteDevServer;
-  port: number;
-  close: () => Promise<void>;
-}> {
+export async function createDevServer(options: DevServerOptions = {}): Promise<DevServerInstance> {
   const config = await loadConfig(options.root, options.configFile);
   const port = options.port || 3000;
   const host = options.host || 'localhost';

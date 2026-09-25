@@ -2,14 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { build as viteBuild, type InlineConfig } from 'vite';
 import { driftPlugin } from 'driftjs-vite-plugin';
-import type { IslandDescriptor } from '../types/index.js';
-import type { DriftSSGConfig } from '../types/config.js';
+import type { IslandDescriptor, DriftSSGConfig, IslandBundleResult } from '../../types/index.js';
 
-export interface IslandBundleResult {
-  scriptTag?: string;
-  assetPath?: string;
-  size: number;
-}
+export type { IslandBundleResult };
+
 
 /**
  * Generates client bootstrap source code for selective island hydration.

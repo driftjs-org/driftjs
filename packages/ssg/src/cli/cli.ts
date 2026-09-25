@@ -2,9 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
 import pc from 'picocolors';
-import { build } from './builder.js';
-import { createDevServer } from './server.js';
-import { loadConfig } from './config.js';
+import { build } from '../build/index.js';
+import { createDevServer } from '../server/index.js';
+import { loadConfig } from '../config/index.js';
 
 export async function runCli(args: string[] = process.argv.slice(2)): Promise<void> {
   const command = args[0] || 'build';

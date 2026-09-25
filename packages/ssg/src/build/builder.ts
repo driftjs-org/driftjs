@@ -1,14 +1,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import pc from 'picocolors';
-import type { BuildOptions, BuildSummary, PageOutput } from '../types/index.js';
-import { loadConfig } from './config.js';
-import { scanRoutes } from './router.js';
-import { resolveAllRoutePaths } from './paths.js';
-import { renderPage } from './renderer.js';
-import { bundleIslands } from './bundler.js';
-import { generateSitemap, generateRobotsTxt } from './head.js';
-import { scanIslands } from './islands.js';
+import type { BuildOptions, BuildSummary, PageOutput } from '../../types/index.js';
+import { loadConfig } from '../config/index.js';
+import { scanRoutes } from '../router/index.js';
+import { resolveAllRoutePaths } from '../router/index.js';
+import { renderPage } from '../render/index.js';
+import { bundleIslands } from '../islands/index.js';
+import { generateSitemap, generateRobotsTxt } from '../render/index.js';
+import { scanIslands } from '../islands/index.js';
+
+export type { BuildOptions, BuildSummary, PageOutput };
 
 /**
  * Executes the full production static site generation pipeline.

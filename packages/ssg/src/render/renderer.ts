@@ -1,27 +1,12 @@
 import fs from 'node:fs';
 import { compile, type CompiledModule } from 'driftjs-compiler';
 import { DriftServerVM, serializeNode, type ServerNode } from 'driftjs-ssr';
-import type { RouteRecord, RouteParams } from '../types/index.js';
-import { renderMarkdown } from './content.js';
+import type { RouteRecord, RouteParams, RenderPageOptions, RenderResult } from '../../types/index.js';
+import { renderMarkdown } from '../content/index.js';
 import { extractHeadTags, injectDocument } from './head.js';
-import { scanIslands } from './islands.js';
+import { scanIslands } from '../islands/index.js';
 
-export interface RenderPageOptions {
-  route: RouteRecord;
-  pathname: string;
-  params: RouteParams;
-  props: Record<string, any>;
-  documentPath?: string | undefined;
-  scripts?: string[] | undefined;
-  headTags?: string[] | undefined;
-  site?: string | undefined;
-}
-
-export interface RenderResult {
-  html: string;
-  islands: ReturnType<typeof scanIslands>;
-  title?: string | undefined;
-}
+export type { RenderPageOptions, RenderResult };
 
 const SLOT_MARKER = '__DRIFT_PAGE_CHILDREN__';
 
@@ -40,7 +25,7 @@ export function renderModule(
 /**
  * Creates a marker ServerNode comment that serializeNode prints unescaped as <!--__DRIFT_PAGE_CHILDREN__-->.
  */
-function createSlotNode(): ServerNode {
+export function createSlotNode(): ServerNode {
   return {
     type: 'comment',
     content: SLOT_MARKER,

@@ -2,13 +2,13 @@ import type { IslandDescriptor } from './render.js';
 
 export interface BuildOptions {
   /** Project root directory */
-  root?: string;
+  root?: string | undefined;
   /** Explicit config file path */
-  configFile?: string;
+  configFile?: string | undefined;
   /** Custom output directory override */
-  outDir?: string;
+  outDir?: string | undefined;
   /** Suppress console output */
-  silent?: boolean;
+  silent?: boolean | undefined;
 }
 
 export interface PageOutput {

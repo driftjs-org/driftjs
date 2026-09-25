@@ -1,5 +1,5 @@
 export interface SSRExecutionOptions {
-  readonly scope?: Record<string, any>;
+  readonly scope?: Record<string, any> | undefined;
 }
 
 export interface StreamOptions extends SSRExecutionOptions {

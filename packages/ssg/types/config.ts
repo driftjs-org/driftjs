@@ -14,7 +14,7 @@ export interface DriftSSGConfig {
   /** Static public assets directory to copy directly into outDir. Defaults to 'public' */
   publicDir: string;
   /** Canonical base URL for production site, e.g. 'https://driftjs.dev' */
-  site?: string;
+  site?: string | undefined;
   /** Base URL path prefix, e.g. '/docs/'. Defaults to '/' */
   base: string;
   /** Whether to automatically generate sitemap.xml. Defaults to true if site is defined */
@@ -26,7 +26,10 @@ export interface DriftSSGConfig {
   /** Default hydration trigger for islands without an explicit directive. Defaults to 'idle' */
   defaultIslandTrigger: IslandTriggerStrategy;
   /** Optional custom Vite configuration options */
-  vite?: ViteUserConfig;
+  vite?: ViteUserConfig | undefined;
 }
 
-export type UserConfig = Partial<DriftSSGConfig>;
+export type UserConfig = {
+  [K in keyof DriftSSGConfig]?: DriftSSGConfig[K] | undefined;
+};
+

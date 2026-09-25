@@ -11,11 +11,11 @@ export interface IslandDescriptor {
   /** Props passed to the island */
   props: Record<string, any>;
   /** Timeout in ms if specified */
-  timeout?: number;
+  timeout?: number | undefined;
   /** CSS media query if specified */
-  media?: string;
+  media?: string | undefined;
   /** Root margin if specified */
-  rootMargin?: string;
+  rootMargin?: string | undefined;
 }
 
 export interface LayoutDescriptor {
@@ -28,6 +28,6 @@ export interface PageRenderContext {
   params: RouteParams;
   props: Record<string, any>;
   route: RouteRecord;
-  site?: string;
-  headTags?: string[];
+  site?: string | undefined;
+  headTags?: string[] | undefined;
 }

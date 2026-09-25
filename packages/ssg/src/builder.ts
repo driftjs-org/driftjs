@@ -6,7 +6,7 @@ import { loadConfig } from './config.js';
 import { scanRoutes } from './router.js';
 import { resolveAllRoutePaths } from './paths.js';
 import { renderPage } from './renderer.js';
-import { bundleIslands } from './bundler.ts';
+import { bundleIslands } from './bundler.js';
 import { generateSitemap, generateRobotsTxt } from './head.js';
 import { scanIslands } from './islands.js';
 

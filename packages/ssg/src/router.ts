@@ -6,8 +6,8 @@ import type { RouteRecord, RouteType, MatchedRoute, RouteParams } from '../types
 export interface ScanResult {
   routes: RouteRecord[];
   layouts: Map<string, string>;
-  document?: string;
-  notFound?: RouteRecord;
+  document?: string | undefined;
+  notFound?: RouteRecord | undefined;
 }
 
 /**

@@ -1,4 +1,4 @@
-import { DriftLexer, DriftParser, type ASTNode, type ElementNode } from 'driftjs-compiler';
+import { DriftLexer, DriftParser, type ElementNode } from 'driftjs-compiler';
 import type { IslandDescriptor } from '../types/index.js';
 import type { IslandTriggerStrategy } from '../types/config.js';
 

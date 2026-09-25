@@ -1,11 +1,11 @@
 import { defineConfig } from 'vite';
-import path from 'path';
+import { fileURLToPath } from 'node:url';
 
 export default defineConfig({
   build: {
     lib: {
       formats: ['es', 'cjs'],
-      entry: path.resolve(__dirname, 'src/index.ts'),
+      entry: fileURLToPath(new URL('./src/index.ts', import.meta.url)),
       name: 'DriftSSG',
       fileName: (format) => `index-${format}.js`,
     },

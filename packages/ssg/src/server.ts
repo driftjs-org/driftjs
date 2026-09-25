@@ -8,10 +8,10 @@ import { renderPage } from './renderer.js';
 import { extractStaticPaths } from './paths.js';
 
 export interface DevServerOptions {
-  root?: string;
-  port?: number;
-  host?: string;
-  configFile?: string;
+  root?: string | undefined;
+  port?: number | undefined;
+  host?: string | undefined;
+  configFile?: string | undefined;
 }
 
 /**

@@ -42,7 +42,7 @@ export function findConfigFile(root: string): string | null {
  */
 export async function loadConfig(
   root: string = process.cwd(),
-  customConfigFile?: string,
+  customConfigFile?: string | undefined,
   overrides: UserConfig = {}
 ): Promise<DriftSSGConfig> {
   const resolvedRoot = path.resolve(root);

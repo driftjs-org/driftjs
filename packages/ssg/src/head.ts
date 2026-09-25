@@ -16,7 +16,7 @@ export interface HeadConfig {
 /**
  * Extracts title and meta tags from an HTML string or head block.
  */
-export function extractHeadTags(html: string): { title?: string; headHtml: string; bodyHtml: string } {
+export function extractHeadTags(html: string): { title?: string | undefined; headHtml: string; bodyHtml: string } {
   let title: string | undefined;
   let headContent = '';
   let bodyContent = html;
@@ -85,10 +85,10 @@ export function mergeHead(
 export function injectDocument(
   html: string,
   options: {
-    headTags?: string[];
-    scripts?: string[];
-    title?: string;
-    lang?: string;
+    headTags?: string[] | undefined;
+    scripts?: string[] | undefined;
+    title?: string | undefined;
+    lang?: string | undefined;
   } = {}
 ): string {
   const lang = options.lang || 'en';

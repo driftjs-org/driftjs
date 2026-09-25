@@ -11,16 +11,16 @@ export interface RenderPageOptions {
   pathname: string;
   params: RouteParams;
   props: Record<string, any>;
-  documentPath?: string;
-  scripts?: string[];
-  headTags?: string[];
-  site?: string;
+  documentPath?: string | undefined;
+  scripts?: string[] | undefined;
+  headTags?: string[] | undefined;
+  site?: string | undefined;
 }
 
 export interface RenderResult {
   html: string;
   islands: ReturnType<typeof scanIslands>;
-  title?: string;
+  title?: string | undefined;
 }
 
 const SLOT_MARKER = '__DRIFT_PAGE_CHILDREN__';

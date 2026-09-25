@@ -27,7 +27,7 @@ export interface MatchedRoute {
 
 export interface RouteNode {
   segment: string;
-  route?: RouteRecord;
-  layout?: string;
+  route?: RouteRecord | undefined;
+  layout?: string | undefined;
   children: Map<string, RouteNode>;
 }

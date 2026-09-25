@@ -1,4 +1,5 @@
 import type { UserConfig as ViteUserConfig } from 'vite';
+import type { HeadConfig } from './head.js';
 
 export type IslandTriggerStrategy = 'eager' | 'idle' | 'visible' | 'interaction' | 'media';
 
@@ -17,6 +18,8 @@ export interface DriftSSGConfig {
   site?: string | undefined;
   /** Base URL path prefix, e.g. '/docs/'. Defaults to '/' */
   base: string;
+  /** Global head configuration (meta tags, link tags, titles) */
+  head?: HeadConfig | undefined;
   /** Whether to automatically generate sitemap.xml. Defaults to true if site is defined */
   sitemap: boolean;
   /** Whether to automatically generate robots.txt. Defaults to true if site is defined */

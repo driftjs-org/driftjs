@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { renderPage, renderLayout } from '../src/renderer.js';
+import { renderPage, renderLayout } from '../src/index.js';
 import type { RouteRecord } from '../types/index.js';
 
 describe('Drift SSG Page Renderer & Nested Layout Composition', () => {
@@ -16,7 +16,7 @@ describe('Drift SSG Page Renderer & Nested Layout Composition', () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it('renders a layout and injects child HTML where {children} is placed', () => {
+  it('renders a layout and injects child HTML where {children} is placed', async () => {
     const layoutPath = path.join(tmpDir, '_layout.drift');
     fs.writeFileSync(
       layoutPath,
@@ -24,7 +24,7 @@ describe('Drift SSG Page Renderer & Nested Layout Composition', () => {
     );
 
     const childHtml = `<section class="content"><h1>Welcome</h1></section>`;
-    const composed = renderLayout(layoutPath, childHtml);
+    const composed = await renderLayout(layoutPath, childHtml);
 
     expect(composed).toContain('<div class="app-layout"><header>My App</header><main><section class="content"><h1>Welcome</h1></section></main></div>');
   });

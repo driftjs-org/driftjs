@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { parseRoutePath, scanRoutes, matchRoute, normalizePath } from '../src/router.js';
+import { parseRoutePath, scanRoutes, matchRoute, normalizePath } from '../src/index.js';
 
 describe('Drift SSG File-System Router', () => {
   let tmpDir: string;

@@ -1,4 +1,7 @@
 import fs from 'node:fs';
+import path from 'node:path';
+import { createServer as createViteServer } from 'vite';
+import { driftPlugin } from 'driftjs-vite-plugin';
 import { compile, type CompiledModule } from 'driftjs-compiler';
 import { DriftServerVM, serializeNode, type ServerNode } from 'driftjs-ssr';
 import type { RouteRecord, RouteParams, RenderPageOptions, RenderResult } from '../../types/index.js';
@@ -34,16 +37,13 @@ export function createSlotNode(): ServerNode {
 }
 
 /**
- * Renders a layout enclosing child HTML.
+ * Internal helper to render layout with a compiled module.
  */
-export function renderLayout(
-  layoutFilePath: string,
+function renderLayoutWithCompiled(
+  compiled: CompiledModule,
   childHtml: string,
   scope: Record<string, any> = {}
 ): string {
-  const source = fs.readFileSync(layoutFilePath, 'utf8');
-  const compiled = compile(source);
-
   const slotNode = createSlotNode();
   const layoutScope = {
     ...scope,
@@ -57,15 +57,44 @@ export function renderLayout(
     return layoutHtml.replace(markerComment, childHtml);
   }
 
-  // Fallback if {children} was printed without comment (e.g. at end of container)
-  return `${layoutHtml}\n${childHtml}`;
+  return layoutHtml;
+}
+
+/**
+ * Renders a layout enclosing child HTML, loading via Vite plugin.
+ */
+export async function renderLayout(
+  layoutFilePath: string,
+  childHtml: string,
+  scope: Record<string, any> = {},
+  moduleLoader?: ((filePath: string) => Promise<any>) | undefined
+): Promise<string> {
+  if (moduleLoader) {
+    const mod = await moduleLoader(layoutFilePath);
+    const compiled: CompiledModule = mod.default || mod;
+    return renderLayoutWithCompiled(compiled, childHtml, scope);
+  }
+
+  const vite = await createViteServer({
+    root: path.dirname(layoutFilePath),
+    server: { middlewareMode: true },
+    appType: 'custom',
+    plugins: [driftPlugin()],
+  });
+  try {
+    const mod = await vite.ssrLoadModule(layoutFilePath);
+    const compiled: CompiledModule = mod.default || mod;
+    return renderLayoutWithCompiled(compiled, childHtml, scope);
+  } finally {
+    await vite.close();
+  }
 }
 
 /**
  * Renders a full page through its nested layout hierarchy and document shell.
  */
 export async function renderPage(options: RenderPageOptions): Promise<RenderResult> {
-  const { route, pathname, params, props, documentPath, scripts, headTags, site } = options;
+  const { route, pathname, params, props, documentPath, scripts, headTags, site, moduleLoader } = options;
 
   let pageHtml = '';
   let islands: ReturnType<typeof scanIslands> = [];
@@ -91,7 +120,24 @@ export async function renderPage(options: RenderPageOptions): Promise<RenderResu
     // .drift SFC page
     const source = fs.readFileSync(route.filePath, 'utf8');
     islands = scanIslands(source);
-    const compiled = compile(source);
+    let compiled: CompiledModule;
+    if (moduleLoader) {
+      const mod = await moduleLoader(route.filePath);
+      compiled = mod.default || mod;
+    } else {
+      const vite = await createViteServer({
+        root: path.dirname(route.filePath),
+        server: { middlewareMode: true },
+        appType: 'custom',
+        plugins: [driftPlugin()],
+      });
+      try {
+        const mod = await vite.ssrLoadModule(route.filePath);
+        compiled = mod.default || mod;
+      } finally {
+        await vite.close();
+      }
+    }
     pageHtml = renderModule(compiled, pageScope);
   }
 
@@ -101,7 +147,7 @@ export async function renderPage(options: RenderPageOptions): Promise<RenderResu
 
   for (const layoutPath of layouts) {
     if (fs.existsSync(layoutPath)) {
-      composedHtml = renderLayout(layoutPath, composedHtml, pageScope);
+      composedHtml = await renderLayout(layoutPath, composedHtml, pageScope, moduleLoader);
       const layoutSource = fs.readFileSync(layoutPath, 'utf8');
       const layoutIslands = scanIslands(layoutSource);
       islands.push(...layoutIslands);
@@ -121,18 +167,15 @@ export async function renderPage(options: RenderPageOptions): Promise<RenderResu
 
   // Wrap in document shell
   if (documentPath && fs.existsSync(documentPath)) {
-    finalHtml = renderLayout(documentPath, bodyHtml, {
+    finalHtml = await renderLayout(documentPath, bodyHtml, {
       ...pageScope,
       title: finalTitle,
+    }, moduleLoader);
+    finalHtml = injectDocument(finalHtml, {
+      headTags: extraHead,
+      scripts,
+      title: finalTitle,
     });
-    // Inject scripts into document if not present
-    if (scripts && scripts.length > 0 && !finalHtml.includes(scripts[0]!)) {
-      finalHtml = injectDocument(finalHtml, {
-        headTags: extraHead,
-        scripts,
-        title: finalTitle,
-      });
-    }
   } else {
     finalHtml = injectDocument(bodyHtml, {
       headTags: extraHead,

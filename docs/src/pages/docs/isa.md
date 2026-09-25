@@ -1,3 +1,8 @@
+---
+title: Virtual Machine ISA Reference
+description: The authoritative register-based bytecode Instruction Set Architecture (ISA) for DriftJS
+---
+
 # DriftJS Virtual Machine Instruction Set Architecture (ISA)
 
 This document provides the complete, authoritative specification for the register-based Bytecode Instruction Set Architecture (ISA) implemented by **DriftJS**.
@@ -98,22 +103,16 @@ DriftJS compiles `.drift` template ASTs into a compact, binary-serializable byte
 - **Bytecode**: `0x0E <parentReg> <iterIdx> <itemNameIdx> <idxNameIdx> <keyIdx> <bodyIdx> <depsIdx> <iterDepsIdx> <rowDepsIdx>`
 - **Length**: 10 bytes
 - **Description**: Registers a dynamic `@for` loop bounded by comment anchors (`<!--for-->` / `<!--/for-->`). Iterates over array `constants[iterIdx]` using sub-module template `constants[bodyIdx]`.
-- **Operands**:
-  - `depsIdx`: union of all reactive variable names the region subscribes to (used by `triggerUpdates` routing).
-  - `iterDepsIdx`: variables that determine the iterable source — a change triggers full LIS reconciliation.
-  - `rowDepsIdx`: outer-scope variables used inside row expressions but not in the iterable — a change triggers per-row in-place patching via `patchRowsForChangedVars` without touching the list structure.
 - **Features**:
   - Uses Longest Increasing Subsequence (LIS) keyed reconciliation (`reconcileKeyedList`) when `iterDepsIdx` variables change.
-  - Uses `patchRowsForChangedVars` fast-path for `rowDepsIdx` variable changes: directly dispatches `executeFrom` at the exact binding PCs per row's register frame — mirroring `triggerUpdates`'s own pattern, with no double-evaluation pre-check.
-  - `SET_ATTR` / `INTERPOLATE_TEXT` opcodes provide their own idempotent no-op guards (`getAttribute !== val`, `nodeValue !== val`).
+  - Uses `patchRowsForChangedVars` fast-path for `rowDepsIdx` variable changes: directly dispatches `executeFrom` at the exact binding PCs per row's register frame.
 
 ### `REACTIVE_ASYNC` (`0x10`)
 - **Bytecode**: `0x10 <parentReg> <promiseIdx> <aliasIdx> <bodyIdx> <fallbackIdx> <catchIdx> <depsIdx> <aliasPopulatorIdx>`
 - **Length**: 9 bytes
-- **Description**: Registers a dynamic `@async` boundary bounded by comment anchors (`<!--drift-async:id-->` / `<!--/drift-async:id-->`). Renders fallback sub-module `constants[fallbackIdx]` while the promise at `constants[promiseIdx]` is pending, then replaces the region with the resolved body sub-module `constants[bodyIdx]` (using compiled AOT populator `constants[aliasPopulatorIdx]`) or catch branch `constants[catchIdx]` upon rejection.
+- **Description**: Registers a dynamic `@async` boundary bounded by comment anchors (`<!--drift-async:id-->` / `<!--/drift-async:id-->`). Renders fallback sub-module `constants[fallbackIdx]` while the promise at `constants[promiseIdx]` is pending.
 
 ### `REACTIVE_SWITCH` (`0x11`)
 - **Bytecode**: `0x11 <parentReg> <discIdx> <casesTableIdx> <defaultModIdx> <depsIdx>`
 - **Length**: 6 bytes
-- **Description**: Registers a dynamic `@switch` block bounded by comment anchors (`<!--switch-->` / `<!--/switch-->`). Evaluates discriminant expression `constants[discIdx]` strictly once into a local stack variable without mutating component scope. Iterates through the cases table `constants[casesTableIdx]` (`[{ testIdx, modIdx }, ...]`), evaluates case test expressions in source order, and renders the matching sub-module or fallback default sub-module `constants[defaultModIdx]`. Re-evaluates when variables in `constants[depsIdx]` change.
-
+- **Description**: Registers a dynamic `@switch` block bounded by comment anchors (`<!--switch-->` / `<!--/switch-->`). Evaluates discriminant expression `constants[discIdx]` strictly once into a local stack variable.

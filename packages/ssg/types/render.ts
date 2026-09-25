@@ -26,6 +26,7 @@ export interface RenderPageOptions {
   scripts?: string[] | undefined;
   headTags?: string[] | undefined;
   site?: string | undefined;
+  moduleLoader?: ((filePath: string) => Promise<any>) | undefined;
 }
 
 export interface RenderResult {

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { runCli } from '../src/cli.js';
+import { runCli } from '../dist/index-es.js';
 
 runCli().catch((err) => {
   console.error(err);

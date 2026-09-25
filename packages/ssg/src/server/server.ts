@@ -4,7 +4,7 @@ import { driftPlugin } from 'driftjs-vite-plugin';
 import type { DevServerOptions, DevServerInstance } from '../../types/index.js';
 import { loadConfig } from '../config/index.js';
 import { scanRoutes, matchRoute } from '../router/index.js';
-import { renderPage } from '../render/index.js';
+import { renderPage, buildHeadTags } from '../render/index.js';
 import { extractStaticPaths } from '../router/index.js';
 
 export type { DevServerOptions, DevServerInstance };
@@ -24,6 +24,7 @@ export async function createDevServer(options: DevServerOptions = {}): Promise<D
     },
     appType: 'custom',
     plugins: [driftPlugin()],
+    publicDir: config.publicDir,
     ...config.vite,
   });
 
@@ -74,13 +75,16 @@ export async function createDevServer(options: DevServerOptions = {}): Promise<D
         }
 
         // 4. Render page with layouts
+        const baseHeadTags = buildHeadTags(config.head, config.publicDir, config.base);
         const renderRes = await renderPage({
           route: matched.route,
           pathname: matched.pathname,
           params: matched.params,
           props,
           documentPath,
+          headTags: baseHeadTags,
           site: config.site,
+          moduleLoader: (filePath: string) => vite.ssrLoadModule(filePath),
         });
 
         // 5. Injected Vite HMR client

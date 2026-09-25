@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { build } from '../src/builder.js';
+import { build } from '../src/index.js';
 
 describe('Drift SSG Production Build Pipeline', () => {
   let tmpSiteDir: string;

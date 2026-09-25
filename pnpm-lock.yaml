@@ -225,6 +225,12 @@ importers:
         specifier: ^8.2.2
         version: 8.2.2(@types/node@26.4.0)(esbuild@0.28.2)(sass@1.101.0)(terser@5.51.2)(tsx@4.23.12)
 
+  docs:
+    dependencies:
+      driftjs-ssg:
+        specifier: workspace:*
+        version: link:../packages/ssg
+
   packages/cli:
     dependencies:
       '@clack/prompts':

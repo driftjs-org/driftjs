@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { scanIslands, wrapIslandHtml } from '../src/islands.js';
+import { scanIslands, wrapIslandHtml } from '../src/index.js';
 
 describe('Drift SSG Islands Scanner & Wrapper', () => {
   it('scans .drift templates and detects client:* hydration directives', () => {

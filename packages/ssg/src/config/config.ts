@@ -109,6 +109,7 @@ export async function loadConfig(
       : path.resolve(resolvedRoot, merged.publicDir || 'public'),
     site,
     base: base.endsWith('/') ? base : `${base}/`,
+    head: merged.head,
     sitemap: merged.sitemap ?? (site !== undefined),
     robots: merged.robots ?? (site !== undefined),
     trailingSlash: merged.trailingSlash ?? 'always',

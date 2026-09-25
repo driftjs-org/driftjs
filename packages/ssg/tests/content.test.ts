@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { renderMarkdown, getCollection, getEntry, slugify } from '../src/content.js';
+import { renderMarkdown, getCollection, getEntry, slugify } from '../src/index.js';
 
 describe('Drift SSG Content Collections & Markdown Engine', () => {
   let tmpContentDir: string;

@@ -1,0 +1,32 @@
+<script>
+// Nested layout for documentation section with navigation sidebar
+</script>
+<div class="docs-wrapper">
+  <aside class="docs-sidebar">
+    <div class="sidebar-group">
+      <div class="sidebar-heading">Getting Started</div>
+      <ul class="sidebar-list">
+        <li><a href="/docs/introduction/">Introduction</a></li>
+        <li><a href="/docs/quickstart/">Quick Start</a></li>
+      </ul>
+    </div>
+    <div class="sidebar-group">
+      <div class="sidebar-heading">Architecture</div>
+      <ul class="sidebar-list">
+        <li><a href="/docs/architecture/">System Architecture</a></li>
+        <li><a href="/docs/isa/">Instruction Set (ISA)</a></li>
+      </ul>
+    </div>
+    <div class="sidebar-group">
+      <div class="sidebar-heading">Performance & Quality</div>
+      <ul class="sidebar-list">
+        <li><a href="/docs/benchmarks/">Benchmarks & Matrix</a></li>
+        <li><a href="/docs/testing/">Test Suite</a></li>
+        <li><a href="/docs/roadmap/">Roadmap</a></li>
+      </ul>
+    </div>
+  </aside>
+  <article class="docs-content markdown-body">
+    {children}
+  </article>
+</div>

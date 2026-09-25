@@ -1,0 +1,14 @@
+{
+  "name": "driftjs-docs",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "drift-ssg dev",
+    "build": "drift-ssg build",
+    "preview": "drift-ssg preview"
+  },
+  "dependencies": {
+    "driftjs-ssg": "workspace:*"
+  }
+}

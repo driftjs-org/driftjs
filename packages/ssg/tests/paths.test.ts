@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { interpolatePath, validateParams, resolveAllRoutePaths, extractStaticPaths } from '../src/paths.js';
+import { interpolatePath, validateParams, resolveAllRoutePaths, extractStaticPaths } from '../src/index.js';
 import type { RouteRecord } from '../types/index.js';
 
 describe('Drift SSG Dynamic Paths Resolver', () => {

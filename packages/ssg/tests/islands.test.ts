@@ -37,7 +37,7 @@ describe('Drift SSG Islands Scanner & Wrapper', () => {
       name: 'Counter',
       componentPath: '../components/Counter.drift',
       trigger: 'eager',
-      props: { initial: '{5}' },
+      props: { initial: '5' },
       media: undefined,
     });
   });

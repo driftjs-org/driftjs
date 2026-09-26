@@ -30,4 +30,5 @@ export interface BuildSummary {
   assets: string[];
   totalSize: number;
   islandBundleSize: number;
+  cssBundleSize?: number | undefined;
 }

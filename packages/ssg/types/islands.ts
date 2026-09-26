@@ -38,5 +38,8 @@ export interface IslandBundleResult {
   scriptTag?: string | undefined;
   assetPath?: string | undefined;
   size: number;
+  cssTag?: string | undefined;
+  cssAssetPath?: string | undefined;
+  cssSize?: number | undefined;
 }
 

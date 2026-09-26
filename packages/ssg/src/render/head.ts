@@ -43,21 +43,6 @@ export function buildHeadTags(
     }
   }
 
-  // Auto-detect common CSS files in public directory if not explicitly linked
-  if (publicDir && fs.existsSync(publicDir)) {
-    const candidateFiles = ['styles.css', 'style.css', 'main.css'];
-    for (const file of candidateFiles) {
-      const fullPath = path.join(publicDir, file);
-      if (fs.existsSync(fullPath)) {
-        const href = `${normalizedBase}${file}`;
-        const hasLink = tags.some((t) => t.includes(file));
-        if (!hasLink) {
-          tags.push(`<link rel="stylesheet" href="${href}" />`);
-        }
-      }
-    }
-  }
-
   return tags;
 }
 

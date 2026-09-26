@@ -13,7 +13,7 @@ export const CLIENT_DIRECTIVES: Record<string, IslandTriggerStrategy> = {
 /**
  * Extracts component import specifiers from a .drift template's <script> block.
  */
-export function extractIslandImports(templateSource: string): Record<string, string> {
+export function extractIslandImports(templateSource: string, sourceFilePath?: string): Record<string, string> {
   const imports: Record<string, string> = {};
   try {
     const compiled = compile(templateSource);
@@ -24,10 +24,32 @@ export function extractIslandImports(templateSource: string): Record<string, str
         }
       }
     }
-  } catch {
-    // If compilation fails, return empty imports
+  } catch (err: any) {
+    const context = sourceFilePath ? ` in "${sourceFilePath}"` : '';
+    throw new Error(`Failed to extract component imports${context}: ${err.message || String(err)}`, { cause: err });
   }
   return imports;
+}
+
+/**
+ * Extracts CSS / stylesheet import specifiers from a .drift template's <script> block.
+ */
+export function extractCssImports(templateSource: string, sourceFilePath?: string): string[] {
+  const cssImports: string[] = [];
+  try {
+    const compiled = compile(templateSource);
+    if (compiled && compiled.imports) {
+      for (const imp of compiled.imports) {
+        if (imp.source && /\.(css|scss|sass|less|styl|stylus)(\?.*)?$/i.test(imp.source)) {
+          cssImports.push(imp.source);
+        }
+      }
+    }
+  } catch (err: any) {
+    const context = sourceFilePath ? ` in "${sourceFilePath}"` : '';
+    throw new Error(`Failed to extract CSS imports${context}: ${err.message || String(err)}`, { cause: err });
+  }
+  return cssImports;
 }
 
 /**
@@ -75,7 +97,7 @@ export function scanIslands(
   const islands: IslandDescriptor[] = [];
 
   try {
-    const autoImports = extractIslandImports(templateSource);
+    const autoImports = extractIslandImports(templateSource, sourceFilePath);
     const resolvedImportMap = { ...autoImports, ...importMap };
 
     const lexer = new DriftLexer(templateSource);
@@ -100,8 +122,14 @@ export function scanIslands(
           // Plain props
           if (typeof attr.value === 'string') {
             props[attr.name] = attr.value;
-          } else if (attr.value && typeof attr.value === 'object' && 'value' in attr.value) {
-            props[attr.name] = (attr.value as any).value;
+          } else if (attr.value && typeof attr.value === 'object') {
+            if ('expression' in attr.value && typeof (attr.value as any).expression === 'string') {
+              props[attr.name] = (attr.value as any).expression;
+            } else if ('value' in attr.value) {
+              props[attr.name] = (attr.value as any).value;
+            } else {
+              props[attr.name] = true;
+            }
           } else {
             props[attr.name] = true;
           }
@@ -121,8 +149,9 @@ export function scanIslands(
         media,
       });
     }
-  } catch (err) {
-    // If parsing fails (e.g. non-SFC file), return empty islands
+  } catch (err: any) {
+    const context = sourceFilePath ? ` in "${sourceFilePath}"` : '';
+    throw new Error(`Failed to parse template for islands${context}: ${err.message || String(err)}`, { cause: err });
   }
 
   return islands;

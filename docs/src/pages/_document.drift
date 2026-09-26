@@ -1,12 +1,12 @@
 <script>
 // Document shell for DriftJS documentation site
+import '../styles.css';
 </script>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{title || 'DriftJS - Register VM Reactivity Engine & AOT Compiler'}</title>
-    <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     {children}

@@ -8,8 +8,5 @@ export default defineConfig({
   robots: true,
   head: {
     title: 'DriftJS - High-Performance Register VM UI Engine & AOT Compiler',
-    links: [
-      { rel: 'stylesheet', href: '/styles.css' },
-    ],
   },
 });

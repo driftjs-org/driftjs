@@ -8,9 +8,8 @@ import { loadConfig } from '../config/index.js';
 import { scanRoutes } from '../router/index.js';
 import { resolveAllRoutePaths } from '../router/index.js';
 import { renderPage, buildHeadTags } from '../render/index.js';
-import { bundleIslands } from '../islands/index.js';
+import { bundleIslands, scanIslands, extractCssImports } from '../islands/index.js';
 import { generateSitemap, generateRobotsTxt } from '../render/index.js';
-import { scanIslands } from '../islands/index.js';
 
 export type { BuildOptions, BuildSummary, PageOutput };
 
@@ -63,6 +62,7 @@ export async function build(options: BuildOptions = {}): Promise<BuildSummary> {
 
     // 5. Scan for all islands across the site (pages, layouts, document)
     const siteIslands: ReturnType<typeof scanIslands> = [];
+    const siteCssFiles = new Set<string>();
     const scannedFiles = new Set<string>();
 
     const scanFile = (filePath: string) => {
@@ -71,6 +71,16 @@ export async function build(options: BuildOptions = {}): Promise<BuildSummary> {
       if (filePath.endsWith('.drift') && fs.existsSync(filePath)) {
         const src = fs.readFileSync(filePath, 'utf8');
         siteIslands.push(...scanIslands(src, {}, filePath));
+        const cssImports = extractCssImports(src, filePath);
+        for (const imp of cssImports) {
+          if (imp.startsWith('.')) {
+            const resolved = path.resolve(path.dirname(filePath), imp);
+            if (fs.existsSync(resolved)) siteCssFiles.add(resolved);
+          } else if (imp.startsWith('/')) {
+            const resolved = path.resolve(config.root, imp.slice(1));
+            if (fs.existsSync(resolved)) siteCssFiles.add(resolved);
+          }
+        }
       }
     };
 
@@ -84,22 +94,47 @@ export async function build(options: BuildOptions = {}): Promise<BuildSummary> {
       scanFile(documentPath);
     }
 
-    // 6. Bundle client islands with Vite (if any islands exist)
+    // 6. Bundle client islands and site CSS with Vite
     let islandBundleScript = '';
     let islandBundleSize = 0;
-    if (siteIslands.length > 0) {
+    let bundledCssTag = '';
+    let cssBundleSize = 0;
+    let bundledCssHref = '';
+
+    const cssList = Array.from(siteCssFiles);
+    if (siteIslands.length > 0 || cssList.length > 0) {
       if (!options.silent) {
-        console.log(`${pc.yellow('⚡')} Bundling ${siteIslands.length} interactive island(s)...`);
+        if (siteIslands.length > 0 && cssList.length > 0) {
+          console.log(`\n${pc.yellow('⚡')} Bundling ${siteIslands.length} interactive island(s) & styles...`);
+        } else if (siteIslands.length > 0) {
+          console.log(`\n${pc.yellow('⚡')} Bundling ${siteIslands.length} interactive island(s)...`);
+        } else {
+          console.log(`\n${pc.yellow('⚡')} Bundling styles...`);
+        }
       }
-      const bundleRes = await bundleIslands(siteIslands, config);
+      const bundleRes = await bundleIslands(siteIslands, config, { cssFiles: cssList });
       islandBundleScript = bundleRes.scriptTag || '';
       islandBundleSize = bundleRes.size;
+      bundledCssTag = bundleRes.cssTag || '';
+      cssBundleSize = bundleRes.cssSize || 0;
+      bundledCssHref = bundleRes.cssAssetPath
+        ? (config.base.endsWith('/') ? `${config.base}${bundleRes.cssAssetPath}` : `${config.base}/${bundleRes.cssAssetPath}`)
+        : '';
     }
 
     // 7. Pre-render all pages to static HTML
     const pageOutputs: PageOutput[] = [];
     let totalHtmlSize = 0;
     const baseHeadTags = buildHeadTags(config.head, config.publicDir, config.base);
+
+    if (bundledCssTag) {
+      for (let i = baseHeadTags.length - 1; i >= 0; i--) {
+        if (baseHeadTags[i]!.includes('styles.css') || baseHeadTags[i]!.includes('style.css')) {
+          baseHeadTags.splice(i, 1);
+        }
+      }
+      baseHeadTags.push(bundledCssTag);
+    }
 
     for (const target of resolvedPaths) {
       const is404 = target.route.type === '404' || target.pathname === '/404';
@@ -169,7 +204,7 @@ export async function build(options: BuildOptions = {}): Promise<BuildSummary> {
       if (!options.silent) {
         const formattedSize = (size / 1024).toFixed(2);
         const isZeroJs = renderRes.islands.length === 0;
-        const jsBadge = isZeroJs ? pc.green('0 kB JS') : pc.yellow(`${renderRes.islands.length} island(s)`);
+        const jsBadge = isZeroJs ? pc.green('0 kB JS') : pc.yellow(`${(islandBundleSize / 1024).toFixed(2)} kB JS`);
         console.log(`  ${pc.green('✓')} ${pc.bold(target.pathname.padEnd(28))} ${pc.dim(`${formattedSize} kB`)}  ${pc.gray(`[${jsBadge}]`)}`);
       }
     }
@@ -199,15 +234,16 @@ export async function build(options: BuildOptions = {}): Promise<BuildSummary> {
     if (!options.silent) {
       console.log(`\n${pc.green('✨ Built in')} ${pc.bold(`${durationMs}ms`)}`);
       console.log(`${pc.gray('▸')} Total Pages: ${pc.bold(pageOutputs.length)}`);
-      console.log(`${pc.gray('▸')} Total Size:  ${pc.bold(`${(totalHtmlSize / 1024).toFixed(2)} kB`)}\n`);
+      console.log(`${pc.gray('▸')} Total Size:  ${pc.bold(`${((totalHtmlSize + islandBundleSize + cssBundleSize) / 1024).toFixed(2)} kB`)}\n`);
     }
 
     return {
       pages: pageOutputs,
       durationMs,
       assets,
-      totalSize: totalHtmlSize + islandBundleSize,
+      totalSize: totalHtmlSize + islandBundleSize + cssBundleSize,
       islandBundleSize,
+      cssBundleSize,
     };
   } finally {
     await vite.close();

@@ -100,10 +100,14 @@ export function stringifyQuery(query: RouteQuery): string {
 
 import { pathToRegexp, compile as compilePath, type Key } from 'path-to-regexp';
 
-function sanitizeForPathToRegexp(path: string): string {
-  const res = path.replace(/\/\*$/, '/(.*)');
-  let i = 0;
+function sanitizeForPathToRegexp(path: string): { normalized: string; patterns: string[] } {
+  let res = path.replace(/:([a-zA-Z0-9_$]+)\(\.\*\)\*?/g, '*$1');
+  res = res.replace(/\/\*$/, '/*pathMatch');
+  res = res.replace(/\/(:[a-zA-Z0-9_$]+)\?/g, '{/$1}');
+
+  const patterns: string[] = [];
   let out = '';
+  let i = 0;
   while (i < res.length) {
     if (res[i] === ':' && /[a-zA-Z0-9_$]/.test(res[i + 1] || '')) {
       let pName = '';
@@ -112,6 +116,7 @@ function sanitizeForPathToRegexp(path: string): string {
         pName += res[i]!;
         i++;
       }
+      out += ':' + pName;
       if (res[i] === '(') {
         let depth = 1;
         let cReg = '';
@@ -122,13 +127,8 @@ function sanitizeForPathToRegexp(path: string): string {
             i += 2;
             continue;
           }
-          if (res[i] === '(') {
-            depth++;
-            cReg += '(?:';
-            i++;
-            continue;
-          }
-          if (res[i] === ')') {
+          if (res[i] === '(') depth++;
+          else if (res[i] === ')') {
             depth--;
             if (depth === 0) {
               i++;
@@ -138,40 +138,37 @@ function sanitizeForPathToRegexp(path: string): string {
           cReg += res[i]!;
           i++;
         }
-        out += `:${pName}(${cReg})`;
-      } else {
-        out += `:${pName}`;
+        if (cReg) {
+          patterns.push(cReg.replace(/(^|[^\\])\((?!\?)/g, '$1(?:'));
+        }
       }
     } else {
       out += res[i]!;
       i++;
     }
   }
-  return out;
+  return { normalized: out, patterns };
 }
 
 function interpolatePathParams(path: string, params: Record<string, any>): string {
   const cleanParams: Record<string, any> = {};
   for (const [k, v] of Object.entries(params)) {
     if (v !== undefined && v !== null) {
-      cleanParams[k] = v;
+      cleanParams[k] = Array.isArray(v) ? v.join('/') : String(v);
     }
   }
 
+  const { normalized } = sanitizeForPathToRegexp(path);
   try {
-    const normalized = sanitizeForPathToRegexp(path.replace(/\/\*$/, '/:pathMatch(.*)'));
-    const toPath = compilePath(normalized, { validate: false, encode: (v) => v });
+    const toPath = compilePath(normalized, { encode: false });
     return toPath(cleanParams);
   } catch {
-    let result = path;
+    let result = normalized;
     for (const [k, v] of Object.entries(cleanParams)) {
-      if (k === 'pathMatch') {
-        result = result.replace(/\/\*$/, '/' + (Array.isArray(v) ? v.join('/') : String(v)));
-      } else {
-        result = result.replace(new RegExp(`:${k}\\b(?:\\([^)]+\\))?[?*+]?`, 'g'), Array.isArray(v) ? v.join('/') : String(v));
-      }
+      result = result.replace(new RegExp(`:${k}\\b`, 'g'), String(v));
+      result = result.replace(new RegExp(`\\*${k}\\b`, 'g'), String(v));
     }
-    result = result.replace(/\/:[a-zA-Z0-9_$]+\?/g, '').replace(/:[a-zA-Z0-9_$]+\?/g, '');
+    result = result.replace(/\{(\/[^}]+)\}/g, '');
     return result;
   }
 }
@@ -188,19 +185,23 @@ export function compilePathToRegex(path: string): PathTokens {
     };
   }
 
-  const normalized = sanitizeForPathToRegexp(path);
-  const keys: Key[] = [];
-  const regex = pathToRegexp(normalized, keys, {
+  const { normalized, patterns } = sanitizeForPathToRegexp(path);
+  const { regexp, keys } = pathToRegexp(normalized, {
     sensitive: false,
-    strict: false,
     end: true,
   });
+
+  let source = regexp.source;
+  for (const pat of patterns) {
+    source = source.replace('([^\\/]+)', `(${pat})`);
+  }
+  const regex = patterns.length > 0 ? new RegExp(source, regexp.flags) : regexp;
 
   const paramNames = keys.map((k) => (typeof k.name === 'number' ? 'pathMatch' : String(k.name)));
 
   let score = 0;
   for (const segment of path.split('/').filter(Boolean)) {
-    if (segment === '*' || segment.includes('(.*)')) {
+    if (segment === '*' || segment.includes('(.*)') || segment.startsWith('*')) {
       score += 1;
     } else if (segment.includes(':')) {
       if (segment.includes('(')) {

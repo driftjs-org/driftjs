@@ -12,9 +12,9 @@ export type { StaticPathResult, ResolvedRoutePath };
  */
 export function interpolatePath(pattern: string, params: RouteParams): string {
   try {
-    const toPath = compilePathToRegexp(pattern, {
+    const compilePattern = pattern.replace(/:([a-zA-Z0-9_]+)\(\.\*\)/g, '*$1');
+    const toPath = compilePathToRegexp(compilePattern, {
       encode: (val: string) => String(val).split('/').map(encodeURIComponent).join('/'),
-      validate: false,
     });
     const formattedParams: Record<string, any> = {};
 

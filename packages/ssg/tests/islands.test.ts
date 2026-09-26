@@ -55,8 +55,8 @@ describe('Drift SSG Islands Scanner & Wrapper', () => {
 
     const islands = scanIslands(sfc, {}, fakeFilePath);
     expect(islands.length).toBe(1);
-    expect(islands[0].componentPath).toBe(path.resolve('/my-project/src/pages', '../components/Counter.drift'));
-    expect(islands[0].trigger).toBe('idle');
+    expect(islands[0]!.componentPath).toBe(path.resolve('/my-project/src/pages', '../components/Counter.drift'));
+    expect(islands[0]!.trigger).toBe('idle');
   });
 
   it('scans .drift templates and detects client:* hydration directives', () => {

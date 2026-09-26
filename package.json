@@ -20,6 +20,9 @@
     "bench:perf": "./benchmarks/run-benchmarks.sh",
     "typecheck": "tsc --noEmit",
     "publish": "pnpm -r publish --no-git-checks --access public",
+    "docs:dev": "pnpm --filter driftjs-docs dev",
+    "docs:build": "pnpm --filter driftjs-docs build",
+    "docs:preview": "pnpm --filter driftjs-docs preview",
     "patch": "node scripts/patch.js",
     "minor": "node scripts/minor.js",
     "major": "node scripts/major.js"

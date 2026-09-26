@@ -225,6 +225,37 @@ importers:
         specifier: 8.3.1
         version: 8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(sass-embedded@1.104.1)(sass@1.104.1)(terser@5.51.2)(tsx@4.23.15)
 
+  docs:
+    dependencies:
+      driftjs-compiler:
+        specifier: workspace:*
+        version: link:../packages/compiler
+      driftjs-dom:
+        specifier: workspace:*
+        version: link:../packages/dom
+      driftjs-router:
+        specifier: workspace:*
+        version: link:../packages/router
+      driftjs-shared:
+        specifier: workspace:*
+        version: link:../packages/utils
+      driftjs-ssg:
+        specifier: workspace:*
+        version: link:../packages/ssg
+      driftjs-ssr:
+        specifier: workspace:*
+        version: link:../packages/ssr
+      driftjs-vite-plugin:
+        specifier: workspace:*
+        version: link:../packages/vite-plugin
+    devDependencies:
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vite:
+        specifier: 8.3.1
+        version: 8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(sass-embedded@1.104.1)(sass@1.104.1)(terser@5.51.2)(tsx@4.23.15)
+
   packages/cli:
     dependencies:
       '@clack/prompts':

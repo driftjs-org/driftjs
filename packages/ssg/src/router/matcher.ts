@@ -10,7 +10,8 @@ export function matchRoute(routes: RouteRecord[], pathname: string): MatchedRout
 
   for (const route of routes) {
     try {
-      const matcher = createPathMatch(route.pattern, { decode: decodeURIComponent, end: true });
+      const matchPattern = route.pattern.replace(/:([a-zA-Z0-9_]+)\(\.\*\)/g, '*$1');
+      const matcher = createPathMatch(matchPattern, { decode: decodeURIComponent, end: true });
       const matched = matcher(normPath);
       if (matched) {
         const rawParams = (matched.params || {}) as Record<string, any>;

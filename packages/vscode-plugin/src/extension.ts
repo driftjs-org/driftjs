@@ -5,7 +5,7 @@ import {
   type LanguageClientOptions,
   type ServerOptions,
   TransportKind,
-} from 'vscode-languageclient/node.js';
+} from 'vscode-languageclient/node';
 
 let client: LanguageClient;
 

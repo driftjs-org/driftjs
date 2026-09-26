@@ -12,7 +12,7 @@ import {
   MarkupKind,
   TextEdit,
   Range,
-} from 'vscode-languageserver/node.js';
+} from 'vscode-languageserver/node';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { compile } from 'driftjs-compiler';
 import * as acorn from 'acorn';

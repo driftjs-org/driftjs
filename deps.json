@@ -1,0 +1,250 @@
+{
+  "@analogjs/vite-plugin-angular": {
+    "oldVersion": "^2.7.1",
+    "latestVersion": "2.7.5"
+  },
+  "@angular/build": {
+    "oldVersion": "^22.1.6",
+    "latestVersion": "22.2.0"
+  },
+  "@angular/common": {
+    "oldVersion": "^22.1.4",
+    "latestVersion": "22.2.0"
+  },
+  "@angular/compiler": {
+    "oldVersion": "^22.1.4",
+    "latestVersion": "22.2.0"
+  },
+  "@angular/compiler-cli": {
+    "oldVersion": "^22.1.4",
+    "latestVersion": "22.2.0"
+  },
+  "@angular/core": {
+    "oldVersion": "^22.1.4",
+    "latestVersion": "22.2.0"
+  },
+  "@angular/platform-browser": {
+    "oldVersion": "^22.1.4",
+    "latestVersion": "22.2.0"
+  },
+  "@babel/core": {
+    "oldVersion": "^7.26.0",
+    "latestVersion": "8.0.6"
+  },
+  "@babel/plugin-transform-runtime": {
+    "oldVersion": "^7.26.0",
+    "latestVersion": "8.0.6"
+  },
+  "@babel/runtime": {
+    "oldVersion": "^7.26.0",
+    "latestVersion": "8.0.5"
+  },
+  "@clack/prompts": {
+    "oldVersion": "^0.10.0",
+    "latestVersion": "1.8.1"
+  },
+  "@embroider/core": {
+    "oldVersion": "^4.6.3",
+    "latestVersion": "4.6.7"
+  },
+  "@embroider/macros": {
+    "oldVersion": "^1.20.6",
+    "latestVersion": "1.21.1"
+  },
+  "@embroider/vite": {
+    "oldVersion": "^1.7.10",
+    "latestVersion": "1.7.13"
+  },
+  "@glimmer/component": {
+    "oldVersion": "^2.1.1",
+    "latestVersion": "2.1.1"
+  },
+  "@rollup/plugin-babel": {
+    "oldVersion": "^6.0.4",
+    "latestVersion": "7.1.0"
+  },
+  "@sveltejs/vite-plugin-svelte": {
+    "oldVersion": "^7.3.0",
+    "latestVersion": "7.3.1"
+  },
+  "@types/acorn": {
+    "oldVersion": "^6.0.4",
+    "latestVersion": "6.0.4"
+  },
+  "@types/estree": {
+    "oldVersion": "^1.0.6",
+    "latestVersion": "1.0.9"
+  },
+  "@types/node": {
+    "oldVersion": "^20.0.0",
+    "latestVersion": "26.6.3"
+  },
+  "@types/vscode": {
+    "oldVersion": "^1.75.0",
+    "latestVersion": "1.138.0"
+  },
+  "@vitejs/plugin-react": {
+    "oldVersion": "^6.1.1",
+    "latestVersion": "6.1.1"
+  },
+  "@vitejs/plugin-vue": {
+    "oldVersion": "^6.0.8",
+    "latestVersion": "6.0.9"
+  },
+  "@vitest/browser": {
+    "oldVersion": "4.1.10",
+    "latestVersion": "5.0.2"
+  },
+  "@vitest/browser-playwright": {
+    "oldVersion": "4.1.10",
+    "latestVersion": "5.0.2"
+  },
+  "@vitest/coverage-v8": {
+    "oldVersion": "^4.1.11",
+    "latestVersion": "5.0.2"
+  },
+  "@vitest/ui": {
+    "oldVersion": "4.1.10",
+    "latestVersion": "5.0.2"
+  },
+  "@vscode/vsce": {
+    "oldVersion": "^3.2.1",
+    "latestVersion": "4.0.0"
+  },
+  "acorn": {
+    "oldVersion": "^8.17.0",
+    "latestVersion": "8.18.0"
+  },
+  "acorn-walk": {
+    "oldVersion": "^8.3.4",
+    "latestVersion": "8.3.5"
+  },
+  "babel-plugin-ember-template-compilation": {
+    "oldVersion": "^4.0.0",
+    "latestVersion": "4.0.0"
+  },
+  "decorator-transforms": {
+    "oldVersion": "^2.4.0",
+    "latestVersion": "2.4.0"
+  },
+  "driftjs-compiler": {
+    "oldVersion": "^0.0.16",
+    "latestVersion": "0.0.16"
+  },
+  "driftjs-dom": {
+    "oldVersion": "^0.0.16",
+    "latestVersion": "0.0.16"
+  },
+  "driftjs-eslint-plugin": {
+    "oldVersion": "^0.0.16",
+    "latestVersion": "0.0.16"
+  },
+  "driftjs-prettier-plugin": {
+    "oldVersion": "^0.0.16",
+    "latestVersion": "0.0.16"
+  },
+  "driftjs-ssr": {
+    "oldVersion": "^0.0.16",
+    "latestVersion": "0.0.16"
+  },
+  "driftjs-vite-plugin": {
+    "oldVersion": "^0.0.16",
+    "latestVersion": "0.0.16"
+  },
+  "ember-source": {
+    "oldVersion": "^7.2.0",
+    "latestVersion": "7.3.0"
+  },
+  "eslint": {
+    "oldVersion": "^9.20.0",
+    "latestVersion": "10.11.0"
+  },
+  "gray-matter": {
+    "oldVersion": "^4.0.3",
+    "latestVersion": "4.0.3"
+  },
+  "marked": {
+    "oldVersion": "^15.0.7",
+    "latestVersion": "18.0.14"
+  },
+  "path-to-regexp": {
+    "oldVersion": "^6.3.0",
+    "latestVersion": "8.4.2"
+  },
+  "picocolors": {
+    "oldVersion": "^1.1.1",
+    "latestVersion": "1.1.1"
+  },
+  "playwright": {
+    "oldVersion": "^1.62.1",
+    "latestVersion": "1.63.0"
+  },
+  "prettier": {
+    "oldVersion": "^3.5.0",
+    "latestVersion": "3.9.9"
+  },
+  "react": {
+    "oldVersion": "^19.2.8",
+    "latestVersion": "19.3.0"
+  },
+  "react-dom": {
+    "oldVersion": "^19.2.8",
+    "latestVersion": "19.3.0"
+  },
+  "rxjs": {
+    "oldVersion": "^7.8.2",
+    "latestVersion": "7.8.2"
+  },
+  "solid-js": {
+    "oldVersion": "^1.9.15",
+    "latestVersion": "1.9.15"
+  },
+  "svelte": {
+    "oldVersion": "^5.56.10",
+    "latestVersion": "5.57.1"
+  },
+  "tslib": {
+    "oldVersion": "^2.8.1",
+    "latestVersion": "2.8.1"
+  },
+  "tsx": {
+    "oldVersion": "^4.23.12",
+    "latestVersion": "4.23.15"
+  },
+  "typescript": {
+    "oldVersion": "^7.0.2",
+    "latestVersion": "7.0.2"
+  },
+  "vite": {
+    "oldVersion": "^8.1.5",
+    "latestVersion": "8.3.1"
+  },
+  "vite-plugin-solid": {
+    "oldVersion": "^2.11.14",
+    "latestVersion": "2.11.14"
+  },
+  "vitest": {
+    "oldVersion": "^4.1.10",
+    "latestVersion": "5.0.2"
+  },
+  "vscode-languageclient": {
+    "oldVersion": "^8.1.0",
+    "latestVersion": "10.1.2"
+  },
+  "vscode-languageserver": {
+    "oldVersion": "^8.1.0",
+    "latestVersion": "10.1.2"
+  },
+  "vscode-languageserver-textdocument": {
+    "oldVersion": "^1.0.8",
+    "latestVersion": "1.0.15"
+  },
+  "vue": {
+    "oldVersion": "^3.5.42",
+    "latestVersion": "3.5.43"
+  },
+  "zone.js": {
+    "oldVersion": "^0.16.2",
+    "latestVersion": "0.16.3"
+  }
+}

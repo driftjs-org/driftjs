@@ -36,15 +36,15 @@
   },
   "license": "MIT",
   "dependencies": {
-    "acorn": "^8.17.0",
-    "acorn-walk": "^8.3.4",
+    "acorn": "8.18.0",
+    "acorn-walk": "8.3.5",
     "driftjs-shared": "workspace:*"
   },
   "devDependencies": {
-    "@types/acorn": "^6.0.4",
-    "@types/estree": "^1.0.6",
-    "typescript": "^7.0.2",
-    "vite": "^8.1.5",
-    "vitest": "^4.1.10"
+    "@types/acorn": "6.0.4",
+    "@types/estree": "1.0.9",
+    "typescript": "7.0.2",
+    "vite": "8.3.1",
+    "vitest": "5.0.2"
   }
 }

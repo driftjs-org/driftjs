@@ -18,7 +18,7 @@
   },
   "devDependencies": {
     "driftjs-vite-plugin": "workspace:*",
-    "typescript": "^7.0.2",
-    "vite": "^8.1.5"
+    "typescript": "7.0.2",
+    "vite": "8.3.1"
   }
 }

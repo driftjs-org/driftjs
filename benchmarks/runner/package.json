@@ -10,9 +10,9 @@
     "build": "pnpm --filter driftjs-benchmark-app build"
   },
   "devDependencies": {
-    "@types/node": "^26.4.0",
-    "playwright": "^1.62.1",
-    "tsx": "^4.23.12",
-    "typescript": "^7.0.2"
+    "@types/node": "26.6.3",
+    "playwright": "1.63.0",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2"
   }
 }

@@ -36,12 +36,12 @@
     "driftjs-compiler": "workspace:*"
   },
   "peerDependencies": {
-    "vite": "8.1.5"
+    "vite": "8.3.1"
   },
   "devDependencies": {
     "driftjs-dom": "workspace:*",
-    "typescript": "^7.0.2",
-    "vite": "^8.1.5",
-    "vitest": "^4.1.10"
+    "typescript": "7.0.2",
+    "vite": "8.3.1",
+    "vitest": "5.0.2"
   }
 }

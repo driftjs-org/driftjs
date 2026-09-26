@@ -653,5 +653,31 @@ describe('DriftServerVM (SSR Engine)', () => {
       expect(html).toContain('data-drift-root-margin="200px"');
       expect(html).toContain('<p>Media Island</p>');
     });
+
+    it('automatically wraps component in island container when client:* directive is present in MOUNT_COMPONENT props', () => {
+      const counterSfc = `
+        <button>Counter Content</button>
+      `;
+      const appSfc = `
+        <script>
+          import Counter from './Counter.drift';
+        </script>
+        <main>
+          <Counter client:load initial="42" />
+        </main>
+      `;
+
+      const counterMod = compile(counterSfc);
+      const appMod = compile(appSfc);
+
+      const html = renderToString(appMod, {
+        scope: { Counter: counterMod },
+      });
+
+      expect(html).toContain('data-drift-island="Counter"');
+      expect(html).toContain('data-drift-trigger="eager"');
+      expect(html).toContain('data-drift-props="{&quot;initial&quot;:&quot;42&quot;}"');
+      expect(html).toContain('<button>Counter Content</button>');
+    });
   });
 });

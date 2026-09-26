@@ -203,7 +203,44 @@ export class DriftServerVM {
                 childScope.children = childrenNode;
               }
               const compNode = subVm.execute(compMod, { scope: childScope });
-              if (compNode) this.setRegister(dstReg, compNode);
+
+              let islandTrigger: string | null = null;
+              let islandMedia: string | undefined;
+              if ('client:load' in propsObj) islandTrigger = 'eager';
+              else if ('client:idle' in propsObj) islandTrigger = 'idle';
+              else if ('client:visible' in propsObj) islandTrigger = 'visible';
+              else if ('client:interaction' in propsObj) islandTrigger = 'interaction';
+              else if ('client:media' in propsObj) {
+                islandTrigger = 'media';
+                islandMedia = typeof propsObj['client:media'] === 'string' ? propsObj['client:media'] : undefined;
+              }
+
+              if (islandTrigger) {
+                const islandAttrs = new Map<string, string | boolean | null>();
+                islandAttrs.set('data-drift-island', tag);
+                islandAttrs.set('data-drift-trigger', islandTrigger);
+                if (islandMedia) {
+                  islandAttrs.set('data-drift-media', islandMedia);
+                }
+                const filteredProps: Record<string, any> = {};
+                for (const [k, v] of Object.entries(propsObj)) {
+                  if (!k.startsWith('client:') && k !== '__drift_children__' && k !== '__drift_props__') {
+                    filteredProps[k] = v;
+                  }
+                }
+                if (Object.keys(filteredProps).length > 0) {
+                  islandAttrs.set('data-drift-props', JSON.stringify(filteredProps));
+                }
+                const wrapperNode: ServerNode = {
+                  type: 'element',
+                  tag: 'div',
+                  attrs: islandAttrs,
+                  children: compNode ? [compNode] : [],
+                };
+                this.setRegister(dstReg, wrapperNode);
+              } else {
+                if (compNode) this.setRegister(dstReg, compNode);
+              }
             }
             pc += 4;
             break;

@@ -1,5 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 import { build as viteBuild, type InlineConfig } from 'vite';
 import { driftPlugin } from 'driftjs-vite-plugin';
 import type { IslandDescriptor, DriftSSGConfig, IslandBundleResult } from '../../types/index.js';
@@ -12,7 +14,8 @@ export type { IslandBundleResult };
  */
 export function generateIslandBootstrapSource(
   islands: IslandDescriptor[],
-  rootDir: string
+  rootDir: string,
+  fromDir?: string
 ): string {
   if (islands.length === 0) return '';
 
@@ -31,7 +34,8 @@ export function generateIslandBootstrapSource(
     const importName = `__drift_comp_${idx++}`;
     let resolvedImport = compPath;
     if (path.isAbsolute(compPath)) {
-      resolvedImport = path.relative(rootDir, compPath);
+      const baseDir = fromDir || rootDir;
+      resolvedImport = path.relative(baseDir, compPath);
       if (!resolvedImport.startsWith('.')) {
         resolvedImport = `./${resolvedImport}`;
       }
@@ -68,13 +72,27 @@ export async function bundleIslands(
   }
 
   const entryFile = path.resolve(tempEntryDir, 'islands-entry.js');
-  const bootstrapCode = generateIslandBootstrapSource(islands, config.root);
+  const bootstrapCode = generateIslandBootstrapSource(islands, config.root, tempEntryDir);
   fs.writeFileSync(entryFile, bootstrapCode, 'utf8');
 
   try {
+    let domPath: string;
+    try {
+      domPath = fileURLToPath(import.meta.resolve('driftjs-dom'));
+    } catch {
+      const req = createRequire(import.meta.url);
+      domPath = req.resolve('driftjs-dom');
+    }
+
     const viteConfig: InlineConfig = {
       root: config.root,
       plugins: [driftPlugin()],
+      resolve: {
+        alias: {
+          'driftjs-dom': domPath,
+          ...(config.vite?.resolve?.alias || {}),
+        },
+      },
       build: {
         outDir: config.outDir,
         emptyOutDir: false,

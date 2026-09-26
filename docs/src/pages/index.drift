@@ -1,8 +1,5 @@
 <script>
-let count = 0;
-function increment() {
-  count = count + 1;
-}
+  import Counter from '../components/Counter.drift';
 </script>
 
 <div class="hero">
@@ -38,8 +35,5 @@ function increment() {
 <div class="demo-section">
   <h2>Interactive Island Demo</h2>
   <p>This counter is hydrated as an interactive island on client load:</p>
-  <div class="counter-box" data-drift-island="Counter" data-drift-trigger="eager">
-    <div class="counter-display">Current Count: <span id="count">{count}</span></div>
-    <button class="btn btn-primary" on:click={increment}>Increment Count</button>
-  </div>
+  <Counter client:load />
 </div>

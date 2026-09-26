@@ -1,4 +1,5 @@
-import { DriftLexer, DriftParser, type ElementNode } from 'driftjs-compiler';
+import path from 'node:path';
+import { compile, DriftLexer, DriftParser, type ElementNode } from 'driftjs-compiler';
 import type { IslandDescriptor, IslandTriggerStrategy } from '../../types/index.js';
 
 export const CLIENT_DIRECTIVES: Record<string, IslandTriggerStrategy> = {
@@ -8,6 +9,26 @@ export const CLIENT_DIRECTIVES: Record<string, IslandTriggerStrategy> = {
   'client:interaction': 'interaction',
   'client:media': 'media',
 };
+
+/**
+ * Extracts component import specifiers from a .drift template's <script> block.
+ */
+export function extractIslandImports(templateSource: string): Record<string, string> {
+  const imports: Record<string, string> = {};
+  try {
+    const compiled = compile(templateSource);
+    if (compiled && compiled.imports) {
+      for (const imp of compiled.imports) {
+        if (imp.localName && imp.source) {
+          imports[imp.localName] = imp.source;
+        }
+      }
+    }
+  } catch {
+    // If compilation fails, return empty imports
+  }
+  return imports;
+}
 
 /**
  * Recursively traverses an AST node tree to find all element nodes with client:* directives.
@@ -48,11 +69,15 @@ export function findIslandElements(node: any, results: ElementNode[] = []): Elem
  */
 export function scanIslands(
   templateSource: string,
-  importMap: Record<string, string> = {}
+  importMap: Record<string, string> = {},
+  sourceFilePath?: string
 ): IslandDescriptor[] {
   const islands: IslandDescriptor[] = [];
 
   try {
+    const autoImports = extractIslandImports(templateSource);
+    const resolvedImportMap = { ...autoImports, ...importMap };
+
     const lexer = new DriftLexer(templateSource);
     const parser = new DriftParser(lexer);
     const ast = parser.parse();
@@ -83,7 +108,10 @@ export function scanIslands(
         }
       }
 
-      const componentPath = importMap[name] || name;
+      let componentPath = resolvedImportMap[name] || name;
+      if (sourceFilePath && componentPath.startsWith('.')) {
+        componentPath = path.resolve(path.dirname(sourceFilePath), componentPath);
+      }
 
       islands.push({
         name,

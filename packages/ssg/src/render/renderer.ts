@@ -119,7 +119,7 @@ export async function renderPage(options: RenderPageOptions): Promise<RenderResu
   } else {
     // .drift SFC page
     const source = fs.readFileSync(route.filePath, 'utf8');
-    islands = scanIslands(source);
+    islands = scanIslands(source, {}, route.filePath);
     let compiled: CompiledModule;
     if (moduleLoader) {
       const mod = await moduleLoader(route.filePath);
@@ -149,7 +149,7 @@ export async function renderPage(options: RenderPageOptions): Promise<RenderResu
     if (fs.existsSync(layoutPath)) {
       composedHtml = await renderLayout(layoutPath, composedHtml, pageScope, moduleLoader);
       const layoutSource = fs.readFileSync(layoutPath, 'utf8');
-      const layoutIslands = scanIslands(layoutSource);
+      const layoutIslands = scanIslands(layoutSource, {}, layoutPath);
       islands.push(...layoutIslands);
     }
   }

@@ -61,13 +61,27 @@ export async function build(options: BuildOptions = {}): Promise<BuildSummary> {
     }
     fs.mkdirSync(config.outDir, { recursive: true });
 
-    // 5. Scan for all islands across the site
+    // 5. Scan for all islands across the site (pages, layouts, document)
     const siteIslands: ReturnType<typeof scanIslands> = [];
-    for (const r of allRoutesToResolve) {
-      if (r.filePath.endsWith('.drift') && fs.existsSync(r.filePath)) {
-        const src = fs.readFileSync(r.filePath, 'utf8');
-        siteIslands.push(...scanIslands(src));
+    const scannedFiles = new Set<string>();
+
+    const scanFile = (filePath: string) => {
+      if (scannedFiles.has(filePath)) return;
+      scannedFiles.add(filePath);
+      if (filePath.endsWith('.drift') && fs.existsSync(filePath)) {
+        const src = fs.readFileSync(filePath, 'utf8');
+        siteIslands.push(...scanIslands(src, {}, filePath));
       }
+    };
+
+    for (const r of allRoutesToResolve) {
+      scanFile(r.filePath);
+      for (const layoutPath of r.layouts) {
+        scanFile(layoutPath);
+      }
+    }
+    if (documentPath) {
+      scanFile(documentPath);
     }
 
     // 6. Bundle client islands with Vite (if any islands exist)
@@ -89,7 +103,25 @@ export async function build(options: BuildOptions = {}): Promise<BuildSummary> {
 
     for (const target of resolvedPaths) {
       const is404 = target.route.type === '404' || target.pathname === '/404';
-      const scripts = target.route.filePath.endsWith('.drift') && siteIslands.length > 0 && islandBundleScript
+
+      let pageHasIslands = false;
+      if (target.route.filePath.endsWith('.drift') && fs.existsSync(target.route.filePath)) {
+        const pageIslands = scanIslands(fs.readFileSync(target.route.filePath, 'utf8'), {}, target.route.filePath);
+        if (pageIslands.length > 0) pageHasIslands = true;
+      }
+      if (!pageHasIslands) {
+        for (const lPath of target.route.layouts) {
+          if (lPath.endsWith('.drift') && fs.existsSync(lPath)) {
+            const lIslands = scanIslands(fs.readFileSync(lPath, 'utf8'), {}, lPath);
+            if (lIslands.length > 0) {
+              pageHasIslands = true;
+              break;
+            }
+          }
+        }
+      }
+
+      const scripts = pageHasIslands && siteIslands.length > 0 && islandBundleScript
         ? [islandBundleScript]
         : [];
 

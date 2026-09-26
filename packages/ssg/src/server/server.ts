@@ -1,11 +1,15 @@
+import fs from 'node:fs';
 import http from 'node:http';
-import { createServer as createViteServer, type ViteDevServer } from 'vite';
+import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
+import { createServer as createViteServer, type ViteDevServer, type Plugin } from 'vite';
 import { driftPlugin } from 'driftjs-vite-plugin';
 import type { DevServerOptions, DevServerInstance } from '../../types/index.js';
 import { loadConfig } from '../config/index.js';
 import { scanRoutes, matchRoute } from '../router/index.js';
 import { renderPage, buildHeadTags } from '../render/index.js';
 import { extractStaticPaths } from '../router/index.js';
+import { scanIslands, generateIslandBootstrapSource } from '../islands/index.js';
 
 export type { DevServerOptions, DevServerInstance };
 
@@ -17,13 +21,50 @@ export async function createDevServer(options: DevServerOptions = {}): Promise<D
   const port = options.port || 3000;
   const host = options.host || 'localhost';
 
+  let domPath: string;
+  try {
+    domPath = fileURLToPath(import.meta.resolve('driftjs-dom'));
+  } catch {
+    const req = createRequire(import.meta.url);
+    domPath = req.resolve('driftjs-dom');
+  }
+
+  const islandsDevPlugin: Plugin = {
+    name: 'drift-islands-dev-plugin',
+    resolveId(id) {
+      if (id.startsWith('/@drift-islands')) {
+        return id;
+      }
+    },
+    load(id) {
+      if (id.startsWith('/@drift-islands')) {
+        const queryIdx = id.indexOf('?');
+        const search = queryIdx !== -1 ? id.slice(queryIdx) : '';
+        const params = new URLSearchParams(search);
+        const pageFile = params.get('page');
+        if (pageFile && fs.existsSync(pageFile)) {
+          const src = fs.readFileSync(pageFile, 'utf8');
+          const islands = scanIslands(src, {}, pageFile);
+          return generateIslandBootstrapSource(islands, config.root);
+        }
+        return '';
+      }
+    },
+  };
+
   const vite = await createViteServer({
     root: config.root,
     server: {
       middlewareMode: true,
     },
     appType: 'custom',
-    plugins: [driftPlugin()],
+    plugins: [driftPlugin(), islandsDevPlugin],
+    resolve: {
+      alias: {
+        'driftjs-dom': domPath,
+        ...(config.vite?.resolve?.alias || {}),
+      },
+    },
     publicDir: config.publicDir,
     ...config.vite,
   });
@@ -76,12 +117,34 @@ export async function createDevServer(options: DevServerOptions = {}): Promise<D
 
         // 4. Render page with layouts
         const baseHeadTags = buildHeadTags(config.head, config.publicDir, config.base);
+
+        let pageHasIslands = false;
+        if (matched.route.filePath.endsWith('.drift') && fs.existsSync(matched.route.filePath)) {
+          const pageIslands = scanIslands(fs.readFileSync(matched.route.filePath, 'utf8'), {}, matched.route.filePath);
+          if (pageIslands.length > 0) pageHasIslands = true;
+        }
+        if (!pageHasIslands) {
+          for (const lPath of matched.route.layouts) {
+            if (lPath.endsWith('.drift') && fs.existsSync(lPath)) {
+              const lIslands = scanIslands(fs.readFileSync(lPath, 'utf8'), {}, lPath);
+              if (lIslands.length > 0) {
+                pageHasIslands = true;
+                break;
+              }
+            }
+          }
+        }
+        const devScripts = pageHasIslands
+          ? [`<script type="module" src="/@drift-islands?page=${encodeURIComponent(matched.route.filePath)}"></script>`]
+          : [];
+
         const renderRes = await renderPage({
           route: matched.route,
           pathname: matched.pathname,
           params: matched.params,
           props,
           documentPath,
+          scripts: devScripts,
           headTags: baseHeadTags,
           site: config.site,
           moduleLoader: (filePath: string) => vite.ssrLoadModule(filePath),

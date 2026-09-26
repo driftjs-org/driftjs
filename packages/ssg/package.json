@@ -1,6 +1,6 @@
 {
   "name": "driftjs-ssg",
-  "version": "0.0.15",
+  "version": "0.0.16",
   "description": "Static Site Generation (SSG) meta-framework and islands bundler for DriftJS.",
   "keywords": [
     "driftjs",

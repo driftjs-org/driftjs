@@ -72,5 +72,38 @@ export function bumpVersion(releaseType) {
     fs.writeFileSync(cliTestPath, testContent, 'utf8');
   }
 
+  // Update packages/cli/template/package.json if present
+  const templatePkgPath = path.join(packagesDir, 'cli', 'template', 'package.json');
+  if (fs.existsSync(templatePkgPath)) {
+    let templateContent = fs.readFileSync(templatePkgPath, 'utf8');
+    templateContent = templateContent.replace(
+      /"driftjs-([^"]+)":\s*"\^[0-9.]+"/g,
+      `"driftjs-$1": "^${newVersion}"`
+    );
+    fs.writeFileSync(templatePkgPath, templateContent, 'utf8');
+  }
+
+  // Update packages/eslint-plugin/src/index.ts if present
+  const eslintIndexPath = path.join(packagesDir, 'eslint-plugin', 'src', 'index.ts');
+  if (fs.existsSync(eslintIndexPath)) {
+    let eslintContent = fs.readFileSync(eslintIndexPath, 'utf8');
+    eslintContent = eslintContent.replace(
+      /version:\s*'[^']+'/,
+      `version: '${newVersion}'`
+    );
+    fs.writeFileSync(eslintIndexPath, eslintContent, 'utf8');
+  }
+
+  // Update packages/ssg/src/build/builder.ts if present
+  const ssgBuilderPath = path.join(packagesDir, 'ssg', 'src', 'build', 'builder.ts');
+  if (fs.existsSync(ssgBuilderPath)) {
+    let builderContent = fs.readFileSync(ssgBuilderPath, 'utf8');
+    builderContent = builderContent.replace(
+      /`v\d+\.\d+\.\d+`/,
+      `\`v${newVersion}\``
+    );
+    fs.writeFileSync(ssgBuilderPath, builderContent, 'utf8');
+  }
+
   console.log(`🚀 Bumped all packages (${releaseType}): ${oldVersion} ──► ${newVersion}`);
 }

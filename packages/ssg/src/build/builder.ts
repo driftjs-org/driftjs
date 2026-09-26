@@ -23,7 +23,7 @@ export async function build(options: BuildOptions = {}): Promise<BuildSummary> {
   });
 
   if (!options.silent) {
-    console.log(`\n🏛️  ${pc.bold(pc.cyan('Drift Static'))} ${pc.gray(`v0.0.15`)}`);
+    console.log(`\n🏛️  ${pc.bold(pc.cyan('Drift Static'))} ${pc.gray(`v0.0.16`)}`);
     console.log(`${pc.gray('▸')} Root:  ${pc.dim(config.root)}`);
     console.log(`${pc.gray('▸')} Pages: ${pc.dim(config.pagesDir)}`);
     console.log(`${pc.gray('▸')} Out:   ${pc.dim(config.outDir)}\n`);

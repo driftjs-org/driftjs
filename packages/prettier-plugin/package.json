@@ -1,6 +1,6 @@
 {
   "name": "driftjs-prettier-plugin",
-  "version": "0.0.15",
+  "version": "0.0.16",
   "description": "Prettier plugin for formatting DriftJS (.drift) Single File Components.",
   "keywords": [
     "driftjs",

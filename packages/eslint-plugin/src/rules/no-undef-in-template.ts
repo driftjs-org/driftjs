@@ -57,6 +57,11 @@ const KNOWN_GLOBALS = new Set([
   'decodeURI',
   'decodeURIComponent',
   'setTimeout',
+  'children',
+  'derive',
+  'effect',
+  'onMount',
+  'onUnmount',
   'clearTimeout',
   'setInterval',
   'clearInterval',
@@ -81,26 +86,112 @@ function extractExpressionIdentifiersWithLoc(
       locations: true,
     });
 
-    walk.simple(exprAst, {
-      Identifier(node: any) {
-        const line = baseOffset.line + (node.loc?.start?.line ?? 1) - 1;
-        const column =
-          (node.loc?.start?.line ?? 1) === 1
-            ? baseOffset.column + (node.loc?.start?.column ?? 0)
-            : node.loc?.start?.column ?? 0;
-        result.push({ name: node.name, loc: { line, column } });
-      },
-      MemberExpression(node: any) {
-        if (node.object.type === 'Identifier') {
-          const line = baseOffset.line + (node.object.loc?.start?.line ?? 1) - 1;
-          const column =
-            (node.object.loc?.start?.line ?? 1) === 1
-              ? baseOffset.column + (node.object.loc?.start?.column ?? 0)
-              : node.object.loc?.start?.column ?? 0;
-          result.push({ name: node.object.name, loc: { line, column } });
+    const scopeStack: Array<Set<string>> = [];
+
+    const isBound = (name: string): boolean => {
+      for (let i = scopeStack.length - 1; i >= 0; i--) {
+        if (scopeStack[i]!.has(name)) return true;
+      }
+      return false;
+    };
+
+    const addPatternToScope = (pattern: any, scope: Set<string>) => {
+      if (!pattern) return;
+      if (pattern.type === 'Identifier') {
+        scope.add(pattern.name);
+      } else if (pattern.type === 'AssignmentPattern') {
+        addPatternToScope(pattern.left, scope);
+        visit(pattern.right);
+      } else if (pattern.type === 'RestElement') {
+        addPatternToScope(pattern.argument, scope);
+      } else if (pattern.type === 'ObjectPattern') {
+        for (const prop of pattern.properties) {
+          if (prop.type === 'Property') {
+            addPatternToScope(prop.value, scope);
+          } else if (prop.type === 'RestElement') {
+            addPatternToScope(prop.argument, scope);
+          }
         }
-      },
-    });
+      } else if (pattern.type === 'ArrayPattern') {
+        for (const elem of pattern.elements) {
+          if (elem) addPatternToScope(elem, scope);
+        }
+      }
+    };
+
+    const visit = (node: any) => {
+      if (!node || typeof node !== 'object') return;
+
+      switch (node.type) {
+        case 'Identifier': {
+          if (!isBound(node.name)) {
+            const line = baseOffset.line + (node.loc?.start?.line ?? 1) - 1;
+            const column =
+              (node.loc?.start?.line ?? 1) === 1
+                ? baseOffset.column + (node.loc?.start?.column ?? 0)
+                : node.loc?.start?.column ?? 0;
+            result.push({ name: node.name, loc: { line, column } });
+          }
+          break;
+        }
+
+        case 'MemberExpression': {
+          visit(node.object);
+          if (node.computed) {
+            visit(node.property);
+          }
+          break;
+        }
+
+        case 'Property': {
+          if (node.computed) {
+            visit(node.key);
+          }
+          visit(node.value);
+          break;
+        }
+
+        case 'ArrowFunctionExpression':
+        case 'FunctionExpression': {
+          const fnScope = new Set<string>();
+          for (const param of node.params) {
+            addPatternToScope(param, fnScope);
+          }
+          scopeStack.push(fnScope);
+          visit(node.body);
+          scopeStack.pop();
+          break;
+        }
+
+        case 'VariableDeclarator': {
+          const currentScope = scopeStack[scopeStack.length - 1];
+          if (currentScope) {
+            addPatternToScope(node.id, currentScope);
+          }
+          if (node.init) {
+            visit(node.init);
+          }
+          break;
+        }
+
+        default: {
+          for (const key of Object.keys(node)) {
+            if (key === 'loc' || key === 'range') continue;
+            const child = node[key];
+            if (Array.isArray(child)) {
+              for (const item of child) {
+                visit(item);
+              }
+            } else if (child && typeof child === 'object' && typeof child.type === 'string') {
+              visit(child);
+            }
+          }
+          break;
+        }
+      }
+    };
+
+    visit(exprAst);
   } catch {
     const matches = [...trimmed.matchAll(/[a-zA-Z_$][a-zA-Z0-9_$]*/g)];
     for (const m of matches) {
@@ -116,6 +207,57 @@ function extractExpressionIdentifiersWithLoc(
     }
   }
 
+  return result;
+}
+
+function extractPatternVariables(patternStr: string): Set<string> {
+  const result = new Set<string>();
+  let clean = patternStr.trim();
+  while (clean.startsWith('(') && clean.endsWith(')')) {
+    clean = clean.slice(1, -1).trim();
+  }
+  if (!clean) return result;
+
+  const addPatternToScope = (pattern: any) => {
+    if (!pattern) return;
+    if (pattern.type === 'Identifier') {
+      result.add(pattern.name);
+    } else if (pattern.type === 'ObjectPattern') {
+      for (const prop of pattern.properties) {
+        if (prop.type === 'Property') {
+          addPatternToScope(prop.value);
+        } else if (prop.type === 'RestElement') {
+          addPatternToScope(prop.argument);
+        }
+      }
+    } else if (pattern.type === 'ArrayPattern') {
+      for (const elem of pattern.elements) {
+        if (elem) addPatternToScope(elem);
+      }
+    } else if (pattern.type === 'AssignmentPattern') {
+      addPatternToScope(pattern.left);
+    } else if (pattern.type === 'RestElement') {
+      addPatternToScope(pattern.argument);
+    }
+  };
+
+  try {
+    const parsed: any = acorn.parse(`let ${clean} = 0;`, {
+      ecmaVersion: 'latest',
+    });
+    const decl = parsed.body[0]?.declarations?.[0]?.id;
+    if (decl) {
+      addPatternToScope(decl);
+      return result;
+    }
+  } catch {
+    const matches = clean.match(/[a-zA-Z_$][a-zA-Z0-9_$]*/g);
+    if (matches) {
+      for (const m of matches) {
+        result.add(m);
+      }
+    }
+  }
   return result;
 }
 
@@ -260,9 +402,8 @@ export const noUndefInTemplateRule: DriftRuleModule = {
 
               const forScope = new Set<string>();
               if (forNode.item) {
-                const itemIds = forNode.item.match(/[a-zA-Z_$][a-zA-Z0-9_$]*/g);
-                if (itemIds) {
-                  for (const id of itemIds) forScope.add(id);
+                for (const id of extractPatternVariables(forNode.item)) {
+                  forScope.add(id);
                 }
               }
               if (forNode.index) {
@@ -335,7 +476,9 @@ export const noUndefInTemplateRule: DriftRuleModule = {
 
               const asyncScope = new Set<string>();
               if (asyncNode.alias) {
-                asyncScope.add(asyncNode.alias);
+                for (const id of extractPatternVariables(asyncNode.alias)) {
+                  asyncScope.add(id);
+                }
               }
               scopeStack.push(asyncScope);
               for (const child of asyncNode.body) {
@@ -351,7 +494,9 @@ export const noUndefInTemplateRule: DriftRuleModule = {
               if (asyncNode.catchBranch) {
                 const catchScope = new Set<string>();
                 if (asyncNode.catchBranch.errorVar) {
-                  catchScope.add(asyncNode.catchBranch.errorVar);
+                  for (const id of extractPatternVariables(asyncNode.catchBranch.errorVar)) {
+                    catchScope.add(id);
+                  }
                 }
                 scopeStack.push(catchScope);
                 for (const child of asyncNode.catchBranch.body) {

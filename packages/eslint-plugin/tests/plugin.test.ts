@@ -125,6 +125,56 @@ describe('driftjs-eslint-plugin', () => {
 
       expect(messages.filter((m) => m.ruleId === 'drift/no-undef-in-template')).toHaveLength(0);
     });
+
+    it('allows arrow function parameters and callback variables without false undef warnings', () => {
+      const code = `<script>
+  let items = [{ id: 1, name: 'Sample' }];
+  let count = 0;
+</script>
+<div>
+  {items.map(item => item.name)}
+  <button onclick={(e) => count++}>Click</button>
+</div>`;
+
+      const messages = linter.verify(code, {
+        plugins: { drift: plugin },
+        languageOptions: { parser: plugin.parser },
+        rules: { 'drift/no-undef-in-template': 'error' },
+      });
+
+      expect(messages.filter((m) => m.ruleId === 'drift/no-undef-in-template')).toHaveLength(0);
+    });
+
+    it('allows destructured @async aliases and errorVar', () => {
+      const code = `<script>
+  let fetchUser;
+</script>
+@async fetchUser() as { name, email } {
+  <div>{name} {email}</div>
+} @catch ({ message }) {
+  <p>{message}</p>
+}`;
+
+      const messages = linter.verify(code, {
+        plugins: { drift: plugin },
+        languageOptions: { parser: plugin.parser },
+        rules: { 'drift/no-undef-in-template': 'error' },
+      });
+
+      expect(messages.filter((m) => m.ruleId === 'drift/no-undef-in-template')).toHaveLength(0);
+    });
+
+    it('allows component {children} without false undef warnings', () => {
+      const code = `<div class="layout">{children}</div>`;
+
+      const messages = linter.verify(code, {
+        plugins: { drift: plugin },
+        languageOptions: { parser: plugin.parser },
+        rules: { 'drift/no-undef-in-template': 'error' },
+      });
+
+      expect(messages.filter((m) => m.ruleId === 'drift/no-undef-in-template')).toHaveLength(0);
+    });
   });
 
   describe('Rule: valid-directives', () => {
@@ -223,6 +273,26 @@ describe('driftjs-eslint-plugin', () => {
 
       expect(messages.filter((m) => m.ruleId === 'drift/prefer-for-key')).toHaveLength(0);
     });
+
+    it('warns when @for is nested inside control flow (@if, @switch, @async) without a key', () => {
+      const code = `<script>
+  let show = true;
+  let items = [1, 2];
+</script>
+@if show {
+  @for item in items {
+    <p>{item}</p>
+  }
+}`;
+
+      const messages = linter.verify(code, {
+        plugins: { drift: plugin },
+        languageOptions: { parser: plugin.parser },
+        rules: { 'drift/prefer-for-key': 'warn' },
+      });
+
+      expect(messages.some((m) => m.ruleId === 'drift/prefer-for-key')).toBe(true);
+    });
   });
 
   describe('Rule: no-reserved-event-names', () => {
@@ -318,6 +388,10 @@ describe('driftjs-eslint-plugin', () => {
       );
       expect(post).toHaveLength(1);
       expect(post[0].line).toBe(2);
+    });
+
+    it('declares supportsAutofix as false to prevent destructive template overwrites', () => {
+      expect(driftProcessor.supportsAutofix).toBe(false);
     });
   });
 });

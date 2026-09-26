@@ -214,5 +214,53 @@ function increment(){count++;}
       expect(output).toContain('  }');
       expect(output).toContain('</div>');
     });
+
+    it('formats inline phrasing elements without breaking into newlines', async () => {
+      const input = '<p>Hello <strong>world</strong>!</p>';
+      const output = await formatDrift(input);
+      expect(output.trim()).toBe('<p>Hello <strong>world</strong>!</p>');
+    });
+
+    it('preserves spaces between sibling inline elements', async () => {
+      const input = '<p><span>First</span> <span>Second</span></p>';
+      const output = await formatDrift(input);
+      expect(output.trim()).toBe('<p><span>First</span> <span>Second</span></p>');
+    });
+
+    it('collapses ragged internal whitespace in multiline text blocks', async () => {
+      const input = `<p>
+         First line of prose.
+         Second line with ragged indentation.
+</p>`;
+      const output = await formatDrift(input);
+      expect(output.trim()).toBe('<p>First line of prose. Second line with ragged indentation.</p>');
+    });
+
+    it('formats TypeScript inside <script lang="ts"> without error', async () => {
+      const input = `<script lang="ts">
+let count: number = 0;
+function add(a: number, b: number): number { return a+b; }
+</script>
+<p>{add(count, 5)}</p>`;
+      const output = await formatDrift(input);
+      expect(output).toContain('let count: number = 0;');
+      expect(output).toContain('function add(a: number, b: number): number {');
+      expect(output).toContain('  return a + b;');
+    });
+
+    it('formats cuddled @if, @else if, and @else blocks', async () => {
+      const input = `@if count === 0 {
+<span>Zero</span>
+}
+@else if count > 0 {
+<span>Positive</span>
+}
+@else {
+<span>Negative</span>
+}`;
+      const output = await formatDrift(input);
+      expect(output).toContain('} @else if count > 0 {');
+      expect(output).toContain('} @else {');
+    });
   });
 });

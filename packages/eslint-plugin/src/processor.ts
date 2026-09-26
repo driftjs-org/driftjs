@@ -29,5 +29,7 @@ export const driftProcessor = {
     });
   },
 
-  supportsAutofix: true,
+  // Autofix is unsafe in processor mode because the extracted script does not contain template markup.
+  // Full autofix is supported when using the custom Drift parser (parseForESLint).
+  supportsAutofix: false,
 };

@@ -35,6 +35,60 @@ const VOID_ELEMENTS = new Set([
   'wbr',
 ]);
 
+const INLINE_ELEMENTS = new Set([
+  'a',
+  'abbr',
+  'audio',
+  'b',
+  'bdi',
+  'bdo',
+  'br',
+  'button',
+  'canvas',
+  'cite',
+  'code',
+  'data',
+  'datalist',
+  'del',
+  'dfn',
+  'em',
+  'embed',
+  'i',
+  'iframe',
+  'img',
+  'input',
+  'ins',
+  'kbd',
+  'label',
+  'map',
+  'mark',
+  'meter',
+  'noscript',
+  'object',
+  'output',
+  'picture',
+  'progress',
+  'q',
+  'ruby',
+  's',
+  'samp',
+  'select',
+  'slot',
+  'small',
+  'span',
+  'strong',
+  'sub',
+  'sup',
+  'svg',
+  'template',
+  'textarea',
+  'time',
+  'u',
+  'var',
+  'video',
+  'wbr',
+]);
+
 function isWhitespaceOnly(text: string): boolean {
   return /^\s*$/.test(text);
 }
@@ -42,13 +96,18 @@ function isWhitespaceOnly(text: string): boolean {
 function hasBlockChildren(children: readonly TemplateChildNode[]): boolean {
   for (const child of children) {
     if (
-      child.type === ASTNodeType.Element ||
       child.type === ASTNodeType.If ||
       child.type === ASTNodeType.For ||
       child.type === ASTNodeType.Switch ||
       child.type === ASTNodeType.Async
     ) {
       return true;
+    }
+    if (child.type === ASTNodeType.Element) {
+      const tagLower = (child as ElementNode).tagName.toLowerCase();
+      if (!INLINE_ELEMENTS.has(tagLower)) {
+        return true;
+      }
     }
   }
   return false;
@@ -108,6 +167,12 @@ function printChildrenList(
     const child = children[i]!;
     if (child.type === ASTNodeType.Text && typeof child.content === 'string') {
       if (isWhitespaceOnly(child.content)) {
+        if (isBlock) {
+          continue;
+        }
+        if (i > 0 && i < children.length - 1) {
+          printedDocs.push(' ');
+        }
         continue;
       }
     }
@@ -268,10 +333,16 @@ export function print(
         if (isWhitespaceOnly(textNode.content)) {
           return '';
         }
-        const hasLeading = /^\s/.test(textNode.content);
-        const hasTrailing = /\s$/.test(textNode.content);
-        const trimmed = textNode.content.trim();
-        return (hasLeading ? ' ' : '') + trimmed + (hasTrailing ? ' ' : '');
+        const collapsed = textNode.content.trim().replace(/\s+/g, ' ');
+        const parent = path.getParentNode();
+        const siblings: any[] = parent?.children || parent?.body || parent?.consequent || [];
+        const index = typeof path.getName() === 'number' ? (path.getName() as number) : -1;
+        const isFirst = index === 0;
+        const isLast = index === siblings.length - 1;
+
+        const hasLeading = !isFirst && /^\s/.test(textNode.content);
+        const hasTrailing = !isLast && /\s$/.test(textNode.content);
+        return (hasLeading ? ' ' : '') + collapsed + (hasTrailing ? ' ' : '');
       }
       return '';
     }
@@ -315,14 +386,13 @@ export function print(
               'alternate'
             );
             parts.push(
-              hardline,
-              '@else {',
+              ' @else {',
               indent([hardline, altDoc]),
               hardline,
               '}'
             );
           } else {
-            parts.push(hardline);
+            parts.push(' ');
             currPath.call((altPath) => {
               printIfNode(currIf.alternate as IfNode, altPath, true);
             }, 'alternate');
@@ -476,31 +546,49 @@ export function embed(path: AstPath, options: any) {
         return [`<${node.tagName}`, attrsDoc, `></${node.tagName}>`];
       }
 
-      try {
-        const formatted = await textToDoc(rawContent, { parser: 'babel' });
-        const shouldIndent = options.driftScriptIndent !== false;
-        const innerDoc = shouldIndent
-          ? indent([hardline, formatted])
-          : [hardline, formatted];
+      const isTs = (node.attributes || []).some(
+        (attr: any) =>
+          attr.name === 'lang' &&
+          typeof attr.value === 'string' &&
+          /^(ts|typescript)$/i.test(attr.value.trim())
+      );
 
-        return [
-          `<${node.tagName}`,
-          attrsDoc,
-          '>',
-          innerDoc,
-          hardline,
-          `</${node.tagName}>`,
-        ];
-      } catch {
-        return [
-          `<${node.tagName}`,
-          attrsDoc,
-          '>',
-          indent([hardline, rawContent]),
-          hardline,
-          `</${node.tagName}>`,
-        ];
+      let formatted: Doc | null = null;
+      if (isTs) {
+        try {
+          formatted = await textToDoc(rawContent, { parser: 'typescript' });
+        } catch {
+          try {
+            formatted = await textToDoc(rawContent, { parser: 'babel-ts' });
+          } catch {
+            // fallback
+          }
+        }
+      } else {
+        try {
+          formatted = await textToDoc(rawContent, { parser: 'babel' });
+        } catch {
+          try {
+            formatted = await textToDoc(rawContent, { parser: 'typescript' });
+          } catch {
+            // fallback
+          }
+        }
       }
+
+      const shouldIndent = options.driftScriptIndent !== false;
+      const innerDoc = formatted
+        ? (shouldIndent ? indent([hardline, formatted]) : [hardline, formatted])
+        : (shouldIndent ? indent([hardline, rawContent]) : [hardline, rawContent]);
+
+      return [
+        `<${node.tagName}`,
+        attrsDoc,
+        '>',
+        innerDoc,
+        hardline,
+        `</${node.tagName}>`,
+      ];
     };
   }
 
@@ -512,31 +600,46 @@ export function embed(path: AstPath, options: any) {
         return [`<${node.tagName}`, attrsDoc, `></${node.tagName}>`];
       }
 
-      try {
-        const formatted = await textToDoc(rawContent, { parser: 'css' });
-        const shouldIndent = options.driftStyleIndent !== false;
-        const innerDoc = shouldIndent
-          ? indent([hardline, formatted])
-          : [hardline, formatted];
+      const isScss = (node.attributes || []).some(
+        (attr: any) =>
+          attr.name === 'lang' &&
+          typeof attr.value === 'string' &&
+          /^(scss|sass)$/i.test(attr.value.trim())
+      );
+      const isLess = (node.attributes || []).some(
+        (attr: any) =>
+          attr.name === 'lang' &&
+          typeof attr.value === 'string' &&
+          /^less$/i.test(attr.value.trim())
+      );
 
-        return [
-          `<${node.tagName}`,
-          attrsDoc,
-          '>',
-          innerDoc,
-          hardline,
-          `</${node.tagName}>`,
-        ];
+      let formatted: Doc | null = null;
+      const primaryParser = isScss ? 'scss' : isLess ? 'less' : 'css';
+      try {
+        formatted = await textToDoc(rawContent, { parser: primaryParser });
       } catch {
-        return [
-          `<${node.tagName}`,
-          attrsDoc,
-          '>',
-          indent([hardline, rawContent]),
-          hardline,
-          `</${node.tagName}>`,
-        ];
+        if (primaryParser !== 'css') {
+          try {
+            formatted = await textToDoc(rawContent, { parser: 'css' });
+          } catch {
+            // fallback
+          }
+        }
       }
+
+      const shouldIndent = options.driftStyleIndent !== false;
+      const innerDoc = formatted
+        ? (shouldIndent ? indent([hardline, formatted]) : [hardline, formatted])
+        : (shouldIndent ? indent([hardline, rawContent]) : [hardline, rawContent]);
+
+      return [
+        `<${node.tagName}`,
+        attrsDoc,
+        '>',
+        innerDoc,
+        hardline,
+        `</${node.tagName}>`,
+      ];
     };
   }
 

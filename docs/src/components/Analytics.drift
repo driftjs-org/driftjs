@@ -1,0 +1,7 @@
+<script>
+  // Vercel Web Analytics - Inject the analytics tracking
+  import { inject } from '@vercel/analytics';
+  
+  // Initialize analytics when component mounts
+  inject({ mode: 'production' });
+</script>

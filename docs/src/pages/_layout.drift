@@ -1,6 +1,7 @@
 <script>
   import Header from '../components/Header.drift';
   import Footer from '../components/Footer.drift';
+  import Analytics from '../components/Analytics.drift';
   import '../styles/docs.css';
 </script>
 
@@ -12,5 +13,6 @@
     {children}
   </div>
   <Footer />
+  <Analytics client:load />
 </div>
 

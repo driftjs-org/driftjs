@@ -1,0 +1,60 @@
+<script>
+  let count = 0;
+  let step = 1;
+  const double = derive(() => count * 2);
+  const isNegative = derive(() => count < 0);
+  const isPositive = derive(() => count > 0);
+  const isZero = derive(() => count === 0);
+  const decText = derive(() => '- ' + step);
+  const incText = derive(() => '+ ' + step);
+
+  function increment() {
+    count = count + step;
+  }
+
+  function decrement() {
+    count = count - step;
+  }
+
+  function reset() {
+    count = 0;
+  }
+
+  function setStep(newStep) {
+    step = newStep;
+  }
+</script>
+
+<div class="interactive-demo-widget">
+  <div class="demo-widget-body">
+    <div class="counter-display-card">
+      <div class="counter-label">Current State</div>
+      <div class="counter-value">{count}</div>
+      <div class="counter-derived">
+        Derived double: <span class="derived-highlight">{double}</span>
+      </div>
+      @if count < 0 {
+        <div class="counter-notice negative">Notice: Value is currently negative!</div>
+      } @else if count > 0 {
+        <div class="counter-notice positive">Notice: Value is currently positive!</div>
+      } @else {
+        <div class="counter-notice zero">Notice: Value is currently zero</div>
+      }
+    </div>
+
+    <div class="demo-controls">
+      <div class="btn-group">
+        <button class="demo-btn primary" onclick={decrement}>{decText}</button>
+        <button class="demo-btn reset" onclick={reset}>Reset</button>
+        <button class="demo-btn primary" onclick={increment}>{incText}</button>
+      </div>
+
+      <div class="step-selector">
+        <span class="step-label">Step size:</span>
+        <button class="step-btn" onclick={() => setStep(1)}>1</button>
+        <button class="step-btn" onclick={() => setStep(5)}>5</button>
+        <button class="step-btn" onclick={() => setStep(10)}>10</button>
+      </div>
+    </div>
+  </div>
+</div>

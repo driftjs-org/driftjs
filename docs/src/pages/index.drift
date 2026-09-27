@@ -1,0 +1,164 @@
+<script>
+  import CounterDemo from '../components/CounterDemo.drift';
+  import RegisterVmVisualizer from '../components/RegisterVmVisualizer.drift';
+</script>
+
+<div class="landing-container">
+  <!-- Hero Section -->
+  <section class="hero-section">
+    <div class="hero-glow"></div>
+    <div class="hero-content">
+      <h1 class="hero-title">
+        The Register VM Reactivity Engine for <span class="gradient-text">High-Performance</span> Web
+      </h1>
+
+      <p class="hero-subtitle">
+        DriftJS replaces traditional Virtual DOM tree diffing and Proxy overhead with a compact 256-register virtual machine, build-time bytecode stream, and selective hydration.
+      </p>
+
+      <div class="hero-actions">
+        <a href="/guide/introduction/" class="btn-primary">
+          <span>Get Started &rarr;</span>
+        </a>
+        <a href="/architecture/virtual-machine/" class="btn-secondary">
+          <span>Architecture Deep Dive</span>
+        </a>
+      </div>
+
+      <div class="install-command-box">
+        <span class="prompt-symbol">$</span>
+        <code>pnpm create drift@latest</code>
+      </div>
+    </div>
+  </section>
+
+  <!-- Live Reactive Islands Showcase -->
+  <section class="demo-section">
+    <div class="section-header">
+      <div class="section-tag">Live Reactive Demos</div>
+      <h2 class="section-title">See DriftJS in Action</h2>
+      <p class="section-subtitle">
+        These interactive components are hydrated selectively using Drift's native Islands Architecture without loading client runtime for the rest of the page.
+      </p>
+    </div>
+
+    <CounterDemo client:visible />
+    <RegisterVmVisualizer client:visible />
+  </section>
+
+  <!-- Key Architectural Pillars -->
+  <section class="features-section">
+    <div class="section-header">
+      <div class="section-tag">Core Pillars</div>
+      <h2 class="section-title">Engineered from First Principles</h2>
+      <p class="section-subtitle">
+        Designed for microsecond responsiveness, zero memory churn, and predictable execution.
+      </p>
+    </div>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon-wrapper">⚙️</div>
+        <h3 class="feature-title">256-Register VM</h3>
+        <p class="feature-desc">
+          Executes compact bytecode directly across fixed registers (r0..r255), eliminating recursive stack frames and object allocations during render loops.
+        </p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon-wrapper">⚡</div>
+        <h3 class="feature-title">Zero VDOM Diffing</h3>
+        <p class="feature-desc">
+          State changes trigger microtask updates that re-execute only the exact bytecode instructions bound to dirty variables. Updates patch DOM nodes directly in-place.
+        </p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon-wrapper">📦</div>
+        <h3 class="feature-title">AOT Bytecode Compiler</h3>
+        <p class="feature-desc">
+          Single File Components (.drift) compile at build time into an optimized binary-like bytecode stream and static constant pool, keeping runtime footprints tiny.
+        </p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon-wrapper">🏝️</div>
+        <h3 class="feature-title">Islands Architecture SSG</h3>
+        <p class="feature-desc">
+          Drift Static meta-framework delivers 0 kB JavaScript on static pages, hydrating interactive widgets selectively with client:load, client:visible, and client:idle.
+        </p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon-wrapper">🔄</div>
+        <h3 class="feature-title">Keyed LIS Reconciliation</h3>
+        <p class="feature-desc">
+          List rendering with &#64;for directive computes the Longest Increasing Subsequence to minimize physical DOM node movements, with fast-path attribute patching.
+        </p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon-wrapper">🌊</div>
+        <h3 class="feature-title">Streaming SSR and Hydration</h3>
+        <p class="feature-desc">
+          DriftServerVM renders virtual server node trees to static HTML with comment delimiters (&lt;!--if--&gt;, &lt;!--for--&gt;), claiming DOM nodes efficiently on client hydration.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Code Comparison Section -->
+  <section class="features-section">
+    <div class="section-header">
+      <div class="section-tag">SFC Authoring</div>
+      <h2 class="section-title">Declarative, Simple, and Fast</h2>
+      <p class="section-subtitle">
+        Write clean components combining JavaScript logic, declarative directives, and scoped styling.
+      </p>
+    </div>
+
+    <div class="comparison-grid">
+      <div class="code-card">
+        <div class="code-header">
+          <span>Counter.drift (DriftJS Single File Component)</span>
+          <span>.drift</span>
+        </div>
+        <pre><code>&lt;script&gt;
+  let count = 0;
+  const double = derive(() => count * 2);
+
+  function inc() &#123;
+    count++;
+  &#125;
+&lt;/script&gt;
+
+&lt;section class="counter"&gt;
+  &lt;h2&gt;Count: &#123;count&#125; (Double: &#123;double&#125;)&lt;/h2&gt;
+  &lt;button onclick=&#123;inc&#125;&gt;Increment&lt;/button&gt;
+
+  &#64;if count &gt; 10 &#123;
+    &lt;p class="milestone"&gt;Milestone reached!&lt;/p&gt;
+  &#125;
+&lt;/section&gt;</code></pre>
+      </div>
+
+      <div class="code-card">
+        <div class="code-header">
+          <span>What DriftJS Compiles Under the Hood</span>
+          <span>Register VM Bytecode</span>
+        </div>
+        <pre><code>// Bytecode Stream (Uint32Array)
+0x01, r0, "section"        // CREATE_ELEMENT
+0x05, r0, "class", "counter" // SET_ATTR
+0x01, r1, "h2"             // CREATE_ELEMENT
+0x07, r2, fn(scope.count)  // INTERPOLATE_TEXT [PC: 6]
+0x04, r1, r2               // APPEND_CHILD
+0x04, r0, r1               // APPEND_CHILD
+0x01, r3, "button"         // CREATE_ELEMENT
+0x05, r3, "onclick", fn    // SET_ATTR (Event handler)
+0x0D, r0, cond, subMod, deps // REACTIVE_IF
+0x00, r0                   // RETURN</code></pre>
+      </div>
+    </div>
+  </section>
+</div>

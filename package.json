@@ -23,11 +23,13 @@
     "docs:dev": "pnpm --filter driftjs-docs dev",
     "docs:build": "pnpm --filter driftjs-docs build",
     "docs:preview": "pnpm --filter driftjs-docs preview",
+    "test:e2e": "playwright test",
     "patch": "node scripts/patch.js",
     "minor": "node scripts/minor.js",
     "major": "node scripts/major.js"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@vitest/browser": "5.0.2",
     "@vitest/browser-playwright": "5.0.2",
     "@vitest/coverage-v8": "5.0.2",

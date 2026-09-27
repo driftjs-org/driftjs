@@ -887,21 +887,35 @@ export class DriftClientVM {
               if (subMod) {
                 const { fragment, createdRegions } = vm.runSubModule(subMod, scope);
                 childRegions = createdRegions;
-                if (fragment) {
+                if (!actualEndAnchor && vm.cursor) {
+                  actualEndAnchor = vm.cursor.claimComment('/if', doc);
+                  if (!actualEndAnchor.parentNode || actualEndAnchor.parentNode !== parentElem) {
+                    parentElem.appendChild(actualEndAnchor);
+                  }
+                }
+                if (fragment && (!vm.cursor || fragment.childNodes.length > 0)) {
                   if (actualEndAnchor && actualEndAnchor.parentNode) {
                     actualEndAnchor.parentNode.insertBefore(fragment, actualEndAnchor);
                   } else {
                     parentElem.appendChild(fragment);
                   }
                 }
+              } else {
+                if (!actualEndAnchor && vm.cursor) {
+                  actualEndAnchor = vm.cursor.claimComment('/if', doc);
+                  if (!actualEndAnchor.parentNode || actualEndAnchor.parentNode !== parentElem) {
+                    parentElem.appendChild(actualEndAnchor);
+                  }
+                }
               }
               if (ifRegion) {
                 ifRegion.childRegions = childRegions;
+                ifRegion.endAnchor = actualEndAnchor;
               }
             };
             renderIf();
 
-            if (this.cursor) {
+            if (this.cursor && !actualEndAnchor) {
               actualEndAnchor = this.cursor.claimComment('/if', doc);
               if (!actualEndAnchor.parentNode || actualEndAnchor.parentNode !== parentElem) {
                 parentElem.appendChild(actualEndAnchor);
@@ -979,21 +993,35 @@ export class DriftClientVM {
               if (matchedMod) {
                 const { fragment, createdRegions } = vm.runSubModule(matchedMod, scope);
                 childRegions = createdRegions;
-                if (fragment) {
+                if (!actualEndAnchor && vm.cursor) {
+                  actualEndAnchor = vm.cursor.claimComment('/switch', doc);
+                  if (!actualEndAnchor.parentNode || actualEndAnchor.parentNode !== parentElem) {
+                    parentElem.appendChild(actualEndAnchor);
+                  }
+                }
+                if (fragment && (!vm.cursor || fragment.childNodes.length > 0)) {
                   if (actualEndAnchor && actualEndAnchor.parentNode) {
                     actualEndAnchor.parentNode.insertBefore(fragment, actualEndAnchor);
                   } else {
                     parentElem.appendChild(fragment);
                   }
                 }
+              } else {
+                if (!actualEndAnchor && vm.cursor) {
+                  actualEndAnchor = vm.cursor.claimComment('/switch', doc);
+                  if (!actualEndAnchor.parentNode || actualEndAnchor.parentNode !== parentElem) {
+                    parentElem.appendChild(actualEndAnchor);
+                  }
+                }
               }
               if (switchRegion) {
                 switchRegion.childRegions = childRegions;
+                switchRegion.endAnchor = actualEndAnchor;
               }
             };
             renderSwitch();
 
-            if (this.cursor) {
+            if (this.cursor && !actualEndAnchor) {
               actualEndAnchor = this.cursor.claimComment('/switch', doc);
               if (!actualEndAnchor.parentNode || actualEndAnchor.parentNode !== parentElem) {
                 parentElem.appendChild(actualEndAnchor);

@@ -1,0 +1,91 @@
+<aside class="docs-sidebar">
+  <div class="sidebar-mobile-header">
+    <div class="brand-link">
+      <img src="/logo.png" alt="DriftJS Logo" class="brand-logo-img" />
+      <span class="brand-text">Drift<span class="brand-accent">JS</span></span>
+    </div>
+    <label for="nav-drawer-toggle" class="sidebar-close-btn" aria-label="Close menu">&times;</label>
+  </div>
+
+  <div class="sidebar-group mobile-nav-group">
+    <div class="sidebar-title">Sections</div>
+    <ul class="sidebar-links">
+      <li><a href="/guide/introduction/" class="sidebar-link">📖 Guide</a></li>
+      <li><a href="/architecture/virtual-machine/" class="sidebar-link">⚙️ VM Architecture</a></li>
+      <li><a href="/ssg/overview/" class="sidebar-link">🏝️ SSG & Islands</a></li>
+      <li><a href="/ecosystem/vite-plugin/" class="sidebar-link">📦 Ecosystem</a></li>
+      <li><a href="/api/compiler/" class="sidebar-link">⚡ API Reference</a></li>
+    </ul>
+  </div>
+
+  <div class="sidebar-group">
+    <div class="sidebar-title">Getting Started</div>
+    <ul class="sidebar-links">
+      <li><a href="/guide/introduction/" class="sidebar-link">Introduction</a></li>
+      <li><a href="/guide/quick-start/" class="sidebar-link">Quick Start</a></li>
+      <li><a href="/guide/sfc-syntax/" class="sidebar-link">SFC (.drift) Syntax</a></li>
+    </ul>
+  </div>
+
+  <div class="sidebar-group">
+    <div class="sidebar-title">Best Practices</div>
+    <ul class="sidebar-links">
+      <li><a href="/best-practices/text-node-hydration/" class="sidebar-link">Text Node Hydration</a></li>
+      <li><a href="/best-practices/component-styling/" class="sidebar-link">Component Styling</a></li>
+    </ul>
+  </div>
+
+  <div class="sidebar-group">
+    <div class="sidebar-title">Reactivity & Core</div>
+    <ul class="sidebar-links">
+      <li><a href="/guide/reactivity/" class="sidebar-link">Reactivity Engine</a></li>
+      <li><a href="/guide/derived-and-effects/" class="sidebar-link">Derived & Effects</a></li>
+      <li><a href="/guide/control-flow/" class="sidebar-link">Control Flow Directives</a></li>
+      <li><a href="/guide/components-and-props/" class="sidebar-link">Components & Props</a></li>
+      <li><a href="/guide/context-api/" class="sidebar-link">Context API</a></li>
+    </ul>
+  </div>
+
+  <div class="sidebar-group">
+    <div class="sidebar-title">VM Architecture</div>
+    <ul class="sidebar-links">
+      <li><a href="/architecture/virtual-machine/" class="sidebar-link">Register VM & 256 Registers</a></li>
+      <li><a href="/architecture/isa-reference/" class="sidebar-link">Instruction Set (ISA)</a></li>
+      <li><a href="/architecture/compiler-pipeline/" class="sidebar-link">AOT Compiler Pipeline</a></li>
+      <li><a href="/architecture/reconciliation/" class="sidebar-link">LIS Reconciliation</a></li>
+    </ul>
+  </div>
+
+  <div class="sidebar-group">
+    <div class="sidebar-title">SSG & Islands</div>
+    <ul class="sidebar-links">
+      <li><a href="/ssg/overview/" class="sidebar-link">SSG Framework Overview</a></li>
+      <li><a href="/ssg/islands/" class="sidebar-link">Islands Architecture</a></li>
+      <li><a href="/ssg/routing-and-layouts/" class="sidebar-link">Routing & Layouts</a></li>
+      <li><a href="/ssg/content-collections/" class="sidebar-link">Content Collections</a></li>
+      <li><a href="/ssg/configuration/" class="sidebar-link">Configuration Guide</a></li>
+    </ul>
+  </div>
+
+  <div class="sidebar-group">
+    <div class="sidebar-title">Ecosystem Tooling</div>
+    <ul class="sidebar-links">
+      <li><a href="/ecosystem/vite-plugin/" class="sidebar-link">Vite Plugin</a></li>
+      <li><a href="/ecosystem/router/" class="sidebar-link">Router</a></li>
+      <li><a href="/ecosystem/cli/" class="sidebar-link">Create Drift CLI</a></li>
+      <li><a href="/ecosystem/eslint-plugin/" class="sidebar-link">ESLint Plugin</a></li>
+      <li><a href="/ecosystem/prettier-plugin/" class="sidebar-link">Prettier Plugin</a></li>
+      <li><a href="/ecosystem/vscode-plugin/" class="sidebar-link">VSCode Extension</a></li>
+    </ul>
+  </div>
+
+  <div class="sidebar-group">
+    <div class="sidebar-title">API Reference</div>
+    <ul class="sidebar-links">
+      <li><a href="/api/compiler/" class="sidebar-link">Compiler API</a></li>
+      <li><a href="/api/dom/" class="sidebar-link">DOM Client API</a></li>
+      <li><a href="/api/ssr/" class="sidebar-link">SSR Server API</a></li>
+      <li><a href="/api/shared/" class="sidebar-link">Shared Runtime API</a></li>
+    </ul>
+  </div>
+</aside>

@@ -1,0 +1,22 @@
+<script>
+  let theme = 'dark';
+
+  function toggle() {
+    const isLight = document.documentElement.classList.toggle('light');
+    theme = isLight ? 'light' : 'dark';
+    try {
+      localStorage.setItem('drift-theme', theme);
+    } catch (e) {
+      console.log(e)
+    }
+  }
+</script>
+
+<button class="theme-toggle-btn" onclick={toggle} aria-label="Toggle Dark/Light Mode">
+  @if theme === 'dark' {
+    <span class="theme-icon">☀️</span>
+  } @else {
+    <span class="theme-icon">🌙</span>
+  }
+</button>
+

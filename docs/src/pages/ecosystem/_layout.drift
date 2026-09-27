@@ -1,0 +1,12 @@
+<script>
+  import DocsSidebar from '../../components/DocsSidebar.drift';
+</script>
+
+<div class="docs-layout">
+  <DocsSidebar />
+  <main class="docs-main">
+    <article class="docs-content">
+      {children}
+    </article>
+  </main>
+</div>

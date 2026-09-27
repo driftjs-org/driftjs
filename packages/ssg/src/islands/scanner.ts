@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { compile, DriftLexer, DriftParser, type ElementNode } from 'driftjs-compiler';
 import type { IslandDescriptor, IslandTriggerStrategy } from '../../types/index.js';
@@ -92,9 +93,14 @@ export function findIslandElements(node: any, results: ElementNode[] = []): Elem
 export function scanIslands(
   templateSource: string,
   importMap: Record<string, string> = {},
-  sourceFilePath?: string
+  sourceFilePath?: string,
+  visited: Set<string> = new Set()
 ): IslandDescriptor[] {
   const islands: IslandDescriptor[] = [];
+
+  if (sourceFilePath) {
+    visited.add(path.resolve(sourceFilePath));
+  }
 
   try {
     const autoImports = extractIslandImports(templateSource, sourceFilePath);
@@ -148,6 +154,27 @@ export function scanIslands(
         props,
         media,
       });
+    }
+
+    // Recursively scan imported .drift components for nested islands
+    if (sourceFilePath) {
+      for (const importSpec of Object.values(resolvedImportMap)) {
+        if (typeof importSpec === 'string' && importSpec.endsWith('.drift')) {
+          const resolved = importSpec.startsWith('.')
+            ? path.resolve(path.dirname(sourceFilePath), importSpec)
+            : importSpec;
+          if (fs.existsSync(resolved) && !visited.has(resolved)) {
+            visited.add(resolved);
+            try {
+              const nestedSrc = fs.readFileSync(resolved, 'utf8');
+              const nestedIslands = scanIslands(nestedSrc, {}, resolved, visited);
+              islands.push(...nestedIslands);
+            } catch {
+              // Ignore transient or unparseable child components
+            }
+          }
+        }
+      }
     }
   } catch (err: any) {
     const context = sourceFilePath ? ` in "${sourceFilePath}"` : '';

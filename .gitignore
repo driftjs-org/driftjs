@@ -18,4 +18,5 @@ prompts/
 __screenshots__/
 process-images/
 html/
+test-results/
 coverage/

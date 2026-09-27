@@ -47,12 +47,28 @@ export async function createDevServer(options: DevServerOptions = {}): Promise<D
         const search = queryIdx !== -1 ? id.slice(queryIdx) : '';
         const params = new URLSearchParams(search);
         const pageFile = params.get('page');
-        if (pageFile && fs.existsSync(pageFile)) {
-          const src = fs.readFileSync(pageFile, 'utf8');
-          const islands = scanIslands(src, {}, pageFile);
-          return generateIslandBootstrapSource(islands, config.root);
+        const pathname = params.get('pathname') || '/';
+
+        const { routes, document: documentPath } = scanRoutes(config.pagesDir);
+        const matched = matchRoute(routes, pathname);
+        const filesToScan = new Set<string>();
+        if (pageFile && fs.existsSync(pageFile)) filesToScan.add(pageFile);
+        if (matched) {
+          if (matched.route.filePath && fs.existsSync(matched.route.filePath)) filesToScan.add(matched.route.filePath);
+          for (const lPath of matched.route.layouts) {
+            if (fs.existsSync(lPath)) filesToScan.add(lPath);
+          }
         }
-        return '';
+        if (documentPath && fs.existsSync(documentPath)) filesToScan.add(documentPath);
+
+        const islands: ReturnType<typeof scanIslands> = [];
+        for (const file of filesToScan) {
+          if (file.endsWith('.drift')) {
+            const src = fs.readFileSync(file, 'utf8');
+            islands.push(...scanIslands(src, {}, file));
+          }
+        }
+        return generateIslandBootstrapSource(islands, config.root);
       }
     },
   };
@@ -149,19 +165,26 @@ export async function createDevServer(options: DevServerOptions = {}): Promise<D
         let pageHasIslands = false;
         let pageIslandsList: ReturnType<typeof scanIslands> = [];
         if (matched.route.filePath.endsWith('.drift') && fs.existsSync(matched.route.filePath)) {
-          pageIslandsList = scanIslands(fs.readFileSync(matched.route.filePath, 'utf8'), {}, matched.route.filePath);
-          if (pageIslandsList.length > 0) pageHasIslands = true;
+          const pIslands = scanIslands(fs.readFileSync(matched.route.filePath, 'utf8'), {}, matched.route.filePath);
+          if (pIslands.length > 0) {
+            pageHasIslands = true;
+            pageIslandsList.push(...pIslands);
+          }
         }
-        if (!pageHasIslands) {
-          for (const lPath of matched.route.layouts) {
-            if (lPath.endsWith('.drift') && fs.existsSync(lPath)) {
-              const lIslands = scanIslands(fs.readFileSync(lPath, 'utf8'), {}, lPath);
-              if (lIslands.length > 0) {
-                pageHasIslands = true;
-                pageIslandsList.push(...lIslands);
-                break;
-              }
+        for (const lPath of matched.route.layouts) {
+          if (lPath.endsWith('.drift') && fs.existsSync(lPath)) {
+            const lIslands = scanIslands(fs.readFileSync(lPath, 'utf8'), {}, lPath);
+            if (lIslands.length > 0) {
+              pageHasIslands = true;
+              pageIslandsList.push(...lIslands);
             }
+          }
+        }
+        if (documentPath && documentPath.endsWith('.drift') && fs.existsSync(documentPath)) {
+          const dIslands = scanIslands(fs.readFileSync(documentPath, 'utf8'), {}, documentPath);
+          if (dIslands.length > 0) {
+            pageHasIslands = true;
+            pageIslandsList.push(...dIslands);
           }
         }
 
@@ -182,7 +205,7 @@ export async function createDevServer(options: DevServerOptions = {}): Promise<D
         }
 
         const devScripts = pageHasIslands
-          ? [`<script type="module" src="/@drift-islands?page=${encodeURIComponent(matched.route.filePath)}"></script>`]
+          ? [`<script type="module" src="/@drift-islands?page=${encodeURIComponent(matched.route.filePath)}&pathname=${encodeURIComponent(matched.pathname)}"></script>`]
           : [];
 
         const renderRes = await renderPage({

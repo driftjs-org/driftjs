@@ -1,0 +1,16 @@
+<script>
+  import Header from '../components/Header.drift';
+  import Footer from '../components/Footer.drift';
+  import '../styles/docs.css';
+</script>
+
+<div class="site-wrapper">
+  <input type="checkbox" id="nav-drawer-toggle" class="drawer-toggle-input" aria-hidden="true" />
+  <label for="nav-drawer-toggle" class="mobile-drawer-backdrop" aria-hidden="true"></label>
+  <Header />
+  <div class="site-main">
+    {children}
+  </div>
+  <Footer />
+</div>
+

@@ -178,6 +178,65 @@ describe('SSR & Hydration End-to-End Integration', () => {
 
     document.body.removeChild(container);
   });
+
+  it('hydrates @if blocks within anchor comments without appending nodes outside delimiters', () => {
+    const src = `
+      <script>
+        let show = true;
+        function toggle() {
+          show = !show;
+        }
+      </script>
+      <div class="box">
+        @if show {
+          <div class="content">Visible Content</div>
+        }
+        <footer class="footer">Footer</footer>
+      </div>
+    `;
+
+    const lexer = new DriftLexer(src);
+    const parser = new DriftParser(lexer);
+    const ast = parser.parse();
+    const transformer = new DriftTransformer(ast);
+    const compiledModule = new DriftGenerator(transformer.transform()).generate();
+
+    // 1. SSR HTML
+    const ssrHtml = renderToString(compiledModule);
+    expect(ssrHtml).toContain('<!--if--><div class="content">Visible Content</div><!--/if--><footer class="footer">Footer</footer>');
+
+    // 2. Hydrate
+    const container = document.createElement('div');
+    container.innerHTML = ssrHtml;
+    document.body.appendChild(container);
+
+    const vm = hydrate(compiledModule, container);
+    const box = container.querySelector('.box')!;
+
+    // Verify DOM child sequence strictly conforms to: <!--if-->, <div.content>, <!--/if-->, <footer.footer>
+    const childNodes = Array.from(box.childNodes);
+    expect(childNodes.length).toBe(4);
+    expect(childNodes[0]?.nodeType).toBe(8); // <!--if-->
+    expect((childNodes[0] as Comment).data.trim()).toBe('if');
+    expect((childNodes[1] as HTMLElement).className).toBe('content');
+    expect(childNodes[2]?.nodeType).toBe(8); // <!--/if-->
+    expect((childNodes[2] as Comment).data.trim()).toBe('/if');
+    expect((childNodes[3] as HTMLElement).className).toBe('footer');
+
+    // 3. Toggle off: content should be cleanly removed strictly between anchors
+    (vm as any).scope.show = false;
+    vm.triggerUpdates(new Set(['show']));
+
+    const childNodesAfter = Array.from(box.childNodes);
+    expect(childNodesAfter.length).toBe(3);
+    expect(childNodesAfter[0]?.nodeType).toBe(8); // <!--if-->
+    expect(childNodesAfter[1]?.nodeType).toBe(8); // <!--/if-->
+    expect((childNodesAfter[2] as HTMLElement).className).toBe('footer');
+    expect(box.querySelector('.content')).toBeNull();
+
+    document.body.removeChild(container);
+  });
 });
+
 
 

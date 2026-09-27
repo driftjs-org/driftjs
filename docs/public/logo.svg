@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" fill="none">
+  <defs>
+    <linearGradient id="driftLogoGrad" x1="4" y1="4" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#06b6d4" />
+      <stop offset="50%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#8b5cf6" />
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="32" height="32" rx="8" fill="#090d16" stroke="#1e293b" stroke-width="1.5" />
+  <path d="M12 11H20C23.3137 11 26 13.6863 26 17C26 20.3137 23.3137 23 20 23H12V11Z" stroke="url(#driftLogoGrad)" stroke-width="2.2" stroke-linejoin="round" />
+  <path d="M16.5 14.5L20.5 17L16.5 19.5V14.5Z" fill="url(#driftLogoGrad)" />
+  <text x="46" y="26" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-weight="800" font-size="20" fill="#f8fafc" letter-spacing="-0.03em">Drift<tspan fill="#38bdf8">JS</tspan></text>
+</svg>

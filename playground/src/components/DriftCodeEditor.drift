@@ -1,0 +1,257 @@
+<script>
+  import { onMount, onUnmount, effect } from 'driftjs-dom';
+  import { createMonacoEditor, setEditorErrorMarkers, setEditorTheme } from '../editor/monaco.js';
+  import { compileDriftSource } from '../compiler/service.js';
+  import { mountPreview, unmountPreview } from '../runner/client-runner.js';
+
+  // Props
+  let width = props.width || '100%';
+  let height = props.height || '500px';
+  let code = props.code || '';
+  let theme = props.theme || 'dark';
+
+  // State
+  let activeTab = 'preview'; // 'preview' | 'console'
+  let compileStatus = 'compiling'; // 'idle' | 'compiling' | 'success' | 'error'
+  let compileDuration = 0;
+  let errorMessage = '';
+  let errorLocation = '';
+
+  let consoleLogs = [];
+  let nextLogId = 1;
+
+  let editorInstance = null;
+  let compileDebounceTimer = null;
+  let editorContainerId = 'drift-editor-' + Math.random().toString(36).substring(2, 9);
+  let previewContainerId = 'drift-preview-' + Math.random().toString(36).substring(2, 9);
+
+  function pushLog(type, args) {
+    const text = args
+      .map((a) => (typeof a === 'object' ? JSON.stringify(a) : String(a)))
+      .join(' ');
+    const time = new Date().toLocaleTimeString();
+    consoleLogs = [
+      ...consoleLogs.slice(-99),
+      { id: 'log-' + nextLogId++, type, text, timestamp: time },
+    ];
+  }
+
+  const originalConsoleLog = console.log;
+  const originalConsoleWarn = console.warn;
+  const originalConsoleError = console.error;
+
+  console.log = function (...args) {
+    originalConsoleLog.apply(console, args);
+    pushLog('log', args);
+  };
+  console.warn = function (...args) {
+    originalConsoleWarn.apply(console, args);
+    pushLog('warn', args);
+  };
+  console.error = function (...args) {
+    originalConsoleError.apply(console, args);
+    pushLog('error', args);
+  };
+
+  function runCompilation(source) {
+    compileStatus = 'compiling';
+    const result = compileDriftSource(source);
+
+    if (result.success && result.module) {
+      compileStatus = 'success';
+      compileDuration = result.compileDurationMs;
+      errorMessage = '';
+      errorLocation = '';
+
+      if (editorInstance) {
+        setEditorErrorMarkers(editorInstance);
+      }
+
+      const previewEl = document.getElementById(previewContainerId);
+      if (previewEl) {
+        const mountRes = mountPreview(previewEl, result.module);
+        if (mountRes.error) {
+          errorMessage = 'Runtime Error: ' + mountRes.error.message;
+          console.error('[DriftJS Runtime Error]: ' + mountRes.error.message);
+        }
+      }
+    } else {
+      compileStatus = 'error';
+      compileDuration = result.compileDurationMs;
+      errorMessage = result.error?.message || 'Unknown compilation error';
+      if (result.error?.line) {
+        errorLocation = 'Line ' + result.error.line + (result.error.column ? ':' + result.error.column : '');
+      } else {
+        errorLocation = '';
+      }
+
+      if (editorInstance) {
+        setEditorErrorMarkers(editorInstance, result.error);
+      }
+
+      const locSuffix = errorLocation ? ' (' + errorLocation + ')' : '';
+      console.error('[DriftJS Compilation Error]' + locSuffix + ': ' + errorMessage);
+    }
+  }
+
+  function onEditorCodeChange(newCode) {
+    if (compileDebounceTimer) clearTimeout(compileDebounceTimer);
+    compileDebounceTimer = setTimeout(() => {
+      runCompilation(newCode);
+      if (props && typeof props.onchange === 'function') {
+        props.onchange(newCode);
+      }
+    }, 200);
+  }
+
+  function setTab(tab) {
+    activeTab = tab;
+  }
+
+  function clearLogs() {
+    consoleLogs = [];
+  }
+
+  function reloadPreview() {
+    if (editorInstance) {
+      runCompilation(editorInstance.getValue());
+    }
+  }
+
+  function initEditor() {
+    if (editorInstance) return;
+    const container = document.getElementById(editorContainerId);
+    if (!container) {
+      setTimeout(initEditor, 25);
+      return;
+    }
+
+    const defaultCode = code || '<' + 'script>\n  let name = "DriftJS";\n<' + '/script>\n\n<h1>Hello, {name}!</h1>';
+    const initialTheme = (props && props.theme) || theme;
+
+    editorInstance = createMonacoEditor(
+      container,
+      defaultCode,
+      onEditorCodeChange,
+      initialTheme === 'dark'
+    );
+
+    runCompilation(defaultCode);
+  }
+
+  // React to incoming props.code changes from parent
+  effect(() => {
+    if (editorInstance && props && props.code !== undefined && editorInstance.getValue() !== props.code) {
+      editorInstance.setValue(props.code);
+    }
+  });
+
+  // React to incoming theme changes from parent
+  effect(() => {
+    if (editorInstance) {
+      setEditorTheme(theme === 'light' ? 'drift-light' : 'drift-dark');
+    }
+  });
+
+  // React to incoming code changes from parent
+  effect(() => {
+    if (editorInstance && code !== undefined && editorInstance.getValue() !== code) {
+      editorInstance.setValue(code);
+    }
+  });
+
+  onMount(() => {
+    initEditor();
+    requestAnimationFrame(initEditor);
+    setTimeout(initEditor, 50);
+  });
+
+  onUnmount(() => {
+    if (editorInstance) {
+      editorInstance.dispose();
+      editorInstance = null;
+    }
+    unmountPreview();
+    console.log = originalConsoleLog;
+    console.warn = originalConsoleWarn;
+    console.error = originalConsoleError;
+  });
+</script>
+
+<div
+  class={theme === 'light' ? "drift-code-editor light" : "drift-code-editor dark"}
+  style={"width: " + width + "; height: " + height + ";"}
+>
+  <!-- Main Body Split -->
+  <div class="editor-component-body">
+    <!-- Monaco Editor Half -->
+    <div class="editor-component-left">
+      <div class="editor-sub-header">
+        <span class="file-tab">App.drift</span>
+        <div class="status-indicator">
+          @if compileStatus === 'compiling' {
+            <span class="status-pill compiling">Compiling...</span>
+          } @else if compileStatus === 'success' {
+            <span class="status-pill success">Compiled successfully</span>
+          } @else {
+            <span class="status-pill error">Error</span>
+          }
+        </div>
+      </div>
+      <div id={editorContainerId} class="monaco-host"></div>
+      @if errorMessage !== '' {
+        <div class="error-strip">{errorMessage}</div>
+      }
+    </div>
+
+    <!-- Output / Terminal Half -->
+    <div class="editor-component-right">
+      <!-- Tabs -->
+      <div class="output-nav">
+        <div class="output-nav-tabs">
+          <button
+            class={activeTab === 'preview' ? 'nav-item active' : 'nav-item'}
+            onclick={() => setTab('preview')}
+          >
+            <span>Preview</span>
+          </button>
+          <button
+            class={activeTab === 'console' ? 'nav-item active' : 'nav-item'}
+            onclick={() => setTab('console')}
+          >
+            <span>Console</span>
+            <span class="tab-badge">{consoleLogs.length}</span>
+          </button>
+        </div>
+        <div class="output-nav-actions">
+          <button class="btn-reload" onclick={reloadPreview} title="Reload / Re-mount Preview">
+            <span>↻</span> Reload
+          </button>
+        </div>
+      </div>
+
+      <!-- Tab 1: Live Preview Canvas (Always clean white canvas isolated from dark mode) -->
+      <div class={activeTab === 'preview' ? 'output-view preview-view' : 'output-view preview-view hidden'}>
+        <div class="preview-host">
+          <div id={previewContainerId}></div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Terminal / Console -->
+      <div class={activeTab === 'console' ? 'output-view console-view' : 'output-view console-view hidden'}>
+        <div class="console-subbar">
+          <span>Captured Logs</span>
+          <button class="comp-btn-xs" onclick={clearLogs}>Clear</button>
+        </div>
+        <ul class="console-log-list">
+          @for (log in consoleLogs key log.id) {
+            <li class={"log-row " + log.type}>
+              <span class="log-time">[{log.timestamp}]</span>
+              <span class="log-msg">{log.text}</span>
+            </li>
+          }
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>

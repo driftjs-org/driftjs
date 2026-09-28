@@ -1,0 +1,94 @@
+<script>
+  let count = 0;
+
+  function increment() {
+    count++;
+  }
+
+  function decrement() {
+    count--;
+  }
+
+  function reset() {
+    count = 0;
+  }
+</script>
+
+<style>
+  .counter-card {
+    max-width: 420px;
+    margin: 2rem auto;
+    padding: 2.25rem 2rem;
+    border-radius: 14px;
+    background: #ffffff;
+    color: #0f172a;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+    border: 1px solid #e2e8f0;
+    text-align: center;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+  .counter-card h2 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin: 0;
+    color: #1e293b;
+  }
+  .display {
+    font-size: 4rem;
+    font-weight: 800;
+    margin: 1rem 0;
+    color: #4f46e5;
+    letter-spacing: -0.04em;
+  }
+  .status-badge {
+    display: inline-block;
+    padding: 0.3rem 0.85rem;
+    border-radius: 9999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 1.75rem;
+  }
+  .badge-pos { background: #dcfce7; color: #15803d; }
+  .badge-neg { background: #fee2e2; color: #b91c1c; }
+  .badge-zero { background: #f1f5f9; color: #475569; }
+  .btn-row {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+  }
+  button {
+    padding: 0.65rem 1.25rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.1s, opacity 0.2s, box-shadow 0.2s;
+  }
+  button:hover { opacity: 0.92; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
+  button:active { transform: scale(0.96); }
+  .btn-dec { background: #ef4444; color: #ffffff; }
+  .btn-inc { background: #10b981; color: #ffffff; }
+  .btn-rst { background: #e2e8f0; color: #334155; }
+</style>
+
+<div class="counter-card">
+  <h2>DriftJS Counter</h2>
+  <div class="display">{count}</div>
+
+  <div>
+    @if count > 0 {
+      <span class="status-badge badge-pos">Positive Value</span>
+    } @else if count < 0 {
+      <span class="status-badge badge-neg">Negative Value</span>
+    } @else {
+      <span class="status-badge badge-zero">Zero (Neutral)</span>
+    }
+  </div>
+
+  <div class="btn-row">
+    <button class="btn-dec" onclick={decrement}>-1 Decrement</button>
+    <button class="btn-rst" onclick={reset}>Reset</button>
+    <button class="btn-inc" onclick={increment}>+1 Increment</button>
+  </div>
+</div>

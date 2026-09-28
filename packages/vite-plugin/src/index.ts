@@ -148,6 +148,7 @@ export function driftPlugin(options: DriftPluginOptions = {}): Plugin {
      * Compiles `.drift` source and returns synthetic ESM.
      */
     transform(src, id) {
+      if (id.includes('?raw') || id.includes('?url')) return null;
       const cleanId = id.split('?')[0] ?? id;
       if (!cleanId.endsWith(DRIFT_EXT)) return null;
 

@@ -21,7 +21,7 @@ export interface CompilationResult {
 export interface PresetExample {
   id: string;
   name: string;
-  icon: string;
+  icon?: string;
   description: string;
   code: string;
 }

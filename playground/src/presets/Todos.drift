@@ -1,0 +1,159 @@
+<script>
+  let newTodoText = "";
+  let todos = [
+    { id: 1, text: "Explore DriftJS Virtual Machine", done: true },
+    { id: 2, text: "Inspect reactive in-place DOM updates", done: true },
+    { id: 3, text: "Ship fast AOT compiled web apps", done: false }
+  ];
+  let nextId = 4;
+
+  function addTodo() {
+    if (!newTodoText.trim()) return;
+    todos = [
+      ...todos,
+      { id: nextId++, text: newTodoText.trim(), done: false }
+    ];
+    newTodoText = "";
+  }
+
+  function toggleTodo(id) {
+    todos = todos.map(t => t.id === id ? { ...t, done: !t.done } : t);
+  }
+
+  function deleteTodo(id) {
+    todos = todos.filter(t => t.id !== id);
+  }
+</script>
+
+<style>
+  .todo-app {
+    max-width: 480px;
+    margin: 2rem auto;
+    padding: 1.75rem;
+    background: #ffffff;
+    border-radius: 14px;
+    color: #0f172a;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+  .todo-app h2 {
+    font-size: 1.3rem;
+    margin: 0 0 1rem 0;
+    color: #0f172a;
+  }
+  .input-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+  }
+  input[type="text"] {
+    flex: 1;
+    padding: 0.65rem 0.85rem;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    color: #0f172a;
+    font-size: 0.95rem;
+    outline: none;
+  }
+  input[type="text"]:focus {
+    border-color: #4f46e5;
+    background: #ffffff;
+  }
+  .btn-add {
+    background: #4f46e5;
+    color: #ffffff;
+    border: none;
+    padding: 0.65rem 1.2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 0.85rem;
+    background: #f8fafc;
+    margin-bottom: 0.5rem;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    border-left: 3px solid #4f46e5;
+    transition: all 0.15s ease;
+  }
+  .item.done {
+    opacity: 0.65;
+    border-left-color: #10b981;
+    background: #f1f5f9;
+  }
+  .item.done .text {
+    text-decoration: line-through;
+    color: #64748b;
+  }
+  .text {
+    flex: 1;
+    margin: 0 0.75rem;
+    font-size: 0.95rem;
+  }
+  .btn-del {
+    background: transparent;
+    color: #ef4444;
+    border: none;
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 0.2rem 0.5rem;
+    line-height: 1;
+  }
+  .btn-del:hover {
+    color: #b91c1c;
+  }
+  .footer {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: #64748b;
+    margin-top: 1.25rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #f1f5f9;
+  }
+</style>
+
+<div class="todo-app">
+  <h2>Tasks (Keyed LIS Reconciler)</h2>
+
+  <div class="input-row">
+    <input
+      type="text"
+      placeholder="What needs doing?"
+      value={newTodoText}
+      oninput={(e) => { newTodoText = e.target.value; }}
+      onkeydown={(e) => { if (e.key === 'Enter') addTodo(); }}
+    />
+    <button class="btn-add" onclick={addTodo}>Add Task</button>
+  </div>
+
+  <ul class="list">
+    @for (item in todos key item.id) {
+      <li class={item.done ? "item done" : "item"}>
+        <input
+          type="checkbox"
+          checked={item.done}
+          onchange={() => toggleTodo(item.id)}
+        />
+        <span class="text">{item.text}</span>
+        <button class="btn-del" onclick={() => deleteTodo(item.id)}>✕</button>
+      </li>
+    }
+  </ul>
+
+  <div class="footer">
+    <span>Total: {todos.length} items</span>
+    <span>Keyed by: <code>item.id</code></span>
+  </div>
+</div>

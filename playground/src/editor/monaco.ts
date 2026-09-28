@@ -5,6 +5,7 @@ import editorWorker from 'monaco-editor/editor/editor.worker?worker';
 
 import { driftLanguageDefinition } from './monarch.js';
 import { registerDriftCompletions } from './completions.js';
+import { driftSemanticTokensProvider } from './semantic-tokens.js';
 
 // Setup Monaco Workers - only the core editor worker is needed for Drift SFCs
 // @ts-ignore
@@ -52,8 +53,11 @@ export function initDriftLanguage(): void {
     ],
   });
 
-  // Monarch tokenizer
+  // Monarch tokenizer (fast top-down baseline)
   monaco.languages.setMonarchTokensProvider('drift', driftLanguageDefinition);
+
+  // AST/Compiler-based Semantic Tokens Provider (deep 100% accurate tokens)
+  monaco.languages.registerDocumentSemanticTokensProvider('drift', driftSemanticTokensProvider);
 
   // Completions
   registerDriftCompletions();
@@ -63,16 +67,25 @@ export function initDriftLanguage(): void {
     base: 'vs-dark',
     inherit: true,
     rules: [
-      { token: 'keyword.directive', foreground: 'cba6f7', fontStyle: 'bold' }, // Purple
+      { token: 'keyword', foreground: 'cba6f7', fontStyle: 'bold' }, // Purple
+      { token: 'keyword.directive', foreground: 'cba6f7', fontStyle: 'bold' },
       { token: 'tag', foreground: '89b4fa', fontStyle: 'bold' }, // Blue
-      { token: 'delimiter', foreground: '89dceb' }, // Cyan
-      { token: 'delimiter.bracket', foreground: 'f9e2af' }, // Yellow
-      { token: 'attribute.name', foreground: 'fab387' }, // Peach
+      { token: 'type', foreground: 'f9e2af', fontStyle: 'bold' }, // Yellow / Component
+      { token: 'function', foreground: '89dceb', fontStyle: 'bold' }, // Cyan
+      { token: 'variable', foreground: 'cdd6f4' }, // White/Cream
+      { token: 'parameter', foreground: 'f38ba8' }, // Pink
+      { token: 'variable.parameter', foreground: 'f38ba8' },
+      { token: 'property', foreground: 'fab387' }, // Peach
+      { token: 'attribute.name', foreground: 'fab387' },
       { token: 'attribute.value', foreground: 'a6e3a1' }, // Green
-      { token: 'variable.parameter', foreground: 'f38ba8' }, // Red / Pink
-      { token: 'variable.other', foreground: 'cdd6f4' },
+      { token: 'string', foreground: 'a6e3a1' },
+      { token: 'number', foreground: 'fab387' },
+      { token: 'operator', foreground: '89dceb' },
+      { token: 'delimiter', foreground: '89dceb' },
+      { token: 'delimiter.bracket', foreground: 'f9e2af' },
       { token: 'comment', foreground: '6c7086', fontStyle: 'italic' },
       { token: 'string.text', foreground: 'cdd6f4' },
+      { token: 'variable.other', foreground: 'cdd6f4' },
     ],
     colors: {
       'editor.background': '#11111b',
@@ -91,13 +104,22 @@ export function initDriftLanguage(): void {
     base: 'vs',
     inherit: true,
     rules: [
+      { token: 'keyword', foreground: '8839ef', fontStyle: 'bold' },
       { token: 'keyword.directive', foreground: '8839ef', fontStyle: 'bold' },
       { token: 'tag', foreground: '1e66f5', fontStyle: 'bold' },
-      { token: 'delimiter', foreground: '04a5e5' },
-      { token: 'delimiter.bracket', foreground: 'df8e1d' },
+      { token: 'type', foreground: 'df8e1d', fontStyle: 'bold' },
+      { token: 'function', foreground: '04a5e5', fontStyle: 'bold' },
+      { token: 'variable', foreground: '4c4f69' },
+      { token: 'parameter', foreground: 'd20f39' },
+      { token: 'variable.parameter', foreground: 'd20f39' },
+      { token: 'property', foreground: 'fe640b' },
       { token: 'attribute.name', foreground: 'fe640b' },
       { token: 'attribute.value', foreground: '40a02b' },
-      { token: 'variable.parameter', foreground: 'd20f39' },
+      { token: 'string', foreground: '40a02b' },
+      { token: 'number', foreground: 'fe640b' },
+      { token: 'operator', foreground: '04a5e5' },
+      { token: 'delimiter', foreground: '04a5e5' },
+      { token: 'delimiter.bracket', foreground: 'df8e1d' },
       { token: 'comment', foreground: '9ca0b0', fontStyle: 'italic' },
       { token: 'string.text', foreground: '4c4f69' },
     ],
@@ -128,6 +150,7 @@ export function createMonacoEditor(
     value: initialCode,
     language: 'drift',
     theme: isDark ? 'drift-dark' : 'drift-light',
+    'semanticHighlighting.enabled': true,
     automaticLayout: true,
     fontSize: 14,
     fontFamily: "'JetBrains Mono', 'Fira Code', Menlo, Monaco, monospace",

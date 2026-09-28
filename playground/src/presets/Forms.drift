@@ -1,0 +1,102 @@
+<script>
+  let username = "Drifter";
+  let themeColor = "#4f46e5";
+  let fontSize = 18;
+  let role = "Compiler Engineer";
+</script>
+
+<style>
+  .form-demo {
+    max-width: 500px;
+    margin: 2rem auto;
+    padding: 1.75rem;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    color: #0f172a;
+    font-family: system-ui, -apple-system, sans-serif;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+  }
+  .form-demo h2 {
+    margin: 0 0 1.25rem 0;
+    font-size: 1.3rem;
+  }
+  .field {
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #475569;
+  }
+  input[type="text"], select {
+    padding: 0.6rem 0.75rem;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    color: #0f172a;
+    font-size: 0.95rem;
+  }
+  input[type="range"] {
+    cursor: pointer;
+  }
+  .card-preview {
+    margin-top: 1.5rem;
+    padding: 1.5rem;
+    border-radius: 10px;
+    background: #f8fafc;
+    border: 2px dashed #cbd5e1;
+  }
+</style>
+
+<div class="form-demo">
+  <h2>Dynamic Form &amp; Live Binding</h2>
+
+  <div class="field">
+    <label>User Name</label>
+    <input
+      type="text"
+      value={username}
+      oninput={(e) => { username = e.target.value; }}
+    />
+  </div>
+
+  <div class="field">
+    <label>Role</label>
+    <select value={role} onchange={(e) => { role = e.target.value; }}>
+      <option value="Compiler Engineer">Compiler Engineer</option>
+      <option value="VM Runtime Architect">VM Runtime Architect</option>
+      <option value="Frontend Performance Guru">Frontend Performance Guru</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <label>Font Size ({fontSize}px)</label>
+    <input
+      type="range"
+      min="14"
+      max="32"
+      value={fontSize}
+      oninput={(e) => { fontSize = Number(e.target.value); }}
+    />
+  </div>
+
+  <div class="field">
+    <label>Accent Color</label>
+    <input
+      type="color"
+      value={themeColor}
+      oninput={(e) => { themeColor = e.target.value; }}
+    />
+  </div>
+
+  <div class="card-preview" style={"border-color: " + themeColor}>
+    <h3 style={"color: " + themeColor + "; font-size: " + fontSize + "px; margin: 0 0 0.5rem 0;"}>
+      {username}
+    </h3>
+    <p style="margin: 0; color: #64748b;">Role: <strong>{role}</strong></p>
+  </div>
+</div>

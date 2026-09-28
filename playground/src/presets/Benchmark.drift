@@ -1,0 +1,115 @@
+<script>
+  let rows = [];
+  let nextRowId = 1;
+  let lastTimeMs = 0;
+
+  function generateRows(count) {
+    const start = performance.now();
+    const newRows = [];
+    for (let i = 0; i < count; i++) {
+      newRows.push({
+        id: nextRowId++,
+        label: "Item #" + (nextRowId - 1) + " (Val: " + Math.floor(Math.random() * 1000) + ")",
+        selected: false
+      });
+    }
+    rows = newRows;
+    lastTimeMs = Number((performance.now() - start).toFixed(1));
+  }
+
+  function clearRows() {
+    const start = performance.now();
+    rows = [];
+    lastTimeMs = Number((performance.now() - start).toFixed(1));
+  }
+
+  function updateEvery10th() {
+    const start = performance.now();
+    rows = rows.map((r, i) => {
+      if (i % 10 === 0) {
+        return { ...r, label: r.label + " [Updated!]" };
+      }
+      return r;
+    });
+    lastTimeMs = Number((performance.now() - start).toFixed(1));
+  }
+</script>
+
+<style>
+  .bench-app {
+    max-width: 580px;
+    margin: 1.5rem auto;
+    padding: 1.75rem;
+    background: #ffffff;
+    border-radius: 14px;
+    color: #0f172a;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+  .bench-app h2 {
+    margin: 0 0 0.5rem 0;
+  }
+  .btn-bar {
+    display: flex;
+    gap: 0.5rem;
+    margin: 1rem 0;
+  }
+  .btn {
+    padding: 0.55rem 1rem;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    background: #4f46e5;
+    color: #ffffff;
+    transition: opacity 0.15s;
+  }
+  .btn:hover {
+    opacity: 0.9;
+  }
+  .bench-list {
+    max-height: 320px;
+    overflow-y: auto;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 0;
+    list-style: none;
+  }
+  .bench-row {
+    padding: 0.45rem 0.85rem;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 0.85rem;
+    color: #1e293b;
+  }
+  .metric {
+    font-size: 0.85rem;
+    color: #15803d;
+    font-weight: 600;
+    margin-top: 0.5rem;
+  }
+</style>
+
+<div class="bench-app">
+  <h2>1,000 Rows Benchmark</h2>
+  <p style="font-size: 0.85rem; color: #64748b;">
+    Test DriftJS keyed reconciliation performance and microtask batching.
+  </p>
+
+  <div class="btn-bar">
+    <button class="btn" onclick={() => generateRows(1000)}>Create 1,000 Rows</button>
+    <button class="btn" onclick={updateEvery10th}>Update Every 10th</button>
+    <button class="btn" onclick={clearRows}>Clear</button>
+  </div>
+
+  <div class="metric">
+    Rows: {rows.length} | Script Time: {lastTimeMs} ms
+  </div>
+
+  <ul class="bench-list">
+    @for (row in rows key row.id) {
+      <li class="bench-row">{row.label}</li>
+    }
+  </ul>
+</div>

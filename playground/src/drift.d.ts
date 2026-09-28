@@ -5,6 +5,11 @@ declare module '*.drift' {
   export default component;
 }
 
+declare module '*?raw' {
+  const rawCode: string;
+  export default rawCode;
+}
+
 /**
  * Declares a reactive computed / derived value in DriftJS Single File Components.
  */

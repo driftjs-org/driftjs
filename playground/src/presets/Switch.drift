@@ -1,0 +1,124 @@
+<script>
+  let activeTab = "architecture";
+
+  function setTab(tab) {
+    activeTab = tab;
+  }
+</script>
+
+<style>
+  .tabs-wrapper {
+    max-width: 520px;
+    margin: 2rem auto;
+    font-family: system-ui, -apple-system, sans-serif;
+    color: #0f172a;
+  }
+  .tabs-wrapper h2 {
+    font-size: 1.3rem;
+    margin: 0 0 1rem 0;
+  }
+  .nav-bar {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 0.5rem;
+  }
+  .nav-btn {
+    background: transparent;
+    border: none;
+    color: #64748b;
+    font-size: 0.95rem;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .nav-btn:hover {
+    color: #0f172a;
+    background: #f1f5f9;
+  }
+  .nav-btn.active {
+    background: #4f46e5;
+    color: #ffffff;
+  }
+  .content-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    padding: 1.75rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  }
+  .content-card h3 {
+    margin: 0 0 0.5rem 0;
+    color: #1e293b;
+  }
+  .content-card p {
+    margin: 0;
+    color: #475569;
+    line-height: 1.5;
+  }
+</style>
+
+<div class="tabs-wrapper">
+  <h2>DriftJS &#64;switch Control Flow</h2>
+
+  <div class="nav-bar">
+    <button
+      class={activeTab === "architecture" ? "nav-btn active" : "nav-btn"}
+      onclick={() => setTab("architecture")}
+    >
+      Architecture
+    </button>
+    <button
+      class={activeTab === "reconciler" ? "nav-btn active" : "nav-btn"}
+      onclick={() => setTab("reconciler")}
+    >
+      LIS Reconciler
+    </button>
+    <button
+      class={activeTab === "benchmarks" ? "nav-btn active" : "nav-btn"}
+      onclick={() => setTab("benchmarks")}
+    >
+      Benchmarks
+    </button>
+  </div>
+
+  <div class="content-card">
+    @switch activeTab {
+      @case "architecture" {
+        <div>
+          <h3>Register VM Architecture</h3>
+          <p>
+            Unlike Virtual DOM frameworks that allocate tree nodes on every render,
+            DriftJS compiles UI components into 256 virtual registers with bytecode instructions.
+          </p>
+        </div>
+      }
+      @case "reconciler" {
+        <div>
+          <h3>Longest Increasing Subsequence</h3>
+          <p>
+            Keyed loops utilize an optimal LIS algorithm to identify the minimal set
+            of DOM manipulations required during state updates.
+          </p>
+        </div>
+      }
+      @case "benchmarks" {
+        <div>
+          <h3>Blistering Performance</h3>
+          <p>
+            With zero virtual DOM diffing and AOT constant pool instantiations,
+            DriftJS achieves sub-millisecond updates on large collections.
+          </p>
+        </div>
+      }
+      @default {
+        <div>
+          <p>Please select a tab from the header above.</p>
+        </div>
+      }
+    }
+  </div>
+</div>

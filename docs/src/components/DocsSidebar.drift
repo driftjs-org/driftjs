@@ -10,11 +10,11 @@
   <div class="sidebar-group mobile-nav-group">
     <div class="sidebar-title">Sections</div>
     <ul class="sidebar-links">
-      <li><a href="/guide/introduction/" class="sidebar-link">📖 Guide</a></li>
-      <li><a href="/architecture/virtual-machine/" class="sidebar-link">⚙️ VM Architecture</a></li>
-      <li><a href="/ssg/overview/" class="sidebar-link">🏝️ SSG & Islands</a></li>
-      <li><a href="/ecosystem/vite-plugin/" class="sidebar-link">📦 Ecosystem</a></li>
-      <li><a href="/api/compiler/" class="sidebar-link">⚡ API Reference</a></li>
+      <li><a href="/guide/introduction/" class="sidebar-link">Guide</a></li>
+      <li><a href="/architecture/virtual-machine/" class="sidebar-link">VM Architecture</a></li>
+      <li><a href="/ssg/overview/" class="sidebar-link">SSG & Islands</a></li>
+      <li><a href="/ecosystem/vite-plugin/" class="sidebar-link">Ecosystem</a></li>
+      <li><a href="/api/compiler/" class="sidebar-link">API Reference</a></li>
     </ul>
   </div>
 

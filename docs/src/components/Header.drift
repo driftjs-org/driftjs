@@ -46,12 +46,12 @@
     </div>
     <nav class="drawer-nav">
       <div class="drawer-section-title">Navigation</div>
-      <a href="/guide/introduction/" class="drawer-link">📖 Documentation Guide</a>
-      <a href="/architecture/virtual-machine/" class="drawer-link">⚙️ VM Architecture</a>
-      <a href="/ssg/overview/" class="drawer-link">🏝️ SSG & Islands</a>
-      <a href="/ecosystem/vite-plugin/" class="drawer-link">📦 Ecosystem Tooling</a>
-      <a href="/api/compiler/" class="drawer-link">⚡ API Reference</a>
-      <a href="https://github.com/driftjs-org/driftjs" target="_blank" rel="noopener noreferrer" class="drawer-link">🐙 GitHub Repository</a>
+      <a href="/guide/introduction/" class="drawer-link">Documentation Guide</a>
+      <a href="/architecture/virtual-machine/" class="drawer-link">VM Architecture</a>
+      <a href="/ssg/overview/" class="drawer-link">SSG & Islands</a>
+      <a href="/ecosystem/vite-plugin/" class="drawer-link">Ecosystem Tooling</a>
+      <a href="/api/compiler/" class="drawer-link">API Reference</a>
+      <a href="https://github.com/driftjs-org/driftjs" target="_blank" rel="noopener noreferrer" class="drawer-link">GitHub Repository</a>
     </nav>
   </div>
 </header>

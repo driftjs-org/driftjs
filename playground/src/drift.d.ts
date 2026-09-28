@@ -19,3 +19,10 @@ declare const children: any;
  * Explicit attributes passed to this component.
  */
 declare const props: Record<string, any>;
+
+declare module '*?worker' {
+  const workerConstructor: {
+    new (): Worker;
+  };
+  export default workerConstructor;
+}

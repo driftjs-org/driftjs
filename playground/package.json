@@ -14,7 +14,8 @@
     "driftjs-dom": "workspace:*",
     "driftjs-router": "workspace:*",
     "driftjs-shared": "workspace:*",
-    "driftjs-ssr": "workspace:*"
+    "driftjs-ssr": "workspace:*",
+    "monaco-editor": "^0.57.0"
   },
   "devDependencies": {
     "driftjs-vite-plugin": "workspace:*",

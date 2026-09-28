@@ -1,103 +1,373 @@
 <script>
-  import { RouterContext, RouterView, Link } from 'driftjs-router';
-  import { CounterContext } from './context.js';
-  import { router } from './routes';
+  import { onMount, onUnmount } from 'driftjs-dom';
+  import { PRESET_EXAMPLES } from './presets/index.js';
+  import { createMonacoEditor, setEditorErrorMarkers, setEditorTheme } from './editor/monaco.js';
+  import { compileDriftSource } from './compiler/service.js';
+  import { mountPreview, unmountPreview } from './runner/client-runner.js';
+  import { encodeCodeToHash, decodeCodeFromHash, copyToClipboard } from './utils/url.js';
 
-  RouterContext.provide(router);
+  // State
+  let activeTab = 'preview'; // 'preview' | 'console'
+  let selectedExampleId = 'counter';
+  let isDarkMode = true;
+  let toastText = '';
+  let toastTimer = null;
 
-  let counterState = {
-    counter: 0,
-    historyLogs: [],
+  // Compilation metrics & errors
+  let compileStatus = 'compiling'; // 'idle' | 'compiling' | 'success' | 'error'
+  let compileDuration = 0;
+  let errorMessage = '';
+  let errorLocation = '';
+
+  let consoleLogs = [];
+  let nextLogId = 1;
+
+  let editorInstance = null;
+  let compileDebounceTimer = null;
+
+  // Intercept console messages for the Console tab
+  const originalConsoleLog = console.log;
+  const originalConsoleWarn = console.warn;
+  const originalConsoleError = console.error;
+
+  function pushLog(type, args) {
+    const text = args
+      .map((a) => (typeof a === 'object' ? JSON.stringify(a) : String(a)))
+      .join(' ');
+    const time = new Date().toLocaleTimeString();
+    consoleLogs = [
+      ...consoleLogs.slice(-99),
+      { id: 'log-' + nextLogId++, type, text, timestamp: time },
+    ];
+  }
+
+  console.log = function (...args) {
+    originalConsoleLog.apply(console, args);
+    pushLog('log', args);
+  };
+  console.warn = function (...args) {
+    originalConsoleWarn.apply(console, args);
+    pushLog('warn', args);
+  };
+  console.error = function (...args) {
+    originalConsoleError.apply(console, args);
+    pushLog('error', args);
   };
 
-  function increment() {
-    counterState.counter++;
-    counterState.historyLogs = ['Incremented to ' + counterState.counter, ...counterState.historyLogs.slice(0, 4)];
+  function showToast(msg) {
+    toastText = msg;
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      toastText = '';
+    }, 2500);
   }
 
-  function decrement() {
-    counterState.counter--;
-    counterState.historyLogs = ['Decremented to ' + counterState.counter, ...counterState.historyLogs.slice(0, 4)];
+  function runCompilation(source) {
+    compileStatus = 'compiling';
+    const result = compileDriftSource(source);
+
+    if (result.success && result.module) {
+      compileStatus = 'success';
+      compileDuration = result.compileDurationMs;
+      errorMessage = '';
+      errorLocation = '';
+
+      if (editorInstance) {
+        setEditorErrorMarkers(editorInstance);
+      }
+
+      // Mount into live preview container
+      const previewEl = document.getElementById('preview-container');
+      if (previewEl) {
+        const mountRes = mountPreview(previewEl, result.module);
+        if (mountRes.error) {
+          errorMessage = 'Runtime Error: ' + mountRes.error.message;
+        }
+      }
+    } else {
+      compileStatus = 'error';
+      compileDuration = result.compileDurationMs;
+      errorMessage = result.error?.message || 'Unknown compilation error';
+      if (result.error?.line) {
+        errorLocation = 'Line ' + result.error.line + (result.error.column ? ':' + result.error.column : '');
+      } else {
+        errorLocation = '';
+      }
+
+      if (editorInstance) {
+        setEditorErrorMarkers(editorInstance, result.error);
+      }
+    }
   }
 
-  function reset() {
-    counterState.counter = 0;
-    counterState.historyLogs = ['Reset counter to 0', ...counterState.historyLogs.slice(0, 4)];
+  function onEditorCodeChange(newCode) {
+    if (compileDebounceTimer) clearTimeout(compileDebounceTimer);
+    compileDebounceTimer = setTimeout(() => {
+      runCompilation(newCode);
+      // Update URL hash
+      window.location.hash = encodeCodeToHash(newCode);
+    }, 200);
   }
 
-  CounterContext.provide({
-    get counter() {
-      return counterState.counter;
-    },
-    get historyLogs() {
-      return counterState.historyLogs;
-    },
-    increment,
-    decrement,
-    reset,
+  function setTab(tab) {
+    activeTab = tab;
+  }
+
+  function onExampleChange(e) {
+    const id = e.target.value;
+    selectedExampleId = id;
+    const example = PRESET_EXAMPLES.find((ex) => ex.id === id);
+    if (example && editorInstance) {
+      editorInstance.setValue(example.code);
+    }
+  }
+
+  function formatCurrentCode() {
+    if (editorInstance) {
+      editorInstance.getAction('editor.action.formatDocument')?.run();
+      showToast('Document formatted');
+    }
+  }
+
+  function resetCurrentCode() {
+    const example = PRESET_EXAMPLES.find((ex) => ex.id === selectedExampleId) || PRESET_EXAMPLES[0];
+    if (example && editorInstance) {
+      editorInstance.setValue(example.code);
+      showToast('Reset to original ' + example.name);
+    }
+  }
+
+  function shareSnippet() {
+    if (editorInstance) {
+      const code = editorInstance.getValue();
+      const hash = encodeCodeToHash(code);
+      const url = window.location.origin + window.location.pathname + hash;
+      copyToClipboard(url);
+      showToast('⚡ Share link copied to clipboard!');
+    }
+  }
+
+  function toggleTheme() {
+    isDarkMode = !isDarkMode;
+    const shell = document.querySelector('.playground-shell');
+    if (shell) {
+      if (isDarkMode) {
+        shell.classList.remove('theme-light');
+      } else {
+        shell.classList.add('theme-light');
+      }
+    }
+    if (editorInstance) {
+      setEditorTheme(isDarkMode ? 'drift-dark' : 'drift-light');
+    }
+  }
+
+  function clearLogs() {
+    consoleLogs = [];
+  }
+
+  function reloadPreview() {
+    if (editorInstance) {
+      runCompilation(editorInstance.getValue());
+      showToast('Preview refreshed');
+    }
+  }
+
+  function initEditor() {
+    if (editorInstance) return;
+    const editorContainer = document.getElementById('monaco-editor-container');
+    if (!editorContainer) {
+      setTimeout(initEditor, 25);
+      return;
+    }
+
+    const hashSource = decodeCodeFromHash();
+    const defaultExample = PRESET_EXAMPLES[0];
+    const initialCode = hashSource || defaultExample.code;
+
+    editorInstance = createMonacoEditor(
+      editorContainer,
+      initialCode,
+      onEditorCodeChange,
+      isDarkMode
+    );
+
+    runCompilation(initialCode);
+  }
+
+  function onMouseDownResizer(e) {
+    e.preventDefault();
+    function onMouseMove(moveEvent) {
+      const containerWidth = window.innerWidth;
+      const newPercent = Math.min(Math.max((moveEvent.clientX / containerWidth) * 100, 20), 80);
+      const editorPane = document.querySelector('.editor-pane');
+      const outputPane = document.querySelector('.output-pane');
+      if (editorPane && outputPane) {
+        editorPane.style.flex = '0 0 ' + newPercent + '%';
+        outputPane.style.flex = '0 0 ' + (100 - newPercent) + '%';
+      }
+      if (editorInstance) {
+        editorInstance.layout();
+      }
+    }
+    function onMouseUp() {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    }
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  }
+
+  onMount(() => {
+    initEditor();
+    requestAnimationFrame(initEditor);
+    setTimeout(initEditor, 50);
   });
 
-  let activePath = router.currentRoute.fullPath;
-  let activeName = router.currentRoute.name || 'unnamed';
-
-  if (router && typeof router.subscribe === 'function') {
-    router.subscribe((to) => {
-      activePath = to.fullPath;
-      activeName = to.name || 'unnamed';
-    });
-  }
-
-  function goBack() {
-    router.back();
-  }
-
-  function goForward() {
-    router.forward();
-  }
-
-  function navigateTo(path) {
-    router.push(path);
-  }
+  onUnmount(() => {
+    if (editorInstance) {
+      editorInstance.dispose();
+      editorInstance = null;
+    }
+    unmountPreview();
+    console.log = originalConsoleLog;
+    console.warn = originalConsoleWarn;
+    console.error = originalConsoleError;
+  });
 </script>
 
-<div class="playground-layout">
-  <header class="playground-header">
-    <div class="brand-title">
-      <span class="logo-mark">⚡</span>
-      <div>
-        <h1>DriftJS Playground</h1>
-        <p class="subtitle">AOT Register Virtual Machine &amp; Native Client-Side Router</p>
-      </div>
+<div class="playground-shell">
+  <!-- Header -->
+  <header class="app-header">
+    <div class="brand">
+      <span class="logo-bolt">⚡</span>
+      <h1 class="brand-title">DriftJS Playground</h1>
+      <span class="version-chip">v0.0.16</span>
     </div>
-    <div class="header-user-status">
-      <span class="badge">v0.0.7 Active</span>
+
+    <div class="header-center">
+      <span class="example-select-label">Preset:</span>
+      <select class="example-select" onchange={onExampleChange}>
+        @for (ex in PRESET_EXAMPLES key ex.id) {
+          <option value={ex.id}>{ex.icon} {ex.name}</option>
+        }
+      </select>
+    </div>
+
+    <div class="header-actions">
+      <button class="btn-header" onclick={formatCurrentCode} title="Format Document">
+        <span>✨</span> Format
+      </button>
+      <button class="btn-header" onclick={resetCurrentCode} title="Reset to template">
+        <span>↺</span> Reset
+      </button>
+      <button class="btn-header primary" onclick={shareSnippet} title="Share Link">
+        <span>🔗</span> Share Link
+      </button>
+      <button class="btn-header" onclick={toggleTheme} title="Toggle Theme">
+        <span>{isDarkMode ? '☀️ Light' : '🌙 Dark'}</span>
+      </button>
     </div>
   </header>
 
-  <nav class="nav-bar">
-    <Link to="/" label="🏠 Home" class="nav-link" />
-    <Link to="/docs/intro" label="📚 Documentation" class="nav-link" />
-    <Link to="/pioneers" label="👤 Pioneers Directory" class="nav-link" />
-    <Link to="/benchmarks" label="⚡ Benchmarks" class="nav-link" />
-    <Link to="/roadmap" label="🗺️ Roadmap" class="nav-link" />
-  </nav>
+  <!-- Main Split Layout -->
+  <main class="main-split">
+    <!-- Left Column: Monaco Code Editor -->
+    <section class="editor-pane">
+      <div class="pane-header">
+        <div class="file-tab">
+          <span>📄</span>
+          <span>App.drift</span>
+        </div>
+        <div class="status-indicator">
+          @if compileStatus === 'compiling' {
+            <span class="status-badge compiling">Compiling...</span>
+          } @else if compileStatus === 'success' {
+            <span class="status-badge success">✓ Compiled ({compileDuration}ms)</span>
+          } @else {
+            <span class="status-badge error">✕ Error {errorLocation}</span>
+          }
+        </div>
+      </div>
 
-  <section class="router-inspector">
-    <div class="inspector-path">
-      <span>Active Route:</span>
-      <code>{activePath}</code>
-      <span>(Name: <em>{activeName}</em>)</span>
-    </div>
-    <div class="inspector-actions">
-      <button class="btn-nav-action" onclick={goBack}>⬅ Back</button>
-      <button class="btn-nav-action" onclick={goForward}>➡ Forward</button>
-      <button class="btn-nav-action" onclick={() => navigateTo('/pioneers/ada?tab=achievements')}>Ada Profile</button>
-      <button class="btn-nav-action" onclick={() => navigateTo('/docs/vm')}>VM Docs</button>
-      <button class="btn-nav-action" onclick={() => navigateTo('/non-existent-page')}>404 Test</button>
-    </div>
-  </section>
+      <div class="monaco-wrapper">
+        <div id="monaco-editor-container"></div>
+      </div>
 
-  <main class="playground-body">
-    <RouterView />
+      @if errorMessage !== '' {
+        <div class="error-banner">
+          <span class="error-banner-text">⚠️ {errorMessage}</span>
+        </div>
+      }
+    </section>
+
+    <!-- Split Divider -->
+    <div class="split-resizer" onmousedown={onMouseDownResizer}></div>
+
+    <!-- Right Column: Outputs & Inspector -->
+    <section class="output-pane">
+      <div class="pane-header">
+        <nav class="output-tab-bar">
+          <button
+            class={activeTab === 'preview' ? 'tab-btn active' : 'tab-btn'}
+            onclick={() => setTab('preview')}
+          >
+            <span>🖥️ Preview</span>
+          </button>
+          <button
+            class={activeTab === 'console' ? 'tab-btn active' : 'tab-btn'}
+            onclick={() => setTab('console')}
+          >
+            <span>💬 Console</span>
+            <span class="tab-badge">{consoleLogs.length}</span>
+          </button>
+        </nav>
+      </div>
+
+      <div class="output-content">
+        <!-- 1. Live Preview Panel -->
+        <div class={activeTab === 'preview' ? 'tab-panel preview-panel' : 'tab-panel preview-panel hidden'}>
+          <div class="preview-toolbar">
+            <span>Client Register VM (Live Interactive DOM)</span>
+            <button class="btn-header" onclick={reloadPreview}>↻ Re-mount</button>
+          </div>
+          <div class="preview-viewport">
+            <div id="preview-container"></div>
+          </div>
+        </div>
+
+        <!-- 2. Console Panel -->
+        <div class={activeTab === 'console' ? 'tab-panel console-panel' : 'tab-panel console-panel hidden'}>
+          <div class="console-toolbar">
+            <span>Captured Console Outputs</span>
+            <button class="btn-header" onclick={clearLogs}>🗑️ Clear Logs</button>
+          </div>
+          <ul class="console-list">
+            @for (log in consoleLogs key log.id) {
+              <li class={"console-entry " + log.type}>
+                <span class="console-time">[{log.timestamp}]</span>
+                <span class="console-text">{log.text}</span>
+              </li>
+            }
+          </ul>
+        </div>
+      </div>
+    </section>
   </main>
+
+  <!-- Footer Status Bar -->
+  <footer class="app-footer">
+    <div class="footer-section">
+      <div class="footer-item">
+        <span>Compile Time: {compileDuration}ms</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Toast Notification -->
+  @if toastText !== '' {
+    <div class="toast-notice">
+      <span>{toastText}</span>
+    </div>
+  }
 </div>

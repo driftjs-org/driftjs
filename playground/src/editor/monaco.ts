@@ -1,21 +1,32 @@
-// @ts-ignore
-import * as monaco from 'monaco-editor/editor/editor.api';
-// @ts-ignore
-import editorWorker from 'monaco-editor/editor/editor.worker?worker';
-
 import { driftLanguageDefinition } from './monarch.js';
 import { registerDriftCompletions } from './completions.js';
 import { driftSemanticTokensProvider } from './semantic-tokens.js';
 
-// Setup Monaco Workers - only the core editor worker is needed for Drift SFCs
-// @ts-ignore
-self.MonacoEnvironment = {
-  getWorker() {
-    return new editorWorker();
-  },
-};
-
+let monaco: any = null;
 let isLanguageRegistered = false;
+
+export async function ensureMonaco(): Promise<any> {
+  if (monaco) return monaco;
+  if (typeof window === 'undefined') return null;
+
+  // @ts-ignore
+  monaco = await import('monaco-editor/editor/editor.api');
+  // @ts-ignore
+  const workerMod = await import('monaco-editor/editor/editor.worker?worker');
+  const editorWorker = workerMod.default;
+
+  if (typeof self !== 'undefined') {
+    // @ts-ignore
+    self.MonacoEnvironment = {
+      getWorker() {
+        return new editorWorker();
+      },
+    };
+  }
+
+  initDriftLanguage();
+  return monaco;
+}
 
 export function initDriftLanguage(): void {
   if (isLanguageRegistered) return;
@@ -60,7 +71,7 @@ export function initDriftLanguage(): void {
   monaco.languages.registerDocumentSemanticTokensProvider('drift', driftSemanticTokensProvider);
 
   // Completions
-  registerDriftCompletions();
+  registerDriftCompletions(monaco);
 
   // Define Drift Dark theme
   monaco.editor.defineTheme('drift-dark', {
@@ -138,15 +149,16 @@ export function initDriftLanguage(): void {
 /**
  * Creates and configures a Monaco Editor instance.
  */
-export function createMonacoEditor(
+export async function createMonacoEditor(
   container: HTMLElement,
   initialCode: string,
   onCodeChange: (code: string) => void,
   isDark = true
-): monaco.editor.IStandaloneCodeEditor {
-  initDriftLanguage();
+): Promise<any> {
+  const m = await ensureMonaco();
+  if (!m) return null;
 
-  const editor = monaco.editor.create(container, {
+  const editor = m.editor.create(container, {
     value: initialCode,
     language: 'drift',
     theme: isDark ? 'drift-dark' : 'drift-light',
@@ -186,9 +198,10 @@ export function createMonacoEditor(
  * Updates Monaco editor error squiggly markers.
  */
 export function setEditorErrorMarkers(
-  editor: monaco.editor.IStandaloneCodeEditor,
+  editor: any,
   error?: { message: string; line?: number; column?: number }
 ): void {
+  if (!monaco || !editor) return;
   const model = editor.getModel();
   if (!model) return;
 
@@ -219,5 +232,7 @@ export function setEditorErrorMarkers(
  * Sets the active Monaco editor theme.
  */
 export function setEditorTheme(theme: 'drift-dark' | 'drift-light'): void {
-  monaco.editor.setTheme(theme);
+  if (monaco) {
+    monaco.editor.setTheme(theme);
+  }
 }

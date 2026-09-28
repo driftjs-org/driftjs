@@ -1,6 +1,59 @@
 <script>
   import CounterDemo from '../components/CounterDemo.drift';
   import RegisterVmVisualizer from '../components/RegisterVmVisualizer.drift';
+  import CodeEditor from '../components/CodeEditor.drift';
+
+  let homeCounterCode = `<script>
+  let count = 0;
+  const double = derive(() => count * 2);
+
+  function inc() {
+    count++;
+  }
+
+  function dec() {
+    count--;
+  }
+<\/script>
+
+<div class="counter-box">
+  <h2>Count: {count}</h2>
+  <p>Double: {double}</p>
+
+  <div class="actions">
+    <button onclick={dec}>- Decrement</button>
+    <button onclick={inc} class="primary">+ Increment</button>
+  </div>
+
+  @if count >= 10 {
+    <p class="congrats">Double digits reached!</p>
+  }
+</div>
+
+<style>
+  .counter-box {
+    padding: 1.5rem;
+    text-align: center;
+    font-family: system-ui, sans-serif;
+  }
+  h2 { font-size: 2rem; color: #0284c7; margin-bottom: 0.25rem; }
+  p { color: #64748b; margin-bottom: 1rem; }
+  .actions { display: flex; gap: 0.5rem; justify-content: center; }
+  button {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button.primary {
+    background: #0284c7;
+    color: #fff;
+    border-color: #0284c7;
+  }
+  .congrats { color: #10b981; font-weight: 700; margin-top: 1rem; }
+</style>`;
 </script>
 
 <div class="landing-container">
@@ -44,6 +97,18 @@
 
     <CounterDemo client:visible />
     <RegisterVmVisualizer client:visible />
+
+    <div class="interactive-editor-showcase">
+      <div class="section-header" style="margin-top: 3.5rem;">
+        <div class="section-tag">Interactive Code Sandbox</div>
+        <h2 class="section-title">Edit &amp; Run Live</h2>
+        <p class="section-subtitle">
+          Test Drift's virtual machine directly in your browser. Edit the code below to see instant in-place DOM updates without VDOM diffing.
+        </p>
+      </div>
+
+      <CodeEditor client:visible code={homeCounterCode} height="440px" />
+    </div>
   </section>
 
   <!-- Key Architectural Pillars -->

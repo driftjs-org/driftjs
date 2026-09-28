@@ -1,0 +1,281 @@
+/* DriftCodeEditor Embeddable Component Styles */
+.drift-code-editor {
+  display: flex;
+  flex-direction: column;
+  border-radius: 8px;
+  border: 1px solid var(--comp-border, #30363d);
+  background-color: var(--comp-bg, #0d1117);
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  margin: 1.5rem 0;
+  text-align: left;
+}
+
+.drift-code-editor *,
+.drift-code-editor *::before,
+.drift-code-editor *::after {
+  box-sizing: border-box;
+}
+
+.drift-code-editor,
+.drift-code-editor.dark {
+  --comp-bg: #0d1117;
+  --comp-panel: #161b22;
+  --comp-subtle: #21262d;
+  --comp-hover: #30363d;
+  --comp-border: #30363d;
+  --comp-text: #f0f6fc;
+  --comp-text-muted: #8b949e;
+  --accent: #8b5cf6;
+  --warning: #d29922;
+  --danger: #f85149;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.drift-code-editor.light,
+.theme-light .drift-code-editor {
+  --comp-bg: #f6f8fa;
+  --comp-panel: #ffffff;
+  --comp-subtle: #eaeef2;
+  --comp-hover: #d0d7de;
+  --comp-border: #d0d7de;
+  --comp-text: #1f2328;
+  --comp-text-muted: #656d76;
+  --accent: #6e40c9;
+  --warning: #9a6700;
+  --danger: #cf222e;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.drift-code-editor .editor-sub-header {
+  height: 38px;
+  background-color: var(--comp-panel);
+  border-bottom: 1px solid var(--comp-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1rem;
+  flex-shrink: 0;
+}
+
+.drift-code-editor .status-pill {
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+}
+.drift-code-editor .status-pill.success { background: rgba(63, 185, 80, 0.15); color: #3fb950; border: 1px solid rgba(63, 185, 80, 0.3); }
+.drift-code-editor .status-pill.error { background: rgba(248, 81, 73, 0.15); color: #f85149; border: 1px solid rgba(248, 81, 73, 0.3); }
+.drift-code-editor .status-pill.compiling { background: rgba(139, 92, 246, 0.15); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3); }
+
+.drift-code-editor .editor-component-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.drift-code-editor .editor-component-left {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background-color: var(--comp-bg) !important;
+  border-right: 1px solid var(--comp-border);
+}
+
+.drift-code-editor .monaco-host {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  background-color: var(--comp-bg) !important;
+}
+
+.drift-code-editor .error-strip {
+  background: rgba(248, 81, 73, 0.15);
+  color: #f85149;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  border-top: 1px solid #f85149;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.drift-code-editor .editor-component-right {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--comp-panel);
+}
+
+.drift-code-editor .output-nav {
+  height: 38px;
+  background-color: var(--comp-panel);
+  border-bottom: 1px solid var(--comp-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0.75rem;
+  flex-shrink: 0;
+}
+
+.drift-code-editor .output-nav-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.drift-code-editor .output-nav-actions {
+  display: flex;
+  align-items: center;
+}
+
+.drift-code-editor .btn-reload {
+  background: var(--comp-subtle);
+  border: 1px solid var(--comp-border);
+  color: var(--comp-text-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.25rem 0.6rem;
+  border-radius: 5px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.15s ease;
+}
+
+.drift-code-editor .btn-reload:hover {
+  color: var(--comp-text);
+  background-color: var(--comp-hover);
+  border-color: var(--accent);
+}
+
+.drift-code-editor .nav-item {
+  background: transparent;
+  border: none;
+  color: var(--comp-text-muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.15s ease;
+}
+
+.drift-code-editor .nav-item:hover {
+  color: var(--comp-text);
+  background-color: var(--comp-hover);
+}
+
+.drift-code-editor .nav-item.active {
+  color: var(--comp-text);
+  background-color: var(--comp-subtle);
+  font-weight: 600;
+}
+
+.drift-code-editor .output-view {
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.drift-code-editor .output-view.hidden,
+.drift-code-editor .tab-panel.hidden,
+.drift-code-editor .hidden {
+  display: none !important;
+}
+
+.drift-code-editor .preview-view {
+  flex: 1;
+  height: 100%;
+  background-color: #ffffff !important;
+  color: #1f2328 !important;
+  color-scheme: light !important;
+  display: flex;
+  flex-direction: column;
+}
+
+.drift-code-editor .preview-host {
+  flex: 1;
+  padding: 1.5rem;
+  overflow-y: auto;
+  background-color: #ffffff !important;
+  color: #1f2328 !important;
+  color-scheme: light !important;
+}
+
+.drift-code-editor .console-view {
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--comp-bg) !important;
+  color: var(--comp-text) !important;
+}
+
+.drift-code-editor .console-subbar {
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0.75rem;
+  font-size: 0.75rem;
+  color: var(--comp-text-muted);
+  background-color: var(--comp-subtle) !important;
+  border-bottom: 1px solid var(--comp-border);
+}
+
+.drift-code-editor .comp-btn-xs {
+  background: transparent;
+  border: 1px solid var(--comp-border);
+  color: var(--comp-text-muted);
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+.drift-code-editor .comp-btn-xs:hover {
+  color: var(--comp-text);
+  background-color: var(--comp-hover);
+}
+
+.drift-code-editor .console-log-list {
+  flex: 1;
+  list-style: none;
+  padding: 0.5rem;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  overflow-y: auto;
+  background-color: var(--comp-bg) !important;
+}
+
+.drift-code-editor .log-row {
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid var(--comp-subtle);
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+.drift-code-editor .log-row.log { color: var(--comp-text) !important; }
+.drift-code-editor .log-row.warn { color: var(--warning) !important; background-color: rgba(210, 153, 34, 0.08); }
+.drift-code-editor .log-row.error { color: var(--danger) !important; background-color: rgba(248, 81, 73, 0.08); }
+.drift-code-editor .log-time { color: var(--comp-text-muted) !important; font-size: 0.7rem; }

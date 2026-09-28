@@ -239,6 +239,9 @@ importers:
       driftjs-dom:
         specifier: workspace:*
         version: link:../packages/dom
+      driftjs-playground:
+        specifier: workspace:*
+        version: link:../playground
       driftjs-router:
         specifier: workspace:*
         version: link:../packages/router

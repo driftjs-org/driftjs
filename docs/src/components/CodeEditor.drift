@@ -1,0 +1,12 @@
+<script>
+  import { DriftCodeEditor } from 'driftjs-playground';
+
+  let code = props.code || '';
+  let height = props.height || '360px';
+  let width = props.width || '100%';
+  let theme = props.theme || 'dark';
+</script>
+
+<div class="docs-code-editor-wrapper">
+  <DriftCodeEditor code={code} height={height} width={width} theme={theme} />
+</div>

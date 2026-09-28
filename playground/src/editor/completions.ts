@@ -1,10 +1,10 @@
 // @ts-ignore
-import * as monaco from 'monaco-editor/editor/editor.api';
+import type * as monacoType from 'monaco-editor/editor/editor.api';
 
 /**
  * Registers completion item provider for the 'drift' language.
  */
-export function registerDriftCompletions(): monaco.IDisposable {
+export function registerDriftCompletions(monaco: typeof monacoType): monacoType.IDisposable {
   return monaco.languages.registerCompletionItemProvider('drift', {
     provideCompletionItems: (model, position) => {
       const word = model.getWordUntilPosition(position);

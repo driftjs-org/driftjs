@@ -142,6 +142,7 @@ export async function bundleIslands(
     let assetFileName = '';
     let totalSize = 0;
     let cssAssetFileName = '';
+    const cssAssetFileNames: string[] = [];
     let totalCssSize = 0;
 
     const allOutputs: any[] = [];
@@ -157,6 +158,7 @@ export async function bundleIslands(
       if (!item.fileName) continue;
 
       if (item.type === 'asset' && item.fileName.endsWith('.css')) {
+        cssAssetFileNames.push(item.fileName);
         cssAssetFileName = item.fileName;
         totalCssSize += item.source ? Buffer.byteLength(String(item.source), 'utf8') : 0;
       } else if (item.type === 'chunk' && item.fileName.includes('island')) {
@@ -180,10 +182,14 @@ export async function bundleIslands(
       : '';
     const scriptTag = scriptSrc ? `<script type="module" src="${scriptSrc}"></script>` : '';
 
-    const cssHref = cssAssetFileName
-      ? (config.base.endsWith('/') ? `${config.base}${cssAssetFileName}` : `${config.base}/${cssAssetFileName}`)
+    const cssTag = cssAssetFileNames.length > 0
+      ? cssAssetFileNames
+          .map((f) => {
+            const href = config.base.endsWith('/') ? `${config.base}${f}` : `${config.base}/${f}`;
+            return `<link rel="stylesheet" href="${href}" />`;
+          })
+          .join('\n')
       : '';
-    const cssTag = cssHref ? `<link rel="stylesheet" href="${cssHref}" />` : '';
 
     return {
       scriptTag,

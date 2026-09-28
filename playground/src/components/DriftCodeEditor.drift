@@ -3,6 +3,7 @@
   import { createMonacoEditor, setEditorErrorMarkers, setEditorTheme } from '../editor/monaco.js';
   import { compileDriftSource } from '../compiler/service.js';
   import { mountPreview, unmountPreview } from '../runner/client-runner.js';
+  import './DriftCodeEditor.css';
 
   // Props
   let width = props.width || '100%';
@@ -120,6 +121,7 @@
 
   function initEditor() {
     if (editorInstance) return;
+    if (typeof window === 'undefined') return;
     const container = document.getElementById(editorContainerId);
     if (!container) {
       setTimeout(initEditor, 25);
@@ -129,12 +131,19 @@
     const defaultCode = code || '<' + 'script>\n  let name = "DriftJS";\n<' + '/script>\n\n<h1>Hello, {name}!</h1>';
     const initialTheme = (props && props.theme) || theme;
 
-    editorInstance = createMonacoEditor(
+    const res = createMonacoEditor(
       container,
       defaultCode,
       onEditorCodeChange,
       initialTheme === 'dark'
     );
+    if (res && typeof res.then === 'function') {
+      res.then((ed) => {
+        if (ed) editorInstance = ed;
+      });
+    } else {
+      editorInstance = res;
+    }
 
     runCompilation(defaultCode);
   }

@@ -3,5 +3,5 @@
   import { inject } from '@vercel/analytics';
   
   // Initialize analytics when component mounts
-  inject({ mode: 'production' });
+  inject({ mode: 'auto' });
 </script>

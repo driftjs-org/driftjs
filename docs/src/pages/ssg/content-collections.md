@@ -2,7 +2,6 @@
 title: "Content Collections and Markdown Engine"
 description: "Manage content with YAML frontmatter, Markdown parsing, and getCollection queries in Drift Static."
 ---
-
 # Content Collections and Markdown Engine
 
 Drift Static includes built-in support for authoring content in Markdown. It supports both **Direct Markdown Pages** (placing `.md` files directly in `src/pages/`) and **Structured Content Collections** in `src/content/`.
@@ -99,26 +98,10 @@ This makes building sidebar tables of contents or anchor links effortless.
 
 ---
 
-## 4. Live DriftJS Editors with the `drift exe` Fence
+## 4. Live DriftJS Editor with the 'drift exe'  Fence
 
 Any fenced code block whose header is `drift exe` is promoted from a static snippet into a **fully interactive
 `DriftCodeEditor` island** — the block is compiled, mounted, and executed in the reader's browser:
-
-```drift exe
-<script>
-  let count = 0;
-  const double = derive(() => count * 2);
-
-  function inc() {
-    count++;
-  }
-</script>
-
-<button onclick={inc}>Increment</button>
-<button onclick={() => count--}>Decrement</button>
-
-<h2>Count: {count} (double: {double})</h2>
-```
 
 The fence header is the only syntax — no extra attributes, no imports. Under the hood the markdown renderer emits an
 island container that hydrates on `client:load`, and the generated island is returned in `result.islands` so the build

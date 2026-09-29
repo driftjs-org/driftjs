@@ -50,6 +50,45 @@ Pass reactive expressions using curly braces `{}`:
 <Avatar src={user.avatarUrl} alt={user.name} size={size * 2} />
 ```
 
+Try a live component that receives and reacts to props-style values:
+
+```drift exe
+<script>
+  let name = 'Grace Hopper';
+  let rank = 'Rear Admiral';
+  let variant = 'primary';
+  const variants = ['primary', 'success', 'warning'];
+
+  function cycleVariant() {
+    variant = variants[(variants.indexOf(variant) + 1) % variants.length];
+  }
+</script>
+
+<div style="padding: 1.25rem; font-family: system-ui, sans-serif; max-width: 340px;">
+  <div style="margin-bottom: 0.6rem;">
+    <label style="font-size: 0.8rem; color: #64748b; display: block; margin-bottom: 0.2rem;">Name</label>
+    <input type="text" value={name} oninput={(e) => name = e.target.value} style="width: 100%; padding: 0.4rem 0.6rem; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.9rem; box-sizing: border-box;" />
+  </div>
+  <div style="margin-bottom: 0.75rem;">
+    <label style="font-size: 0.8rem; color: #64748b; display: block; margin-bottom: 0.2rem;">Rank</label>
+    <input type="text" value={rank} oninput={(e) => rank = e.target.value} style="width: 100%; padding: 0.4rem 0.6rem; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 0.9rem; box-sizing: border-box;" />
+  </div>
+
+  <div style="border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden;">
+    <div style="padding: 0.75rem 1rem; background: {variant === 'primary' ? '#0284c7' : variant === 'success' ? '#10b981' : '#f59e0b'}; color: #fff;">
+      <strong>{name}</strong> — {rank}
+    </div>
+    <div style="padding: 0.75rem 1rem; color: #475569; font-size: 0.875rem;">
+      Pioneer of computer programming and compiler development.
+    </div>
+  </div>
+
+  <button onclick={cycleVariant} style="margin-top: 0.75rem; padding: 0.4rem 1rem; border-radius: 6px; border: 1px solid #6366f1; background: #6366f1; color: #fff; font-weight: 600; cursor: pointer; font-size: 0.875rem;">Variant: {variant}</button>
+</div>
+```
+
+_✦ Edit name, rank, or cycle the variant — props-driven reactive UI in action._
+
 ---
 
 ## 3. Receiving Props in Child Components

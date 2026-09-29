@@ -33,6 +33,33 @@ Conditionals are declared using `@if`, `@else if`, and `@else`. Each branch bloc
 
 The condition expression can be authored either with or without outer parentheses (e.g. `@if role === 'admin' {` or `@if (role === 'admin') {`).
 
+Try switching branches live:
+
+```drift exe
+<script>
+  let role = 'admin';
+  const roles = ['admin', 'editor', 'user'];
+
+  function cycle() {
+    role = roles[(roles.indexOf(role) + 1) % roles.length];
+  }
+</script>
+
+<div style="padding: 1.25rem; font-family: system-ui, sans-serif; text-align: center;">
+  <button onclick={cycle} style="margin-bottom: 1rem; padding: 0.4rem 1.2rem; border-radius: 6px; border: 1px solid #6366f1; background: #6366f1; color: #fff; font-weight: 600; cursor: pointer;">Switch Role ({role})</button>
+
+  @if role === 'admin' {
+    <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 0.75rem 1.25rem; color: #92400e; font-weight: 600;">👑 Administrator Access</div>
+  } @else if role === 'editor' {
+    <div style="background: #dbeafe; border: 1px solid #3b82f6; border-radius: 8px; padding: 0.75rem 1.25rem; color: #1e40af; font-weight: 600;">✏️ Editor Workspace</div>
+  } @else {
+    <div style="background: #f0fdf4; border: 1px solid #22c55e; border-radius: 8px; padding: 0.75rem 1.25rem; color: #166534; font-weight: 600;">👤 Standard User View</div>
+  }
+</div>
+```
+
+_✦ Click "Switch Role" to cycle branches — only the changed subtree is swapped between comment anchors._
+
 ### Virtual Machine Execution Mechanism with Reactive If
 * The compiler creates two boundary DOM Comment nodes: `<!--if-->` and `<!--/if-->`.
 * The consequent and alternate branches are compiled into isolated **sub-modules** stored in the constant pool.
@@ -84,6 +111,41 @@ You can destructure objects directly in the loop target binding:
 * **Keyed (Recommended):** Providing a `key <expr>` clause (such as `key todo.id`) allows the VM reconciler (`reconcileKeyedList`) to compute the Longest Increasing Subsequence (LIS). When lists are reordered or updated, the VM moves only the minimal number of DOM nodes.
 * **Row Attribute Fast-Patching:** If outer-scope state changes without modifying list item identities, `patchItemAttributes` updates text and attributes on existing rows without reordering or replacing DOM nodes.
 
+Try the keyed `@for` list live — add tasks and toggle completion:
+
+```drift exe
+<script>
+  let todos = [
+    { id: 1, title: 'Learn Register VM', done: true },
+    { id: 2, title: 'Build Docs Site', done: false },
+    { id: 3, title: 'Ship to Production', done: false },
+  ];
+
+  function toggle(id) {
+    todos = todos.map(t => t.id === id ? { ...t, done: !t.done } : t);
+  }
+
+  function addItem() {
+    const id = Date.now();
+    todos = [...todos, { id, title: `Task ${todos.length + 1}`, done: false }];
+  }
+</script>
+
+<div style="padding: 1.25rem; font-family: system-ui, sans-serif; max-width: 340px; margin: 0 auto;">
+  <ul style="list-style: none; padding: 0; margin: 0 0 0.75rem;">
+    @for todo in todos key todo.id {
+      <li onclick={() => toggle(todo.id)} style="display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.25rem; cursor: pointer; border-bottom: 1px solid #e2e8f0;">
+        <span style="font-size: 1.1rem;">{todo.done ? '✅' : '⬜'}</span>
+        <span style="text-decoration: {todo.done ? 'line-through' : 'none'}; color: {todo.done ? '#94a3b8' : '#1e293b'}">{todo.title}</span>
+      </li>
+    }
+  </ul>
+  <button onclick={addItem} style="padding: 0.4rem 1rem; border-radius: 6px; border: 1px solid #0284c7; background: #0284c7; color: #fff; font-size: 0.875rem; font-weight: 600; cursor: pointer;">+ Add Task</button>
+</div>
+```
+
+_✦ Click items to toggle, add new tasks — keyed LIS reconciliation moves only the minimum DOM nodes._
+
 ---
 
 ## The Switch Directive
@@ -114,6 +176,40 @@ Pattern match against a discriminant expression with `@switch`, `@case`, and `@d
 ```
 
 The discriminant expression in `@switch` is evaluated once, and the VM mounts the matching case branch sub-module.
+
+Try it live:
+
+```drift exe
+<script>
+  let status = 'loading';
+  const states = ['loading', 'success', 'error', 'idle'];
+
+  function next() {
+    status = states[(states.indexOf(status) + 1) % states.length];
+  }
+</script>
+
+<div style="padding: 1.25rem; font-family: system-ui, sans-serif; text-align: center;">
+  <button onclick={next} style="margin-bottom: 1rem; padding: 0.4rem 1.2rem; border-radius: 6px; border: 1px solid #6366f1; background: #6366f1; color: #fff; font-weight: 600; cursor: pointer;">Next State ({status})</button>
+
+  @switch status {
+    @case 'loading' {
+      <div style="background: #f0f9ff; border: 1px solid #38bdf8; border-radius: 8px; padding: 0.75rem 1.25rem; color: #0369a1;">⏳ Loading data...</div>
+    }
+    @case 'success' {
+      <div style="background: #f0fdf4; border: 1px solid #22c55e; border-radius: 8px; padding: 0.75rem 1.25rem; color: #166534;">✅ Operation succeeded!</div>
+    }
+    @case 'error' {
+      <div style="background: #fef2f2; border: 1px solid #f87171; border-radius: 8px; padding: 0.75rem 1.25rem; color: #991b1b;">❌ An error occurred.</div>
+    }
+    @default {
+      <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0.75rem 1.25rem; color: #475569;">💤 Idle</div>
+    }
+  }
+</div>
+```
+
+_✦ Cycle through all four switch branches live._
 
 ---
 

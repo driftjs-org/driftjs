@@ -203,7 +203,7 @@
 
 <div
   class={theme === 'light' ? "drift-code-editor light" : "drift-code-editor dark"}
-  style={"width: " + width + "; height: " + height + ";"}
+  style={"width: " + width + "; --editor-height: " + height + ";"}
 >
   <!-- Main Body Split -->
   <div class="editor-component-body">

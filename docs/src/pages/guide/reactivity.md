@@ -45,6 +45,30 @@ In your component, state is updated via plain JavaScript assignment:
 </script>
 ```
 
+Try it live — every increment marks `count` dirty, batches a microtask flush, and patches only the text node:
+
+```drift exe
+<script>
+  let count = 0;
+
+  function inc() { count++; }
+  function dec() { count--; }
+</script>
+
+<div style="padding: 1.5rem; text-align: center; font-family: system-ui, sans-serif;">
+  <h2 style="font-size: 2rem; color: #0284c7; margin: 0 0 0.5rem;">Count: {count}</h2>
+  <div style="display: flex; gap: 0.5rem; justify-content: center;">
+    <button onclick={dec} style="padding: 0.4rem 1rem; border-radius: 6px; border: 1px solid #cbd5e1; background: #f8fafc; font-weight: 600; cursor: pointer;">−</button>
+    <button onclick={inc} style="padding: 0.4rem 1rem; border-radius: 6px; border: 1px solid #0284c7; background: #0284c7; color: #fff; font-weight: 600; cursor: pointer;">+</button>
+  </div>
+  @if count >= 10 {
+    <p style="color: #10b981; font-weight: 700; margin-top: 1rem;">🎉 Double digits!</p>
+  }
+</div>
+```
+
+_✦ Edit the code above — changes execute instantly in your browser._
+
 At runtime, the component scope is configured with a change listener:
 
 ```

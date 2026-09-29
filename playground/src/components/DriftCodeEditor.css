@@ -2,6 +2,7 @@
 .drift-code-editor {
   display: flex;
   flex-direction: column;
+  height: var(--editor-height, auto);
   border-radius: 8px;
   border: 1px solid var(--comp-border, #30363d);
   background-color: var(--comp-bg, #0d1117);
@@ -220,6 +221,28 @@
   color-scheme: light !important;
 }
 
+/* Force ALL descendants inside preview to use light mode colors —
+   this beats the html { color: var(--text-primary) } dark cascade. */
+.drift-code-editor .preview-host,
+.drift-code-editor .preview-host * {
+  color-scheme: light !important;
+  --comp-text: #1f2328;
+  --comp-bg: #ffffff;
+  --comp-text-muted: #656d76;
+  --text-primary: #1f2328;
+  --accent-cyan: #0969da;
+}
+
+/* Reset inherited color for all elements inside preview */
+.drift-code-editor .preview-host * {
+  color: #1f2328;
+}
+
+/* Keep anchor colors sensible in light context */
+.drift-code-editor .preview-host a { color: #0969da !important; }
+.drift-code-editor .preview-host a:hover { color: #0550ae !important; }
+.drift-code-editor .preview-host a:visited { color: #6e40c9 !important; }
+
 .drift-code-editor .console-view {
   flex: 1;
   height: 100%;
@@ -282,11 +305,10 @@
 
 /* Responsive: stack output preview below code editor on smaller screens */
 @media (max-width: 868px) {
-  /* Let the component grow with its stacked content instead of being
-     squeezed into a fixed viewport box. */
+  /* Override the CSS variable so height: var(--editor-height) resolves to auto */
   .drift-code-editor {
-    height: auto !important;
-    min-height: 0;
+    --editor-height: auto;
+    overflow: visible;
   }
 
   .drift-code-editor .editor-component-body {
@@ -334,3 +356,4 @@
     padding: 0 0.5rem;
   }
 }
+

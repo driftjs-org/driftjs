@@ -1,7 +1,7 @@
 <script>
   import CounterDemo from '../components/CounterDemo.drift';
   import RegisterVmVisualizer from '../components/RegisterVmVisualizer.drift';
-  import CodeEditor from '../components/CodeEditor.drift';
+  import { DriftCodeEditor } from 'driftjs-playground';
 
   let homeCounterCode = `<script>
   let count = 0;
@@ -104,7 +104,7 @@
         </p>
       </div>
 
-      <CodeEditor client:visible code={homeCounterCode} height="440px" />
+      <DriftCodeEditor client:load code={homeCounterCode} height="440px" />
     </div>
   </section>
 

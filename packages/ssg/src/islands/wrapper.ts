@@ -7,6 +7,7 @@ export interface WrapIslandOptions {
   media?: string | undefined;
   rootMargin?: string | undefined;
   islandTag?: string | undefined;
+  className?: string | undefined;
 }
 
 /**
@@ -20,6 +21,10 @@ export function wrapIslandHtml(
   const tag = options.islandTag || 'div';
   const trigger = options.trigger || 'idle';
   let attrs = ` data-drift-island="${islandName}" data-drift-trigger="${trigger}"`;
+
+  if (options.className) {
+    attrs = ` class="${options.className.replace(/"/g, '&quot;')}"` + attrs;
+  }
 
   if (options.props && Object.keys(options.props).length > 0) {
     const safeProps = JSON.stringify(options.props).replace(/"/g, '&quot;');

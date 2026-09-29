@@ -19,10 +19,10 @@ export function generateIslandBootstrapSource(
 ): string {
   if (islands.length === 0) return '';
 
-  const uniqueIslands = new Map<string, string>();
+  const uniqueIslands = new Map<string, IslandDescriptor>();
   for (const island of islands) {
     if (!uniqueIslands.has(island.name)) {
-      uniqueIslands.set(island.name, island.componentPath);
+      uniqueIslands.set(island.name, island);
     }
   }
 
@@ -30,7 +30,8 @@ export function generateIslandBootstrapSource(
   const componentRegistrations: string[] = [];
 
   let idx = 0;
-  for (const [name, compPath] of uniqueIslands.entries()) {
+  for (const [name, island] of uniqueIslands.entries()) {
+    const compPath = island.componentPath;
     const importName = `__drift_comp_${idx++}`;
     let resolvedImport = compPath;
     if (path.isAbsolute(compPath)) {
@@ -46,7 +47,11 @@ export function generateIslandBootstrapSource(
           : `/${rel.replace(/^\/+/, '')}`;
       }
     }
-    importLines.push(`import ${importName} from '${resolvedImport}';`);
+    importLines.push(
+      island.exportName
+        ? `import { ${island.exportName} as ${importName} } from '${resolvedImport}';`
+        : `import ${importName} from '${resolvedImport}';`
+    );
     componentRegistrations.push(`  ${JSON.stringify(name)}: ${importName}`);
   }
 

@@ -1676,47 +1676,4 @@ style, script {
   flex-wrap: wrap;
 }
 
-/* Responsive Interactive Code Editor Showcase */
-.docs-code-editor-wrapper {
-  width: 100%;
-  max-width: 100%;
-}
-
-@media (max-width: 868px) {
-  .docs-code-editor-wrapper .drift-code-editor {
-    height: auto !important;
-    min-height: 600px;
-  }
-
-  .docs-code-editor-wrapper .editor-component-body {
-    flex-direction: column !important;
-    overflow: visible !important;
-  }
-
-  .docs-code-editor-wrapper .editor-component-left {
-    height: 320px !important;
-    min-height: 280px;
-    flex: none !important;
-    border-right: none !important;
-    border-bottom: 1px solid var(--border-subtle, #30363d) !important;
-  }
-
-  .docs-code-editor-wrapper .editor-component-right {
-    height: 320px !important;
-    min-height: 280px;
-    flex: 1 !important;
-  }
-}
-
-@media (max-width: 480px) {
-  .docs-code-editor-wrapper .editor-component-left {
-    height: 280px !important;
-    min-height: 240px;
-  }
-
-  .docs-code-editor-wrapper .editor-component-right {
-    height: 280px !important;
-    min-height: 240px;
-  }
-}
 

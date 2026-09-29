@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { renderMarkdown, getCollection, getEntry, slugify } from '../src/index.js';
+import { renderMarkdown, getCollection, getEntry, slugify, scanMarkdownIslands, stripFrontmatter } from '../src/index.js';
 
 describe('Drift SSG Content Collections & Markdown Engine', () => {
   let tmpContentDir: string;
@@ -113,6 +113,107 @@ published: false
       expect(entry).toBeDefined();
       expect(entry?.data.title).toBe('First Post');
       expect(entry?.html).toContain('<h1 id="hello-first">Hello First</h1>');
+    });
+  });
+
+  describe('drift exe live editor fences', () => {
+    const liveSource = `# Demo
+
+\`\`\`drift exe
+<h1>Hello {name}</h1>
+\`\`\`
+
+\`\`\`ts
+const vm = new DriftServerVM();
+\`\`\`
+`;
+
+    it('promotes a "drift exe" fence into a DriftCodeEditor island container', () => {
+      const result = renderMarkdown(liveSource);
+
+      expect(result.html).toContain('data-drift-island="DriftCodeEditor"');
+      expect(result.html).toContain('data-drift-trigger="eager"');
+      expect(result.html).toContain('class="drift-md-editor"');
+      expect(result.html).not.toContain('<pre><code class="language-drift exe">');
+
+      const props = JSON.parse(
+        /data-drift-props="([^"]*)"/.exec(result.html)![1]!.replace(/&quot;/g, '"')
+      );
+      expect(props.code).toBe('<h1>Hello {name}</h1>');
+      expect(props.height).toBe('440px');
+      expect(props.width).toBe('100%');
+    });
+
+    it('leaves every other fence as a static code block', () => {
+      const result = renderMarkdown(liveSource);
+
+      expect(result.html).toContain('<code class="language-ts">');
+      expect(result.islands).toHaveLength(1);
+    });
+
+    it('reports the editor island descriptor for bundling', () => {
+      const [island] = renderMarkdown(liveSource).islands;
+
+      expect(island).toEqual({
+        name: 'DriftCodeEditor',
+        componentPath: 'driftjs-playground',
+        exportName: 'DriftCodeEditor',
+        trigger: 'eager',
+        props: {
+          code: '<h1>Hello {name}</h1>',
+          height: '440px',
+          width: '100%',
+        },
+      });
+    });
+
+    it('honours markdown island overrides from the project config', () => {
+      const result = renderMarkdown(liveSource, {
+        component: 'MyEditor',
+        componentPath: './src/components/MyEditor.drift',
+        exportName: undefined,
+        trigger: 'visible',
+        height: '300px',
+        width: '80%',
+        wrapperClass: 'md-editor',
+        props: { theme: 'light' },
+      });
+
+      expect(result.html).toContain('data-drift-island="MyEditor"');
+      expect(result.html).toContain('data-drift-trigger="visible"');
+      expect(result.html).toContain('class="md-editor"');
+
+      const [island] = result.islands;
+      expect(island?.componentPath).toBe('./src/components/MyEditor.drift');
+      expect(island?.exportName).toBeUndefined();
+      expect(island?.props).toMatchObject({ theme: 'light', height: '300px', width: '80%' });
+    });
+
+    it('only matches the exact "drift exe" fence header', () => {
+      const result = renderMarkdown(
+        '```drift\nplain\n```\n\n```drift-exe\nplain\n```\n\n```DRIFT EXE\nupper\n```\n'
+      );
+
+      expect(result.html).toContain('<code class="language-drift">');
+      expect(result.html).toContain('<code class="language-drift-exe">');
+      expect(result.islands).toHaveLength(1);
+      expect(result.islands[0]?.props.code).toBe('upper');
+    });
+
+    it('scans fences for island discovery without rendering HTML', () => {
+      const islands = scanMarkdownIslands(
+        '# Title\n\n```drift exe\n<p>One</p>\n```\n\n```drift exe\n<p>Two</p>\n```\n'
+      );
+
+      expect(islands).toHaveLength(2);
+      expect(islands[0]?.props.code).toBe('<p>One</p>');
+      expect(islands[1]?.props.code).toBe('<p>Two</p>');
+      expect(scanMarkdownIslands('```ts\nconst a = 1;\n```\n')).toHaveLength(0);
+    });
+
+    it('strips frontmatter before scanning', () => {
+      const source = '---\ntitle: "Doc"\n---\n\n```drift exe\n<p>Body</p>\n```\n';
+      expect(scanMarkdownIslands(stripFrontmatter(source))).toHaveLength(1);
     });
   });
 });

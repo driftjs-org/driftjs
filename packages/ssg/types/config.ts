@@ -1,5 +1,6 @@
 import type { UserConfig as ViteUserConfig } from 'vite';
 import type { HeadConfig } from './head.js';
+import type { MarkdownIslandOptions } from './content.js';
 
 export type IslandTriggerStrategy = 'eager' | 'idle' | 'visible' | 'interaction' | 'media';
 
@@ -28,6 +29,8 @@ export interface DriftSSGConfig {
   trailingSlash: 'always' | 'never' | 'ignore';
   /** Default hydration trigger for islands without an explicit directive. Defaults to 'idle' */
   defaultIslandTrigger: IslandTriggerStrategy;
+  /** Markdown processing options (e.g. live editor fence configuration) */
+  markdown?: MarkdownIslandOptions | undefined;
   /** Optional custom Vite configuration options */
   vite?: ViteUserConfig | undefined;
 }

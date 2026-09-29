@@ -11,7 +11,7 @@ import type {
   IslandHydrationResult,
   BaseHydrationOptions,
 } from '../types/index.js';
-import { DriftClientVM, hydrate } from './index.js';
+import { DriftClientVM, hydrate, mount } from './index.js';
 
 const DEFAULT_INTERACTION_EVENTS: readonly string[] = [
   'pointerenter',
@@ -21,6 +21,18 @@ const DEFAULT_INTERACTION_EVENTS: readonly string[] = [
   'touchstart',
   'keydown',
 ];
+
+/**
+ * Renders an island into its container: claims server-rendered markup when present,
+ * otherwise mounts the component fresh (e.g. markdown-authored islands that ship no SSR output).
+ */
+function renderIsland(
+  component: CompiledModule,
+  container: HTMLElement,
+  options: BaseHydrationOptions
+): DriftClientVM {
+  return container.firstChild ? hydrate(component, container, options) : mount(component, container, options);
+}
 
 /**
  * Hydrates an SSR-rendered component during browser idle periods using requestIdleCallback.
@@ -56,7 +68,7 @@ export function hydrateOnIdle(
     }
     cleanupPending();
     isHydrated = true;
-    vmInstance = hydrate(component, container, options);
+    vmInstance = renderIsland(component, container, options);
     resolveReady(vmInstance);
     return vmInstance;
   };
@@ -135,7 +147,7 @@ export function hydrateWhenVisible(
     }
     cleanupPending();
     isHydrated = true;
-    vmInstance = hydrate(component, container, options);
+    vmInstance = renderIsland(component, container, options);
     resolveReady(vmInstance);
     return vmInstance;
   };
@@ -237,7 +249,7 @@ export function hydrateOnInteraction(
     }
     cleanupPending();
     isHydrated = true;
-    vmInstance = hydrate(component, container, options);
+    vmInstance = renderIsland(component, container, options);
     resolveReady(vmInstance);
     return vmInstance;
   };
@@ -317,7 +329,7 @@ export function hydrateOnMedia(
     }
     cleanupPending();
     isHydrated = true;
-    vmInstance = hydrate(component, container, options);
+    vmInstance = renderIsland(component, container, options);
     resolveReady(vmInstance);
     return vmInstance;
   };
@@ -390,7 +402,7 @@ export function hydrateSelectively(
         return vmInstance;
       }
       isHydrated = true;
-      vmInstance = hydrate(component, container, options);
+      vmInstance = renderIsland(component, container, options);
       resolveReady(vmInstance);
       return vmInstance;
     };
@@ -454,7 +466,7 @@ export function hydrateSelectively(
     case 'eager':
     default: {
       let isHydrated = true;
-      let vmInstance: DriftClientVM | null = hydrate(component, container, options);
+      let vmInstance: DriftClientVM | null = renderIsland(component, container, options);
       return {
         get vm() {
           return vmInstance;
@@ -463,7 +475,7 @@ export function hydrateSelectively(
           return isHydrated;
         },
         ready: Promise.resolve(vmInstance),
-        hydrateNow: () => vmInstance ?? hydrate(component, container, options),
+        hydrateNow: () => vmInstance ?? renderIsland(component, container, options),
         cancel: () => {},
         unmount: () => {
           isHydrated = false;

@@ -10,6 +10,7 @@ import { resolveAllRoutePaths } from '../router/index.js';
 import { renderPage, buildHeadTags } from '../render/index.js';
 import { bundleIslands, scanIslands, extractCssImports } from '../islands/index.js';
 import { generateSitemap, generateRobotsTxt } from '../render/index.js';
+import { scanMarkdownIslands, stripFrontmatter } from '../content/index.js';
 
 export type { BuildOptions, BuildSummary, PageOutput };
 
@@ -68,11 +69,11 @@ export async function build(options: BuildOptions = {}): Promise<BuildSummary> {
     const scanFile = (filePath: string) => {
       if (scannedFiles.has(filePath)) return;
       scannedFiles.add(filePath);
-      if (filePath.endsWith('.drift') && fs.existsSync(filePath)) {
-        const src = fs.readFileSync(filePath, 'utf8');
+      if (!fs.existsSync(filePath)) return;
+      const src = fs.readFileSync(filePath, 'utf8');
+      if (filePath.endsWith('.drift')) {
         siteIslands.push(...scanIslands(src, {}, filePath));
-        const cssImports = extractCssImports(src, filePath);
-        for (const imp of cssImports) {
+        for (const imp of extractCssImports(src, filePath)) {
           if (imp.startsWith('.')) {
             const resolved = path.resolve(path.dirname(filePath), imp);
             if (fs.existsSync(resolved)) siteCssFiles.add(resolved);
@@ -81,6 +82,9 @@ export async function build(options: BuildOptions = {}): Promise<BuildSummary> {
             if (fs.existsSync(resolved)) siteCssFiles.add(resolved);
           }
         }
+      } else if (filePath.endsWith('.md')) {
+        // Markdown can request islands through live fence blocks (e.g. ```drift exe)
+        siteIslands.push(...scanMarkdownIslands(stripFrontmatter(src), config.markdown));
       }
     };
 
@@ -143,6 +147,11 @@ export async function build(options: BuildOptions = {}): Promise<BuildSummary> {
       if (target.route.filePath.endsWith('.drift') && fs.existsSync(target.route.filePath)) {
         const pageIslands = scanIslands(fs.readFileSync(target.route.filePath, 'utf8'), {}, target.route.filePath);
         if (pageIslands.length > 0) pageHasIslands = true;
+      } else if (target.route.filePath.endsWith('.md') && fs.existsSync(target.route.filePath)) {
+        const mdSource = fs.readFileSync(target.route.filePath, 'utf8');
+        if (scanMarkdownIslands(stripFrontmatter(mdSource), config.markdown).length > 0) {
+          pageHasIslands = true;
+        }
       }
       if (!pageHasIslands) {
         for (const lPath of target.route.layouts) {
@@ -169,6 +178,7 @@ export async function build(options: BuildOptions = {}): Promise<BuildSummary> {
         scripts,
         headTags: baseHeadTags,
         site: config.site,
+        markdown: config.markdown,
         moduleLoader,
       });
 

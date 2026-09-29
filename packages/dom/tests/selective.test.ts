@@ -418,6 +418,34 @@ describe('Selective Hydration Suite', () => {
       expect(count!.textContent).toBe('1');
     });
 
+    it('mounts islands whose container ships no server-rendered markup', async () => {
+      const counterComp = compileSFC(`
+        <script>
+          let count = (typeof props !== 'undefined' && props && props.count) || 0;
+          function inc() {
+            count++;
+          }
+        </script>
+        <div class="counter-box">
+          <span class="count">{count}</span>
+          <button class="inc-btn" onclick={inc}>Increment</button>
+        </div>
+      `);
+
+      container.innerHTML = `
+        <div data-drift-island="Counter" data-drift-trigger="eager" data-drift-props='{"count":10}'></div>
+      `;
+
+      const result = hydrateIslands(container, { Counter: counterComp });
+
+      expect(result.controllers[0]!.isHydrated).toBe(true);
+      const count = container.querySelector('.count');
+      expect(count!.textContent).toBe('10');
+      const btn = container.querySelector('.inc-btn') as HTMLButtonElement;
+      btn.click();
+      expect(count!.textContent).toBe('11');
+    });
+
     it('handles hydrateAll() and cancelAll() on island result', async () => {
       const counterComp = compileSFC(counterSrc);
 

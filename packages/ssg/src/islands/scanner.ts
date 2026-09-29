@@ -12,22 +12,40 @@ export const CLIENT_DIRECTIVES: Record<string, IslandTriggerStrategy> = {
 };
 
 /**
- * Extracts component import specifiers from a .drift template's <script> block.
+ * Collects every import binding declared in a .drift template's <script> block.
  */
-export function extractIslandImports(templateSource: string, sourceFilePath?: string): Record<string, string> {
-  const imports: Record<string, string> = {};
+function collectScriptImports(
+  templateSource: string,
+  sourceFilePath?: string
+): Record<string, { source: string; importedName: string }> {
+  const imports: Record<string, { source: string; importedName: string }> = {};
   try {
     const compiled = compile(templateSource);
     if (compiled && compiled.imports) {
       for (const imp of compiled.imports) {
         if (imp.localName && imp.source) {
-          imports[imp.localName] = imp.source;
+          imports[imp.localName] = {
+            source: imp.source,
+            importedName: imp.importedName || 'default',
+          };
         }
       }
     }
   } catch (err: any) {
     const context = sourceFilePath ? ` in "${sourceFilePath}"` : '';
     throw new Error(`Failed to extract component imports${context}: ${err.message || String(err)}`, { cause: err });
+  }
+  return imports;
+}
+
+/**
+ * Extracts component import specifiers from a .drift template's <script> block.
+ */
+export function extractIslandImports(templateSource: string, sourceFilePath?: string): Record<string, string> {
+  const collected = collectScriptImports(templateSource, sourceFilePath);
+  const imports: Record<string, string> = {};
+  for (const [localName, info] of Object.entries(collected)) {
+    imports[localName] = info.source;
   }
   return imports;
 }
@@ -103,7 +121,11 @@ export function scanIslands(
   }
 
   try {
-    const autoImports = extractIslandImports(templateSource, sourceFilePath);
+    const collected = collectScriptImports(templateSource, sourceFilePath);
+    const autoImports: Record<string, string> = {};
+    for (const [localName, info] of Object.entries(collected)) {
+      autoImports[localName] = info.source;
+    }
     const resolvedImportMap = { ...autoImports, ...importMap };
 
     const lexer = new DriftLexer(templateSource);
@@ -147,9 +169,19 @@ export function scanIslands(
         componentPath = path.resolve(path.dirname(sourceFilePath), componentPath);
       }
 
+      // Package specifiers (e.g. `import { DriftCodeEditor } from 'driftjs-playground'`)
+      // expose a named export, while .drift files expose a default export.
+      const binding = collected[name];
+      const isPackageSpecifier = Boolean(binding) && !componentPath.startsWith('.') && !path.isAbsolute(componentPath);
+      const exportName =
+        isPackageSpecifier && binding!.importedName === name && binding!.importedName !== 'default'
+          ? binding!.importedName
+          : undefined;
+
       islands.push({
         name,
         componentPath,
+        exportName,
         trigger,
         props,
         media,

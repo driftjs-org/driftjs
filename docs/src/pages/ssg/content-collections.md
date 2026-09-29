@@ -96,3 +96,53 @@ export interface HeadingEntry {
 ```
 
 This makes building sidebar tables of contents or anchor links effortless.
+
+---
+
+## 4. Live DriftJS Editors with the `drift exe` Fence
+
+Any fenced code block whose header is `drift exe` is promoted from a static snippet into a **fully interactive
+`DriftCodeEditor` island** — the block is compiled, mounted, and executed in the reader's browser:
+
+```drift exe
+<script>
+  let count = 0;
+  const double = derive(() => count * 2);
+
+  function inc() {
+    count++;
+  }
+</script>
+
+<button onclick={inc}>Increment</button>
+<button onclick={() => count--}>Decrement</button>
+
+<h2>Count: {count} (double: {double})</h2>
+```
+
+The fence header is the only syntax — no extra attributes, no imports. Under the hood the markdown renderer emits an
+island container that hydrates on `client:load`, and the generated island is returned in `result.islands` so the build
+pipeline can bundle and register the component automatically:
+
+```ts
+const { html, islands } = renderMarkdown(source);
+// islands[0] => { name: 'DriftCodeEditor', componentPath: 'driftjs-playground', trigger: 'eager', ... }
+```
+
+Height, width, and the component itself are configurable per project in `drift.config.js`:
+
+```js
+export default {
+  markdown: {
+    component: 'DriftCodeEditor',      // island name registered on the client
+    componentPath: 'driftjs-playground', // module exporting the component
+    exportName: 'DriftCodeEditor',     // named export of that module
+    trigger: 'eager',                  // 'eager' (client:load) | 'idle' | 'visible' | ...
+    height: '440px',
+    width: '100%',
+  },
+};
+```
+
+Every other code fence keeps rendering as a regular static `<pre><code>` block, so pages stay **Zero-JS by default**
+until you opt a snippet into interactivity.

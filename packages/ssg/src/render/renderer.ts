@@ -94,7 +94,7 @@ export async function renderLayout(
  * Renders a full page through its nested layout hierarchy and document shell.
  */
 export async function renderPage(options: RenderPageOptions): Promise<RenderResult> {
-  const { route, pathname, params, props, documentPath, scripts, headTags, site, moduleLoader } = options;
+  const { route, pathname, params, props, documentPath, scripts, headTags, site, markdown, moduleLoader } = options;
 
   let pageHtml = '';
   let islands: ReturnType<typeof scanIslands> = [];
@@ -111,8 +111,9 @@ export async function renderPage(options: RenderPageOptions): Promise<RenderResu
   if (route.filePath.endsWith('.md')) {
     // Markdown page
     const raw = fs.readFileSync(route.filePath, 'utf8');
-    const mdResult = renderMarkdown(raw);
+    const mdResult = renderMarkdown(raw, markdown);
     pageHtml = mdResult.html;
+    islands.push(...mdResult.islands);
     if (mdResult.frontmatter['title']) {
       pageTitle = String(mdResult.frontmatter['title']);
     }

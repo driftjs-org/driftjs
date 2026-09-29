@@ -15,6 +15,7 @@ export const DEFAULT_CONFIG: DriftSSGConfig = {
   robots: true,
   trailingSlash: 'always',
   defaultIslandTrigger: 'idle',
+  markdown: {},
 };
 
 const CONFIG_FILENAMES = [
@@ -114,6 +115,7 @@ export async function loadConfig(
     robots: merged.robots ?? (site !== undefined),
     trailingSlash: merged.trailingSlash ?? 'always',
     defaultIslandTrigger: merged.defaultIslandTrigger ?? 'idle',
+    markdown: merged.markdown,
     vite: merged.vite,
   };
 }

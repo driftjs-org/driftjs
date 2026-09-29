@@ -11,6 +11,7 @@ import { scanRoutes, matchRoute } from '../router/index.js';
 import { renderPage, buildHeadTags } from '../render/index.js';
 import { extractStaticPaths } from '../router/index.js';
 import { scanIslands, generateIslandBootstrapSource, extractCssImports } from '../islands/index.js';
+import { scanMarkdownIslands, stripFrontmatter } from '../content/index.js';
 
 export type { DevServerOptions, DevServerInstance };
 
@@ -66,6 +67,9 @@ export async function createDevServer(options: DevServerOptions = {}): Promise<D
           if (file.endsWith('.drift')) {
             const src = fs.readFileSync(file, 'utf8');
             islands.push(...scanIslands(src, {}, file));
+          } else if (file.endsWith('.md')) {
+            // Markdown can request islands through live fence blocks (e.g. ```drift exe)
+            islands.push(...scanMarkdownIslands(stripFrontmatter(fs.readFileSync(file, 'utf8')), config.markdown));
           }
         }
         return generateIslandBootstrapSource(islands, config.root);
@@ -170,6 +174,15 @@ export async function createDevServer(options: DevServerOptions = {}): Promise<D
             pageHasIslands = true;
             pageIslandsList.push(...pIslands);
           }
+        } else if (matched.route.filePath.endsWith('.md') && fs.existsSync(matched.route.filePath)) {
+          const mdIslands = scanMarkdownIslands(
+            stripFrontmatter(fs.readFileSync(matched.route.filePath, 'utf8')),
+            config.markdown
+          );
+          if (mdIslands.length > 0) {
+            pageHasIslands = true;
+            pageIslandsList.push(...mdIslands);
+          }
         }
         for (const lPath of matched.route.layouts) {
           if (lPath.endsWith('.drift') && fs.existsSync(lPath)) {
@@ -217,6 +230,7 @@ export async function createDevServer(options: DevServerOptions = {}): Promise<D
           scripts: devScripts,
           headTags: devHeadTags,
           site: config.site,
+          markdown: config.markdown,
           moduleLoader: (filePath: string) => vite.ssrLoadModule(filePath),
         });
 

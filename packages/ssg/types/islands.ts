@@ -12,6 +12,8 @@ export interface IslandDescriptor {
   name: string;
   /** Resolved file path or import specifier of the component */
   componentPath: string;
+  /** Named export of the component module. Omit for a default import */
+  exportName?: string | undefined;
   /** Selective hydration trigger */
   trigger: IslandTriggerStrategy;
   /** Props passed to the island */

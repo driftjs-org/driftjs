@@ -1,5 +1,6 @@
 import type { RouteRecord, RouteParams } from './router.js';
 import type { IslandDescriptor } from './islands.js';
+import type { MarkdownIslandOptions } from './content.js';
 
 export type { IslandDescriptor } from './islands.js';
 
@@ -26,6 +27,7 @@ export interface RenderPageOptions {
   scripts?: string[] | undefined;
   headTags?: string[] | undefined;
   site?: string | undefined;
+  markdown?: MarkdownIslandOptions | undefined;
   moduleLoader?: ((filePath: string) => Promise<any>) | undefined;
 }
 

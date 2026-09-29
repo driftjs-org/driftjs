@@ -11,6 +11,6 @@
   },
   "include": [
     "src/**/*",
-    "drift.config.js"
+    "drift.config.ts"
   ]
 }

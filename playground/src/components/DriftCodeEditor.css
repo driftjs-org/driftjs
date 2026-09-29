@@ -279,3 +279,58 @@
 .drift-code-editor .log-row.warn { color: var(--warning) !important; background-color: rgba(210, 153, 34, 0.08); }
 .drift-code-editor .log-row.error { color: var(--danger) !important; background-color: rgba(248, 81, 73, 0.08); }
 .drift-code-editor .log-time { color: var(--comp-text-muted) !important; font-size: 0.7rem; }
+
+/* Responsive: stack output preview below code editor on smaller screens */
+@media (max-width: 868px) {
+  /* Let the component grow with its stacked content instead of being
+     squeezed into a fixed viewport box. */
+  .drift-code-editor {
+    height: auto !important;
+    min-height: 0;
+  }
+
+  .drift-code-editor .editor-component-body {
+    flex: none;
+    height: auto;
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  .drift-code-editor .editor-component-left {
+    flex: none;
+    height: 320px;
+    min-height: 280px;
+    border-right: none;
+    border-bottom: 1px solid var(--comp-border);
+  }
+
+  /* Contain Monaco's overflowing line layer so it cannot paint over the
+     stacked preview/console panel below (and swallow its clicks). */
+  .drift-code-editor .monaco-host {
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  .drift-code-editor .editor-component-right {
+    flex: none;
+    height: 320px;
+    min-height: 280px;
+  }
+}
+
+@media (max-width: 480px) {
+  .drift-code-editor .editor-component-left,
+  .drift-code-editor .editor-component-right {
+    height: 280px;
+    min-height: 240px;
+  }
+
+  .drift-code-editor .preview-host {
+    padding: 1rem;
+  }
+
+  .drift-code-editor .editor-sub-header,
+  .drift-code-editor .output-nav {
+    padding: 0 0.5rem;
+  }
+}

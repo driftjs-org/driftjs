@@ -1,6 +1,6 @@
 /** @type {import('driftjs-ssg').UserConfig} */
 export default {
-  site: 'https://driftjs.org',
+  site: 'https://driftjs-docs.vercel.app',
   base: '/',
   trailingSlash: 'always',
   pagesDir: 'src/pages',
@@ -21,7 +21,7 @@ export default {
       { property: 'og:title', content: 'DriftJS — Register VM Reactivity Engine & AOT Compiler' },
       { property: 'og:description', content: 'Explore the next-generation register VM reactivity engine and AOT compiler replacing VDOM diffing and Proxies.' },
       { property: 'og:type', content: 'website' },
-      { property: 'og:url', content: 'https://driftjs.org/' },
+      { property: 'og:url', content: 'https://driftjs-docs.vercel.app/' },
       { name: 'twitter:card', content: 'summary_large_image' },
       { name: 'twitter:title', content: 'DriftJS — Register VM Reactivity Engine & AOT Compiler' },
       { name: 'twitter:description', content: 'Ultra-fast register VM reactivity engine and AOT compiler for the modern web.' }

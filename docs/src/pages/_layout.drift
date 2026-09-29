@@ -3,12 +3,14 @@
   import Footer from '../components/Footer.drift';
   import Analytics from '../components/Analytics.drift';
   import '../styles/docs.css';
+
+  let isRoot = url === '/' || url === '';
 </script>
 
-<div class="site-wrapper">
+<div class={isRoot ? 'site-wrapper is-root-page' : 'site-wrapper'}>
   <input type="checkbox" id="nav-drawer-toggle" class="drawer-toggle-input" aria-hidden="true" />
   <label for="nav-drawer-toggle" class="mobile-drawer-backdrop" aria-hidden="true"></label>
-  <Header />
+  <Header isRoot={isRoot} />
   <div class="site-main">
     {children}
   </div>

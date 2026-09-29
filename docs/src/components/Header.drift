@@ -1,15 +1,20 @@
 <script>
   import ThemeToggle from '../components/ThemeToggle.drift';
+
+  let { isRoot = false } = props;
+  let hideHamburger = isRoot || url === '/' || url === '';
 </script>
 
 <header class="site-header">
   <div class="header-inner">
     <div class="header-left">
-      <label for="nav-drawer-toggle" class="mobile-hamburger-btn" aria-label="Toggle Navigation Menu">
-        <span class="hamburger-bar"></span>
-        <span class="hamburger-bar"></span>
-        <span class="hamburger-bar"></span>
-      </label>
+      @if !hideHamburger {
+        <label for="nav-drawer-toggle" class="mobile-hamburger-btn" aria-label="Toggle Navigation Menu">
+          <span class="hamburger-bar"></span>
+          <span class="hamburger-bar"></span>
+          <span class="hamburger-bar"></span>
+        </label>
+      }
 
       <a href="/" class="brand-link">
         <img src="/logo.png" alt="DriftJS Logo" class="brand-logo-img" />

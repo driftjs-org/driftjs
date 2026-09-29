@@ -169,13 +169,25 @@
     }
   });
 
+  function handleResize() {
+    if (editorInstance) {
+      editorInstance.layout();
+    }
+  }
+
   onMount(() => {
     initEditor();
     requestAnimationFrame(initEditor);
     setTimeout(initEditor, 50);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', handleResize);
+    }
   });
 
   onUnmount(() => {
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('resize', handleResize);
+    }
     if (editorInstance) {
       editorInstance.dispose();
       editorInstance = null;

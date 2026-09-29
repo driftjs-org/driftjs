@@ -73,9 +73,6 @@
         <a href="/guide/introduction/" class="btn-primary">
           <span>Get Started &rarr;</span>
         </a>
-        <a href="/architecture/virtual-machine/" class="btn-secondary">
-          <span>Architecture Deep Dive</span>
-        </a>
       </div>
 
       <div class="install-command-box">

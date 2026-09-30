@@ -15,6 +15,7 @@ export interface VMExecutionOptions {
 
 /** A self-contained reactive region that re-renders its DOM subtree when deps change. */
 export interface ReactiveRegion {
+  type?: string | undefined;
   readonly deps: ReadonlySet<string>;
   readonly reRender: (changedVars?: ReadonlySet<string>) => void;
   childRegions?: ReactiveRegion[] | undefined;

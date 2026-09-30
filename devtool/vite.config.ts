@@ -37,6 +37,7 @@ function extensionScriptsPlugin() {
 }
 
 export default defineConfig({
+  base: './',
   plugins: [driftPlugin() as any, extensionScriptsPlugin()],
   build: {
     outDir: 'dist',

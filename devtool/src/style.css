@@ -245,39 +245,45 @@ html, body, #app {
 .dt-content {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
+  padding: 16px 20px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 24px;
 }
 
-/* Section Cards */
+/* Flat Open Sections (no card boxes or boundaries) */
 .dt-card {
-  background-color: var(--dt-bg-subtle);
-  border: 1px solid var(--dt-border);
-  border-radius: 6px;
-  overflow: hidden;
+  background-color: transparent;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
 }
 
 .dt-card-header {
-  padding: 8px 12px;
-  background-color: var(--dt-bg-header);
+  padding: 4px 0 10px 0;
+  background-color: transparent;
+  border: none;
   border-bottom: 1px solid var(--dt-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
   font-weight: 600;
   font-size: 12px;
+  color: var(--dt-text);
+  margin-bottom: 4px;
 }
 
 .dt-card-title {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .dt-card-body {
-  padding: 12px;
+  padding: 6px 0;
+  overflow: visible;
 }
 
 /* Tables */

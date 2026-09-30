@@ -20,3 +20,4 @@ process-images/
 html/
 test-results/
 coverage/
+*.zip

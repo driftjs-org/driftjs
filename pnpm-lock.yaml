@@ -228,7 +228,7 @@ importers:
         specifier: 8.3.1
         version: 8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(sass-embedded@1.104.1)(sass@1.104.1)(terser@5.51.2)(tsx@4.23.15)
 
-  devtools:
+  devtool:
     dependencies:
       driftjs-compiler:
         specifier: workspace:*

@@ -314,7 +314,7 @@
               <span class="dt-card-title">Bytecode Instruction Stream</span>
               <span class="dt-tag-badge">{selectedVm.bytecode.length} instructions</span>
             </div>
-            <div class="dt-card-body" style="max-height: 280px; overflow-y: auto;">
+            <div class="dt-card-body">
               @if (selectedVm.bytecode.length === 0) {
                 <div style="color: var(--dt-text-muted); font-size: 11px;">No instructions</div>
               } @else {
@@ -355,7 +355,7 @@
               <span class="dt-card-title">Constant Pool</span>
               <span class="dt-tag-badge">{selectedVm.constants.length} entries</span>
             </div>
-            <div class="dt-card-body" style="max-height: 200px; overflow-y: auto;">
+            <div class="dt-card-body">
               <table class="dt-table">
                 <thead>
                   <tr>

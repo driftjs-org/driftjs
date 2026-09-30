@@ -219,10 +219,20 @@ import type { VMSnapshot, VMRegisterSnapshot, ReactivityEvent } from './types/br
         }
       }),
       bytecode: disassembled,
-      reactiveRegions: Array.from((vm.reactiveRegions as Set<any>) || []).map((r) => ({
-        type: r.type || 'if',
-        deps: Array.isArray(r.deps) ? r.deps : [],
-      })),
+      reactiveRegions: Array.from((vm.reactiveRegions as Set<any>) || []).map((r) => {
+        let type = r.type;
+        if (!type && r.startAnchor) {
+          const val = r.startAnchor.nodeValue || r.startAnchor.textContent || '';
+          if (val.includes('for')) type = 'for';
+          else if (val.includes('switch')) type = 'switch';
+          else if (val.includes('async')) type = 'async';
+          else type = 'if';
+        }
+        return {
+          type: type || 'if',
+          deps: r.deps ? Array.from(r.deps) : [],
+        };
+      }),
       renderCount: 1,
       tagName,
     };

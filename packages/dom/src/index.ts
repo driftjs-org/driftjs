@@ -934,6 +934,7 @@ export class DriftClientVM {
             }
 
             ifRegion = {
+              type: 'if',
               deps,
               reRender: () => {
                 renderIf();
@@ -1040,6 +1041,7 @@ export class DriftClientVM {
             }
 
             switchRegion = {
+              type: 'switch',
               deps,
               reRender: () => {
                 renderSwitch();
@@ -1321,6 +1323,7 @@ export class DriftClientVM {
             }
 
             const forRegion: ReactiveRegion = {
+              type: 'for',
               deps,
               reRender: (changedVars?: ReadonlySet<string>) => {
                 // If no changedVars hint, or any iterable-source variable changed,
@@ -1475,6 +1478,7 @@ export class DriftClientVM {
             }
 
             asyncRegion = {
+              type: 'async',
               deps,
               reRender: () => {
                 renderAsync();

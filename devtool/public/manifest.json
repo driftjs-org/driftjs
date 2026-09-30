@@ -5,7 +5,6 @@
   "description": "Firefox DevTools extension for DriftJS register VM reactivity engine",
   "browser_specific_settings": {
     "gecko": {
-      "id": "driftjs-devtools@driftjs.org",
       "strict_min_version": "109.0"
     }
   },

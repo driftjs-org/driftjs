@@ -13,16 +13,17 @@
     "format:check": "prettier --check ."
   },
   "devDependencies": {
-    "driftjs-eslint-plugin": "0.0.16",
-    "driftjs-prettier-plugin": "0.0.16",
-    "driftjs-vite-plugin": "0.0.16",
+    "driftjs-eslint-plugin": "workspace:*",
+    "driftjs-prettier-plugin": "workspace:*",
+    "driftjs-vite-plugin": "workspace:*",
     "eslint": "10.11.0",
     "prettier": "3.9.9",
     "typescript": "7.0.2",
     "vite": "8.3.1"
   },
   "dependencies": {
-    "driftjs-compiler": "0.0.16",
-    "driftjs-dom": "0.0.16"
+    "driftjs-compiler": "workspace:*",
+    "driftjs-dom": "workspace:*",
+    "driftjs-shared": "workspace:*"
   }
 }

@@ -1,104 +1,451 @@
 <script>
-  let count = 0;
-  let history = [];
-  let autoRunning = false;
-  let _intervalId = null;
+  let activeTab = 'scope';
+  let connected = false;
+  let driftVersion = '';
+  let vms = [];
+  let selectedVmId = '';
+  let selectedVm = null;
+  let events = [];
+  let searchQuery = '';
 
-  function increment() {
-    count++;
-    history = [`Incremented to ${count}`, ...history];
+  export function setBridge(bridge) {
+    window.__drift_bridge__ = bridge;
   }
 
-  function decrement() {
-    count--;
-    history = [`Decremented to ${count}`, ...history];
+  function getBridge() {
+    return window.__drift_bridge__;
   }
 
-  function reset() {
-    count = 0;
-    history = ['Reset counter to 0', ...history];
+  export function handleDetected(ver, count) {
+    connected = true;
+    driftVersion = ver;
   }
 
-  function clearHistory() {
-    history = [];
-  }
-
-  function startAutoIncrement() {
-    if (autoRunning) return;
-    autoRunning = true;
-    history = ['▶ Auto-increment started', ...history];
-    _intervalId = setInterval(() => {
-      count++;
-      history = [`Auto-incremented to ${count}`, ...history];
-    }, 1000);
-  }
-
-  function stopAutoIncrement() {
-    if (!autoRunning) return;
-    clearInterval(_intervalId);
-    _intervalId = null;
-    autoRunning = false;
-    history = ['■ Auto-increment stopped', ...history];
-  }
-
-  function toggleAuto() {
-    if (autoRunning) {
-      stopAutoIncrement();
+  export function handleTree(newVms) {
+    connected = true;
+    vms = newVms || [];
+    if (vms.length > 0) {
+      if (!selectedVmId || !vms.find(v => v.id === selectedVmId)) {
+        selectedVmId = vms[0].id;
+        selectedVm = vms[0];
+      } else {
+        selectedVm = vms.find(v => v.id === selectedVmId);
+      }
     } else {
-      startAutoIncrement();
+      selectedVm = null;
+    }
+  }
+
+  export function handleVMUpdated(vmId, newScope, dirtyVars) {
+    if (selectedVm && selectedVm.id === vmId) {
+      selectedVm.scope = newScope;
+      selectedVm = { ...selectedVm };
+    }
+    const idx = vms.findIndex(v => v.id === vmId);
+    if (idx !== -1) {
+      vms[idx].scope = newScope;
+      vms = [...vms];
+    }
+  }
+
+  export function handleVMMounted(vm) {
+    connected = true;
+    const exists = vms.findIndex(v => v.id === vm.id);
+    if (exists === -1) {
+      vms = [...vms, vm];
+      if (!selectedVm) {
+        selectedVmId = vm.id;
+        selectedVm = vm;
+      }
+    }
+  }
+
+  export function handleVMUnmounted(vmId) {
+    vms = vms.filter(v => v.id !== vmId);
+    if (selectedVmId === vmId) {
+      selectedVmId = vms.length > 0 ? vms[0].id : '';
+      selectedVm = vms.length > 0 ? vms[0] : null;
+    }
+  }
+
+  export function handleEvent(event) {
+    events = [event, ...events.slice(0, 49)];
+  }
+
+  function selectVM(vm) {
+    selectedVmId = vm.id;
+    selectedVm = vm;
+    const b = getBridge();
+    if (b) {
+      b.highlightVM(vm.id);
+    }
+  }
+
+  function onTreeItemMouseEnter(vm) {
+    const b = getBridge();
+    if (b) {
+      b.highlightVM(vm.id);
+    }
+  }
+
+  function onTreeItemMouseLeave() {
+    const b = getBridge();
+    if (b) {
+      b.unhighlightVM();
+    }
+  }
+
+  function setTab(tab) {
+    activeTab = tab;
+  }
+
+  function refreshTree() {
+    const b = getBridge();
+    if (b) {
+      b.refreshTree();
+    }
+  }
+
+  function clearEvents() {
+    events = [];
+  }
+
+  function handleScopeEdit(varName, e) {
+    const rawVal = e.target.value;
+    let parsedVal = rawVal;
+    try {
+      parsedVal = JSON.parse(rawVal);
+    } catch {
+      parsedVal = rawVal;
+    }
+    const b = getBridge();
+    if (b && selectedVmId) {
+      b.updateScopeVar(selectedVmId, varName, parsedVal);
     }
   }
 </script>
 
-<div class="card">
-  <div class="header">
-    <div class="logo-badge">Powered by DriftJS</div>
-    <p class="subtitle">A Register-based Virtual Machine</p>
-    <h1>Basic Counter Application</h1>
-    <p class="hint">🚀 Edit <code>src/App.drift</code> to see live reactive updates!</p>
-  </div>
+<div class="dt-container">
+  <!-- Top Navigation Header -->
+  <header class="dt-header">
+    <div class="dt-header-left">
+      <div class="dt-brand">
+        <svg class="dt-brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <circle cx="12" cy="12" r="9"></circle>
+          <path d="M12 7v5l3 3"></path>
+        </svg>
+        <span>Drift DevTools</span>
+      </div>
 
-  <div class="counter-display">
-    <span class="label">CURRENT COUNT</span>
-    <div class="count-value">{count}</div>
-    
-    <div class="badge-container">
-      @if count === 0 {
-        <span class="badge badge-zero">Zero</span>
-      } @else if count > 0 {
-        <span class="badge badge-positive">Positive</span>
-      } @else {
-        <span class="badge badge-negative">Negative</span>
-      }
-
-      @if count % 2 === 0 {
-        <span class="badge badge-even">Even</span>
-      } @else {
-        <span class="badge badge-odd">Odd</span>
-      }
+      <nav class="dt-tabs">
+        <button class={activeTab === 'tree' ? 'dt-tab-btn active' : 'dt-tab-btn'} onclick={() => setTab('tree')}>
+          Components
+        </button>
+        <button class={activeTab === 'scope' ? 'dt-tab-btn active' : 'dt-tab-btn'} onclick={() => setTab('scope')}>
+          Scope & State
+        </button>
+        <button class={activeTab === 'isa' ? 'dt-tab-btn active' : 'dt-tab-btn'} onclick={() => setTab('isa')}>
+          Registers & ISA
+        </button>
+        <button class={activeTab === 'timeline' ? 'dt-tab-btn active' : 'dt-tab-btn'} onclick={() => setTab('timeline')}>
+          Timeline ({events.length})
+        </button>
+      </nav>
     </div>
-  </div>
 
-  <div class="button-group">
-    <button class="btn btn-dec" onclick={decrement}>Decrement</button>
-    <button class="btn btn-reset" onclick={reset}>Reset</button>
-    <button class="btn btn-inc" onclick={increment}>Increment</button>
-    @if autoRunning {
-      <button class="btn btn-auto btn-auto-stop" onclick={stopAutoIncrement}>Stop Auto Increment</button>
-    } @else {
-      <button class="btn btn-auto" onclick={startAutoIncrement}>Auto Increment</button>
-    }
-  </div>
-
-  <div class="history-section">
-    <div class="history-header">
-      <h2>Activity History Log</h2>
-      <button class="btn-clear" onclick={clearHistory}>Clear</button>
-    </div>
-    <ul class="history-list">
-      @for log in history {
-        <li class="pill">{log}</li>
+    <div class="dt-header-right">
+      @if (connected) {
+        <span class="dt-badge dt-badge-green">Drift v{driftVersion || '0.0.16'}</span>
+      } @else {
+        <span class="dt-badge dt-badge-yellow">Connecting...</span>
       }
-    </ul>
+
+      <span class="dt-badge dt-badge-green">{vms.length} VMs</span>
+
+      <button class="dt-btn-icon" onclick={refreshTree} title="Refresh component tree">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19"></path>
+        </svg>
+        <span>Refresh</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Split Layout -->
+  <div class="dt-main">
+    <!-- Left Sidebar: Component Tree -->
+    <aside class="dt-sidebar">
+      <div class="dt-sidebar-header">
+        <span class="dt-sidebar-title">VM Instances</span>
+      </div>
+
+      <div class="dt-tree-list">
+        @if (vms.length === 0) {
+          <div class="dt-empty-state" style="padding: 24px 12px;">
+            <div class="dt-empty-title">No Drift VMs</div>
+            <div style="font-size: 11px; color: var(--dt-text-dim);">Navigate to a page running DriftJS</div>
+          </div>
+        } @else {
+          @for (vm, idx) in vms {
+            <div
+              class={selectedVmId === vm.id ? 'dt-tree-item selected' : 'dt-tree-item'}
+              onclick={() => selectVM(vm)}
+              onmouseenter={() => onTreeItemMouseEnter(vm)}
+              onmouseleave={onTreeItemMouseLeave}
+            >
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span class="dt-tag-name">&lt;{vm.name}&gt;</span>
+                <span class="dt-tag-badge">{vm.id}</span>
+              </div>
+              <span style="font-size: 10px; color: var(--dt-text-muted);">{vm.registers.length} regs</span>
+            </div>
+          }
+        }
+      </div>
+    </aside>
+
+    <!-- Right Panel Content -->
+    <main class="dt-content">
+      @if (selectedVm) {
+        @if (activeTab === 'scope') {
+          <!-- Scope & State Inspector Card -->
+          <div class="dt-card">
+            <div class="dt-card-header">
+              <span class="dt-card-title">Component Scope Variables</span>
+              <span class="dt-tag-badge">{Object.keys(selectedVm.scope).length} variables</span>
+            </div>
+            <div class="dt-card-body">
+              @if (Object.keys(selectedVm.scope).length === 0) {
+                <div style="color: var(--dt-text-muted); font-size: 11px;">Scope is empty</div>
+              } @else {
+                <table class="dt-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 140px;">Variable</th>
+                      <th>Value</th>
+                      <th style="width: 180px;">Live Edit</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (varName, vIdx) in Object.keys(selectedVm.scope) {
+                      <tr>
+                        <td style="color: var(--dt-accent); font-weight: 600;">{varName}</td>
+                        <td style="color: var(--dt-text); word-break: break-all;">
+                          {typeof selectedVm.scope[varName] === 'object' ? JSON.stringify(selectedVm.scope[varName]) : String(selectedVm.scope[varName])}
+                        </td>
+                        <td>
+                          <input
+                            class="dt-table-input"
+                            value={typeof selectedVm.scope[varName] === 'object' ? JSON.stringify(selectedVm.scope[varName]) : String(selectedVm.scope[varName])}
+                            onchange={(e) => handleScopeEdit(varName, e)}
+                          />
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+            </div>
+          </div>
+
+          <!-- Reactive Bindings Card -->
+          <div class="dt-card">
+            <div class="dt-card-header">
+              <span class="dt-card-title">Reactive Variable Bindings (PC Locations)</span>
+              <span class="dt-tag-badge">{selectedVm.reactiveBindings.length} tracked</span>
+            </div>
+            <div class="dt-card-body">
+              @if (selectedVm.reactiveBindings.length === 0) {
+                <div style="color: var(--dt-text-muted); font-size: 11px;">No reactive bindings</div>
+              } @else {
+                <table class="dt-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 160px;">Variable</th>
+                      <th>Bytecode PC Positions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (b, bIdx) in selectedVm.reactiveBindings {
+                      <tr>
+                        <td style="color: var(--dt-yellow); font-weight: 600;">{b.varName}</td>
+                        <td style="color: var(--dt-purple);">[ {b.pcs.join(', ')} ]</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+            </div>
+          </div>
+
+          <!-- Reactive Regions Card -->
+          <div class="dt-card">
+            <div class="dt-card-header">
+              <span class="dt-card-title">Reactive Regions (conditional &amp; loop anchors)</span>
+              <span class="dt-tag-badge">{selectedVm.reactiveRegions.length} regions</span>
+            </div>
+            <div class="dt-card-body">
+              @if (selectedVm.reactiveRegions.length === 0) {
+                <div style="color: var(--dt-text-muted); font-size: 11px;">No active reactive regions</div>
+              } @else {
+                <table class="dt-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 100px;">Region Type</th>
+                      <th>Dependencies</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (r, rIdx) in selectedVm.reactiveRegions {
+                      <tr>
+                        <td style="color: var(--dt-green); font-weight: 600;">@{r.type}</td>
+                        <td style="color: var(--dt-text-dim);">[ {r.deps.join(', ')} ]</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+            </div>
+          </div>
+        } @else if (activeTab === 'isa') {
+          <!-- Bytecode Disassembly Stream -->
+          <div class="dt-card">
+            <div class="dt-card-header">
+              <span class="dt-card-title">Bytecode Instruction Stream</span>
+              <span class="dt-tag-badge">{selectedVm.bytecode.length} instructions</span>
+            </div>
+            <div class="dt-card-body" style="max-height: 280px; overflow-y: auto;">
+              @if (selectedVm.bytecode.length === 0) {
+                <div style="color: var(--dt-text-muted); font-size: 11px;">No instructions</div>
+              } @else {
+                @for (instr, iIdx) in selectedVm.bytecode {
+                  <div class="dt-instruction-row">
+                    <span class="dt-pc">0x{instr.pc.toString(16).padStart(2, '0').toUpperCase()}</span>
+                    <span class="dt-mnemonic">{instr.mnemonic}</span>
+                    <span class="dt-operands">{instr.operands.join(' ')}</span>
+                    <span class="dt-annotation">{instr.annotation}</span>
+                  </div>
+                }
+              }
+            </div>
+          </div>
+
+          <!-- Registers Snapshot r0..r255 -->
+          <div class="dt-card">
+            <div class="dt-card-header">
+              <span class="dt-card-title">Registers Snapshot (Active Registers)</span>
+              <span class="dt-tag-badge">{selectedVm.registers.length} occupied</span>
+            </div>
+            <div class="dt-card-body">
+              <div class="dt-registers-grid">
+                @for (reg, rIdx) in selectedVm.registers {
+                  <div class="dt-register-box">
+                    <span class="dt-reg-index">r{reg.index}</span>
+                    <span class="dt-tag-badge" style="margin-right: 4px;">{reg.type}</span>
+                    <span class="dt-reg-val">{reg.preview}</span>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- Constants Pool -->
+          <div class="dt-card">
+            <div class="dt-card-header">
+              <span class="dt-card-title">Constant Pool</span>
+              <span class="dt-tag-badge">{selectedVm.constants.length} entries</span>
+            </div>
+            <div class="dt-card-body" style="max-height: 200px; overflow-y: auto;">
+              <table class="dt-table">
+                <thead>
+                  <tr>
+                    <th style="width: 80px;">Index</th>
+                    <th>Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (constVal, cIdx) in selectedVm.constants {
+                    <tr>
+                      <td style="color: var(--dt-text-muted);">c[{cIdx}]</td>
+                      <td style="color: var(--dt-text);">{typeof constVal === 'object' ? JSON.stringify(constVal) : String(constVal)}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        } @else if (activeTab === 'timeline') {
+          <!-- Timeline View -->
+          <div class="dt-card">
+            <div class="dt-card-header">
+              <span class="dt-card-title">Reactivity Event Log</span>
+              <button class="dt-btn-icon" onclick={clearEvents}>Clear</button>
+            </div>
+            <div class="dt-card-body">
+              @if (events.length === 0) {
+                <div style="color: var(--dt-text-muted); font-size: 11px;">No reactivity events captured yet</div>
+              } @else {
+                <div class="dt-timeline-list">
+                  @for (evt, eIdx) in events {
+                    <div class="dt-timeline-item">
+                      <span class="dt-timeline-time">{new Date(evt.timestamp).toLocaleTimeString()}</span>
+                      <span class={evt.type === 'dirty' ? 'dt-timeline-badge dt-badge-dirty' : evt.type === 'mount' ? 'dt-timeline-badge dt-badge-mount' : 'dt-timeline-badge dt-badge-region'}>
+                        {evt.type}
+                      </span>
+                      <span style="color: var(--dt-accent); font-weight: 600;">&lt;{evt.vmName}&gt;</span>
+                      <span style="color: var(--dt-text); flex: 1;">{evt.details}</span>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        } @else {
+          <!-- Tree / Overview Tab -->
+          <div class="dt-card">
+            <div class="dt-card-header">
+              <span class="dt-card-title">Component Overview: &lt;{selectedVm.name}&gt;</span>
+              <span class="dt-badge dt-badge-green">{selectedVm.id}</span>
+            </div>
+            <div class="dt-card-body">
+              <table class="dt-table">
+                <tbody>
+                  <tr>
+                    <td style="width: 140px; color: var(--dt-text-muted);">VM ID</td>
+                    <td>{selectedVm.id}</td>
+                  </tr>
+                  <tr>
+                    <td style="color: var(--dt-text-muted);">DOM Tag</td>
+                    <td>&lt;{selectedVm.name}&gt;</td>
+                  </tr>
+                  <tr>
+                    <td style="color: var(--dt-text-muted);">Parent VM</td>
+                    <td>{selectedVm.parentId ? selectedVm.parentId : 'None (Root VM)'}</td>
+                  </tr>
+                  <tr>
+                    <td style="color: var(--dt-text-muted);">Declared Variables</td>
+                    <td>{selectedVm.declaredVars.join(', ') || 'None'}</td>
+                  </tr>
+                  <tr>
+                    <td style="color: var(--dt-text-muted);">Occupied Registers</td>
+                    <td>{selectedVm.registers.length} / 256</td>
+                  </tr>
+                  <tr>
+                    <td style="color: var(--dt-text-muted);">Reactive Regions</td>
+                    <td>{selectedVm.reactiveRegions.length}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+      } @else {
+        <div class="dt-empty-state">
+          <div class="dt-empty-icon">⚡</div>
+          <div class="dt-empty-title">Select a Component</div>
+          <div>Choose a Drift VM instance from the left sidebar to inspect its scope, registers, and reactivity.</div>
+        </div>
+      }
+    </main>
   </div>
 </div>

@@ -114,6 +114,14 @@ export default defineConfig({
           setupFiles: ['./packages/ssr/tests/setup.ts'],
         },
       },
+      {
+        test: {
+          name: 'devtools',
+          include: ['devtools/tests/**/*.test.ts'],
+          exclude: ['devtools/dist'],
+          environment: 'node',
+        },
+      },
     ],
   },
 });

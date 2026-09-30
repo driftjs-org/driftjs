@@ -231,21 +231,24 @@ importers:
   devtools:
     dependencies:
       driftjs-compiler:
-        specifier: 0.0.16
-        version: 0.0.16
+        specifier: workspace:*
+        version: link:../packages/compiler
       driftjs-dom:
-        specifier: 0.0.16
-        version: 0.0.16
+        specifier: workspace:*
+        version: link:../packages/dom
+      driftjs-shared:
+        specifier: workspace:*
+        version: link:../packages/utils
     devDependencies:
       driftjs-eslint-plugin:
-        specifier: 0.0.16
-        version: 0.0.16(eslint@10.11.0(supports-color@8.1.1))
+        specifier: workspace:*
+        version: link:../packages/eslint-plugin
       driftjs-prettier-plugin:
-        specifier: 0.0.16
-        version: 0.0.16(prettier@3.9.9)
+        specifier: workspace:*
+        version: link:../packages/prettier-plugin
       driftjs-vite-plugin:
-        specifier: 0.0.16
-        version: 0.0.16(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(sass-embedded@1.104.1)(sass@1.104.1)(terser@5.51.2)(tsx@4.23.15))
+        specifier: workspace:*
+        version: link:../packages/vite-plugin
       eslint:
         specifier: 10.11.0
         version: 10.11.0(supports-color@8.1.1)
@@ -3639,30 +3642,6 @@ packages:
   domutils@4.0.2:
     resolution: {integrity: sha512-qI4JLRKnSzqFqr7hAlS5xQDusBCjKSEG4t4+7aNrIQMHBcsC2TGEhuyABJdYkgSewL57PNLYEiibY2iPKhKpaA==}
     engines: {node: '>=20.19.0'}
-
-  driftjs-compiler@0.0.16:
-    resolution: {integrity: sha512-sOUsbN8HfZLSQcI393QNAj+Nvv7m8aWJQXjG/vgX4s2Rciqwvu30rsnYbtSh5mwXUn2nqb9FnbH9r1xUd94DAw==}
-
-  driftjs-dom@0.0.16:
-    resolution: {integrity: sha512-T0wruHs0QswobeWQgyWR6qs4vB/JIU91P/yxEvtsItgQix+6N9HWPNyFNSO9QjcGaAP37PxmGXgjegAivjM4iQ==}
-
-  driftjs-eslint-plugin@0.0.16:
-    resolution: {integrity: sha512-14lEoZIrkf414SREOqPEHKoWSIO9a05TMzi/WruyAA78hZGqM63KbG0joS+/MXW22uvIy7WHr15egDccIUjbcg==}
-    peerDependencies:
-      eslint: '>=8.57.0'
-
-  driftjs-prettier-plugin@0.0.16:
-    resolution: {integrity: sha512-smFiTucyHdEAUHXQVDbRUnYIqh/GQCOxShbyn9/D9SEtCkStQ8giahDQg/Mvoq1UpDYC71D95Bjd5uFxSuRbvw==}
-    peerDependencies:
-      prettier: '>=3.0.0'
-
-  driftjs-shared@0.0.16:
-    resolution: {integrity: sha512-AUMArO6vMYgn2YT8nlqM+DMmR6XnzFOPvhF2fX+gqDAaVa08zk+79LlHi4/C7PjohDYU2RDScCsG/duE20tp3g==}
-
-  driftjs-vite-plugin@0.0.16:
-    resolution: {integrity: sha512-Tbu5yUhSv/W6LRjjm/XADUp0Qoqj4I8HK++aYg36ER9zCpbQ1lIGYIQkKYvNsiy/8ZJz4CzRxL1nySjWDeEr9g==}
-    peerDependencies:
-      vite: 8.1.5
 
   dunder-proto@1.0.1:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
@@ -9553,39 +9532,6 @@ snapshots:
       dom-serializer: 3.1.1
       domelementtype: 3.0.0
       domhandler: 6.0.1
-
-  driftjs-compiler@0.0.16:
-    dependencies:
-      acorn: 8.18.0
-      acorn-walk: 8.3.5
-      driftjs-shared: 0.0.16
-
-  driftjs-dom@0.0.16:
-    dependencies:
-      driftjs-shared: 0.0.16
-
-  driftjs-eslint-plugin@0.0.16(eslint@10.11.0(supports-color@8.1.1)):
-    dependencies:
-      acorn: 8.18.0
-      acorn-walk: 8.3.5
-      driftjs-compiler: 0.0.16
-      driftjs-shared: 0.0.16
-      eslint: 10.11.0(supports-color@8.1.1)
-
-  driftjs-prettier-plugin@0.0.16(prettier@3.9.9):
-    dependencies:
-      acorn: 8.18.0
-      acorn-walk: 8.3.5
-      driftjs-compiler: 0.0.16
-      driftjs-shared: 0.0.16
-      prettier: 3.9.9
-
-  driftjs-shared@0.0.16: {}
-
-  driftjs-vite-plugin@0.0.16(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(sass-embedded@1.104.1)(sass@1.104.1)(terser@5.51.2)(tsx@4.23.15)):
-    dependencies:
-      driftjs-compiler: 0.0.16
-      vite: 8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(sass-embedded@1.104.1)(sass@1.104.1)(terser@5.51.2)(tsx@4.23.15)
 
   dunder-proto@1.0.1:
     dependencies:

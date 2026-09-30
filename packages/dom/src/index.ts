@@ -322,9 +322,11 @@ export class DriftClientVM {
       DriftClientVM.activeVMCount--;
     }
 
-    if (typeof window !== 'undefined' && (window as any).__DRIFT_DEVTOOLS_GLOBAL_HOOK__) {
-      (window as any).__DRIFT_DEVTOOLS_GLOBAL_HOOK__.unregisterVM(this);
-    }
+    try {
+      if (typeof window !== 'undefined' && (window as any).__DRIFT_DEVTOOLS_GLOBAL_HOOK__) {
+        (window as any).__DRIFT_DEVTOOLS_GLOBAL_HOOK__.unregisterVM(this);
+      }
+    } catch {}
 
 
     for (const childVM of Array.from(this.mountedChildVMs)) {
@@ -393,9 +395,11 @@ export class DriftClientVM {
     this.pendingDirtyVars.add(varName);
     this.invalidateDerived(varName);
     this.invalidateEffects(varName);
-    if (typeof window !== 'undefined' && (window as any).__DRIFT_DEVTOOLS_GLOBAL_HOOK__) {
-      (window as any).__DRIFT_DEVTOOLS_GLOBAL_HOOK__.emitDirty(this, varName);
-    }
+    try {
+      if (typeof window !== 'undefined' && (window as any).__DRIFT_DEVTOOLS_GLOBAL_HOOK__) {
+        (window as any).__DRIFT_DEVTOOLS_GLOBAL_HOOK__.emitDirty(this, varName);
+      }
+    } catch {}
     if (!this.isUpdateScheduled) {
       this.isUpdateScheduled = true;
       queueMicrotask(() => this.flushUpdates());
@@ -1601,9 +1605,11 @@ export class DriftClientVM {
       const result = this.executeFrom(0, module.bytecode, module.constants, scope, VMMode.MOUNT);
       this.cursor = null;
       this.flushPendingEffects();
-      if (typeof window !== 'undefined' && (window as any).__DRIFT_DEVTOOLS_GLOBAL_HOOK__) {
-        (window as any).__DRIFT_DEVTOOLS_GLOBAL_HOOK__.registerVM(this);
-      }
+      try {
+        if (typeof window !== 'undefined' && (window as any).__DRIFT_DEVTOOLS_GLOBAL_HOOK__) {
+          (window as any).__DRIFT_DEVTOOLS_GLOBAL_HOOK__.registerVM(this);
+        }
+      } catch {}
       return result;
     } finally {
       popActiveVM();

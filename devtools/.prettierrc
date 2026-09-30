@@ -1,0 +1,8 @@
+{
+  "plugins": ["driftjs-prettier-plugin"],
+  "tabWidth": 2,
+  "singleQuote": true,
+  "driftScriptIndent": true,
+  "driftStyleIndent": true,
+  "driftSelfCloseVoid": true
+}

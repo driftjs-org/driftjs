@@ -6,6 +6,7 @@ packages:
   - 'benchmarks/runner/app'
   - 'benchmarks/frameworks/*'
   - 'docs'
+  - 'devtools'
 allowBuilds:
   '@vscode/vsce-sign': true
   keytar: true

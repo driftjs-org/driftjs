@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "drift-ssg dev",
+    "prebuild": "node ../scripts/copy-assets.js",
     "build": "drift-ssg build",
     "preview": "drift-ssg preview"
   },

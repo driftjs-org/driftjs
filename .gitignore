@@ -21,3 +21,8 @@ html/
 test-results/
 coverage/
 *.zip
+
+# Generated build-time assets
+packages/vscode-plugin/assets/
+devtool/public/assets/
+docs/public/assets/

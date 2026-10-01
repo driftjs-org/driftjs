@@ -5,7 +5,7 @@
     <em>256-Register Virtual Machine • AOT Bytecode Stream • Comment-Anchored Reactive Regions • Zero Virtual DOM</em>
   </p>
   <br />
-  <img src="packages/vscode-plugin/assets/icon.png" alt="DriftJS Logo" width="180" />
+  <img src="assets/icon.png" alt="DriftJS Logo" width="180" />
 </div>
 
 

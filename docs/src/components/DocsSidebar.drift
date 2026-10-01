@@ -1,7 +1,7 @@
 <aside class="docs-sidebar">
   <div class="sidebar-mobile-header">
     <div class="brand-link">
-      <img src="/logo.png" alt="DriftJS Logo" class="brand-logo-img" />
+      <img src="/assets/icon.png" alt="DriftJS Logo" class="brand-logo-img" />
       <span class="brand-text">Drift<span class="brand-accent">JS</span></span>
     </div>
     <label for="nav-drawer-toggle" class="sidebar-close-btn" aria-label="Close menu">&times;</label>

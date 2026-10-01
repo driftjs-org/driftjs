@@ -5,25 +5,21 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
-const sourceIcon = path.join(rootDir, 'assets', 'icon.png');
+const sourceAssets = path.join(rootDir, 'assets');
 
-if (!fs.existsSync(sourceIcon)) {
-  console.error(`[copy-assets] Error: Source icon not found at ${sourceIcon}`);
+if (!fs.existsSync(sourceAssets)) {
+  console.error(`[copy-assets] Error: Source assets directory not found at ${sourceAssets}`);
   process.exit(1);
 }
 
-const targets = [
-  path.join(rootDir, 'packages', 'vscode-plugin', 'assets', 'icon.png'),
-  path.join(rootDir, 'devtool', 'public', 'icon.png'),
-  path.join(rootDir, 'docs', 'public', 'icon.png'),
+const targetDirs = [
+  path.join(rootDir, 'packages', 'vscode-plugin', 'assets'),
+  path.join(rootDir, 'devtool', 'public', 'assets'),
+  path.join(rootDir, 'docs', 'public', 'assets'),
 ];
 
-for (const destPath of targets) {
-  const destDir = path.dirname(destPath);
-  if (!fs.existsSync(destDir)) {
-    fs.mkdirSync(destDir, { recursive: true });
-  }
-
-  fs.copyFileSync(sourceIcon, destPath);
-  console.log(`[copy-assets] Copied assets/icon.png -> ${path.relative(rootDir, destPath)}`);
+for (const destDir of targetDirs) {
+  fs.mkdirSync(destDir, { recursive: true });
+  fs.cpSync(sourceAssets, destDir, { recursive: true });
+  console.log(`[copy-assets] Copied assets/ -> ${path.relative(rootDir, destDir)}/`);
 }

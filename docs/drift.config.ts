@@ -29,7 +29,7 @@ export default {
       { name: 'twitter:description', content: 'Ultra-fast register VM reactivity engine and AOT compiler for the modern web.' }
     ],
     links: [
-      { rel: 'icon', href: '/favicon.png', type: 'image/png' },
+      { rel: 'icon', href: '/assets/icon.png', type: 'image/png' },
       { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
       { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: 'anonymous' },
       { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap' }

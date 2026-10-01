@@ -11,8 +11,8 @@ This document outlines the strategic technical roadmap for DriftJS, covering the
 | **Milestone 1** | DevTools Cross-Browser Packaging & Release Automation | 🔄 In Progress |
 | **Milestone 2** | Explicit State Declaration API (`$state`, `$derived`, `$effect`) | 📋 Planned |
 | **Milestone 3** | Compiler & Register VM Architecture Refactoring | 📋 Planned |
-| **Milestone 4** | Two-Way Binding Directive (`@bind`) & Component Slots | 📋 Planned |
-| **Milestone 5** | Tooling & Ecosystem Alignment (VSCode, ESLint, Prettier) | 📋 Planned |
+| **Milestone 4** | Two-Way Binding (`@bind`), Component Slots & `<Head>` Metadata | 📋 Planned |
+| **Milestone 5** | Tooling & TypeScript SFC Support (`<script lang="ts">`, VSCode, ESLint) | 📋 Planned |
 | **Milestone 6** | Examples Showcase & Compiler Fixtures Infrastructure | 📋 Planned |
 | **Milestone 7** | Cross-Browser Matrix Testing (Gecko, WebKit, Blink) & Benchmarks | 📋 Planned |
 
@@ -134,22 +134,45 @@ This document outlines the strategic technical roadmap for DriftJS, covering the
 - [ ] Scoped slots: passing data from child VM to parent projection slot (`<slot {item} />`).
 - [ ] Dynamic component mounting opcode (`OP_MOUNT_DYNAMIC`).
 
+### 4.3 Declarative `<Head>` & Document Metadata Management (⚡ High Priority)
+- [ ] **`<Head>` Template Tag Support**:
+  - Declarative `<Head>` element inside `.drift` components to manage `<title>`, `<meta>`, `<link>`, and OpenGraph social tags:
+    ```html
+    <Head>
+      <title>{post.title} - DriftJS</title>
+      <meta name="description" content={post.summary} />
+      <meta property="og:image" content={post.coverUrl} />
+    </Head>
+    ```
+- [ ] **SSR Head Hoisting (`driftjs-ssr`)**:
+  - Collect all `<Head>` child nodes during `renderToString` / `renderToStream`.
+  - Hoist and inject tags into the server HTML document `<head>` without rendering comment anchors in the body.
+- [ ] **CSR Dynamic Head Sync (`driftjs-dom`)**:
+  - Dynamically patch `document.title` and `<head>` metadata in browser client on route transitions or reactive state updates.
+  - Automatically de-duplicate meta tags by `name` or `property` attribute to avoid duplicate tag pollution.
+  - Cleanup/restore previous tags on component unmount.
+
 ---
 
-## Milestone 5: Tooling & Developer Ecosystem
+## Milestone 5: Tooling, Developer Ecosystem & TypeScript
 
-### 5.1 VSCode Extension (`driftjs-vscode`)
+### 5.1 First-Class TypeScript in SFCs (`<script lang="ts">`)
+- [ ] Support `<script lang="ts">` in `.drift` single-file components.
+- [ ] Integrate TypeScript type stripping via `acorn-typescript` / Sucrase in `driftjs-compiler` so type annotations don't throw syntax errors.
+- [ ] Preserve full type checking and type inference in `driftjs-vscode` language server (diagnostics, completions, hover info).
+
+### 5.2 VSCode Extension (`driftjs-vscode`)
 - [ ] Syntax highlighting grammar for `$state`, `$derived`, `$effect`, `$props`, and `@bind`.
 - [ ] Hover tooltips showing type signatures and reactive dependency links.
-- [ ] Autocomplete snippets for explicit state primitives and component directives.
+- [ ] Autocomplete snippets for explicit state primitives, `<Head>`, and component directives.
 
-### 5.2 ESLint Plugin (`driftjs-eslint-plugin`)
+### 5.3 ESLint Plugin (`driftjs-eslint-plugin`)
 - [ ] Rule: `drift/no-untracked-mutations` — Warn when reassigning variables not declared with `$state()`.
 - [ ] Rule: `drift/no-derived-side-effects` — Forbid side-effects inside `$derived()` expressions.
 - [ ] Rule: `drift/valid-slot-names` — Validate slot usage against component declarations.
 
-### 5.3 Prettier Plugin (`driftjs-prettier-plugin`)
-- [ ] Formatter rules for `@bind` directive syntax and `$state` declarations.
+### 5.4 Prettier Plugin (`driftjs-prettier-plugin`)
+- [ ] Formatter rules for `@bind` directive syntax, `<Head>` tags, and `$state` declarations.
 - [ ] Clean multiline formatting for reactive directive attributes.
 
 ---

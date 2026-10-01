@@ -14,7 +14,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "pnpm -r build",
+    "copy-assets": "node scripts/copy-assets.js",
+    "prebuild": "node scripts/copy-assets.js",
+    "build": "node scripts/copy-assets.js && pnpm -r build",
     "test": "vitest run",
     "bench": "pnpm --filter driftjs-benchmark-runner start",
     "bench:perf": "./benchmarks/run-benchmarks.sh",

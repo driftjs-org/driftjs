@@ -67,10 +67,11 @@
     ]
   },
   "scripts": {
+    "prebuild": "node ../../scripts/copy-assets.js",
     "build": "vite build",
     "watch": "tsc -w",
     "test": "vitest run --passWithNoTests",
-    "package": "vsce package --no-dependencies"
+    "package": "node ../../scripts/copy-assets.js && vsce package --no-dependencies"
   },
   "dependencies": {
     "acorn": "8.18.0",

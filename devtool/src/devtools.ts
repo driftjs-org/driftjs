@@ -3,7 +3,7 @@ import { ext } from './utils/ext.js';
 try {
   ext.devtools.panels.create(
     'Drift',
-    'icons/icon-32.png',
+    'assets/icon.png',
     'panel.html',
     () => {
       if (ext.runtime.lastError) {

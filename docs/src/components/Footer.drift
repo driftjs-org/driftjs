@@ -2,7 +2,7 @@
   <div class="footer-inner">
     <div class="footer-brand">
       <a href="/" class="brand-link">
-        <img src="/logo.png" alt="DriftJS" class="brand-logo-img" />
+        <img src="/assets/icon.png" alt="DriftJS" class="brand-logo-img" />
         <span class="brand-text">Drift<span class="brand-accent">JS</span></span>
       </a>
       <p>High-performance register VM-based reactivity engine and AOT compiler for modern web applications.</p>
@@ -44,6 +44,5 @@
 
   <div class="footer-bottom">
     <div>Released under the MIT License. Copyright &copy; 2026 Hrutav Modha.</div>
-    <div>Built statically with <strong>Drift SSG</strong>. Zero-JS by default.</div>
   </div>
 </footer>

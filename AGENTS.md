@@ -179,7 +179,7 @@ driftjs/
 │   ├── RESULTS.md         # Benchmark & performance test results
 │   └── TODO.md            # Feature implementation roadmap ($derived, $effect, @bind, slots)
 │
-├── scripts/               # Workspace helper scripts (versioning)
+├── scripts/               # Workspace helper scripts (versioning, asset management)
 ├── package.json           # Root monorepo config (pnpm workspaces)
 ├── pnpm-workspace.yaml    # Workspace package configuration
 ├── tsconfig.json          # Root strict TypeScript config

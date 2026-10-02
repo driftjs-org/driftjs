@@ -5,8 +5,9 @@
   "description": "Official documentation site for DriftJS, built with Drift's own SSG meta-framework.",
   "type": "module",
   "scripts": {
+    "predev": "node ../scripts/assets/copy.js",
     "dev": "drift-ssg dev",
-    "prebuild": "node ../scripts/copy-assets.js",
+    "prebuild": "node ../scripts/assets/copy.js",
     "build": "drift-ssg build",
     "preview": "drift-ssg preview"
   },

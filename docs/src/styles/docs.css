@@ -181,17 +181,6 @@ html.light .site-header {
   color: var(--accent-cyan);
 }
 
-.version-badge {
-  font-size: 0.75rem;
-  font-weight: 600;
-  font-family: var(--font-mono);
-  padding: 0.15rem 0.5rem;
-  border-radius: 9999px;
-  background: rgba(56, 189, 248, 0.12);
-  color: var(--accent-cyan);
-  border: 1px solid rgba(56, 189, 248, 0.3);
-}
-
 .header-nav {
   display: flex;
   align-items: center;
@@ -1088,11 +1077,6 @@ html.light .gradient-text {
   .feature-card {
     padding: 1.5rem;
   }
-
-  .version-badge {
-    display: none;
-  }
-
 
   .docs-main {
     padding: 1.5rem 1rem 2.5rem 1rem;

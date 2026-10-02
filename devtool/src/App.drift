@@ -154,9 +154,7 @@
     </div>
 
     <div class="dt-header-right">
-      @if (connected) {
-        <span class="dt-badge dt-badge-green">Drift v{driftVersion || '0.0.16'}</span>
-      } @else {
+      @if (!connected) {
         <span class="dt-badge dt-badge-yellow">Connecting...</span>
       }
 

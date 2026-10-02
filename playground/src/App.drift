@@ -70,7 +70,6 @@
   <header class="app-header">
     <div class="brand">
       <h1 class="brand-title">DriftJS Playground</h1>
-      <span class="version-chip">v0.0.16</span>
     </div>
 
     <div class="header-center">

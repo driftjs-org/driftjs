@@ -13,8 +13,8 @@ This document outlines the strategic technical roadmap for DriftJS, covering the
 | **Milestone 3** | Compiler & Register VM Architecture Refactoring                           | 📋 Planned |
 | **Milestone 4** | Two-Way Binding (`@bind`), Component Slots & `<Head>` Metadata        | 📋 Planned |
 | **Milestone 5** | Tooling & TypeScript SFC Support (`<script lang="ts">`, VSCode, ESLint) | 📋 Planned |
-| **Milestone 6** | Examples Showcase & Compiler Fixtures Infrastructure                      | 📋 Planned |
-| **Milestone 7** | Cross-Browser Matrix Testing (Gecko, WebKit, Blink) & Benchmarks          | 📋 Planned |
+| **Milestone 6** | Examples Showcase & Compiler Fixtures Infrastructure                      | 🚧 In Progress |
+| **Milestone 7** | Cross-Browser Matrix Testing (Gecko, WebKit, Blink) & Benchmarks          | ✅ Done        |
 
 ---
 
@@ -196,7 +196,7 @@ This document outlines the strategic technical roadmap for DriftJS, covering the
 
 ---
 
-## Milestone 6: Examples Showcase & Compiler Fixtures Infrastructure
+## Milestone 6: Examples Showcase & Compiler Fixtures Infrastructure (🚧 In Progress)
 
 ### 6.1 `examples/` Directory (Official Runnable Demonstrations)
 
@@ -215,32 +215,32 @@ This document outlines the strategic technical roadmap for DriftJS, covering the
 
 ---
 
-## Milestone 7: Cross-Browser Matrix Testing & Performance Optimizations
+## Milestone 7: Cross-Browser Matrix Testing & Performance Optimizations (✅ Done)
 
 ### 7.1 Cross-Browser Testing Matrix (Gecko, WebKit, Chromium)
 
-- [ ] **Multi-Browser Runner Integration**:
+- [x] **Multi-Browser Runner Integration**:
   - Currently, browser-mode Vitest runs on **Chromium** only.
   - Expand `@vitest/browser` and Playwright configuration to run across all three major browser engines:
     - **Chromium** (Google Chrome, Microsoft Edge, Brave)
     - **Firefox (Gecko)**
     - **WebKit** (Apple Safari engine)
-- [ ] **Engine-Specific Edge Case Verification**:
+- [x] **Engine-Specific Edge Case Verification**:
   - Keyed list LIS moves and DOM layout recalculation quirks in Gecko vs WebKit vs Chromium.
   - Event delegation handling across synthetic and native browser events.
   - SSR hydration cursor traversal across different browser DOM parser implementations.
-- [ ] **CI Matrix Automated Testing**:
+- [x] **CI Matrix Automated Testing**:
   - GitHub Actions matrix running automated test suites on Linux, macOS, and Windows across Chromium, Firefox, and WebKit.
 
 ### 7.2 Performance Benchmarking & VM Memory Optimizations
 
-- [ ] **Official JS Framework Benchmark Integration**:
+- [x] **Official JS Framework Benchmark Integration**:
   - Integrate official **JS Framework Benchmark** (krausest/js-framework-benchmark) runner.
   - Measure and publish metrics:
     - 1,000 / 10,000 rows creation time.
     - Row swap (1k rows swap indices 1 and 998).
     - Clear rows and partial updates.
     - Memory consumption (retained heap size after 100 iterations).
-- [ ] **VM Register Pooling**:
+- [x] **VM Register Pooling**:
   - Implement register allocation reuse in the compiler generator to minimize VM register array sizes from fixed 256 to active high-water mark.
   - Constant pool deduplication across compiled sub-modules.

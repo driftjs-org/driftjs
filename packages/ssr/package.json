@@ -19,10 +19,10 @@
   ],
   "main": "./dist/index-cjs.js",
   "module": "./dist/index-es.js",
-  "types": "./src/index.ts",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./src/index.ts",
+      "types": "./dist/index.d.ts",
       "import": "./dist/index-es.js",
       "require": "./dist/index-cjs.js",
       "default": "./dist/index-es.js"

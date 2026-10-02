@@ -19,7 +19,6 @@
       <a href="/" class="brand-link">
         <img src="/assets/icon.png" alt="DriftJS Logo" class="brand-logo-img" />
         <span class="brand-text">Drift<span class="brand-accent">JS</span></span>
-        <span class="version-badge">v0.0.16</span>
       </a>
     </div>
 

@@ -1,13 +1,28 @@
 <script>
   let theme = 'dark';
 
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem('drift-theme');
+      if (saved === 'light' || (!saved && window.matchMedia('(prefers-color-scheme: light)').matches)) {
+        theme = 'light';
+        document.documentElement.classList.add('light');
+      } else {
+        theme = 'dark';
+        document.documentElement.classList.remove('light');
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
   function toggle() {
     const isLight = document.documentElement.classList.toggle('light');
     theme = isLight ? 'light' : 'dark';
     try {
       localStorage.setItem('drift-theme', theme);
     } catch (e) {
-      console.log(e)
+      console.error(e);
     }
   }
 </script>

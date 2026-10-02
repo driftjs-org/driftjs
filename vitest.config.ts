@@ -83,6 +83,8 @@ export default defineConfig({
             provider: playwright(),
             instances: [
               { browser: 'chromium' },
+              { browser: 'firefox' },
+              { browser: 'webkit' },
             ],
             headless: true,
           },
@@ -100,6 +102,8 @@ export default defineConfig({
             provider: playwright(),
             instances: [
               { browser: 'chromium' },
+              { browser: 'firefox' },
+              { browser: 'webkit' },
             ],
             headless: true,
           },

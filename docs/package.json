@@ -20,7 +20,7 @@
     "driftjs-shared": "workspace:*",
     "driftjs-ssg": "workspace:*",
     "driftjs-ssr": "workspace:*",
-    "driftjs-vite-plugin": "workspace:*"
+    "driftjs-unplugin": "workspace:*"
   },
   "devDependencies": {
     "typescript": "7.0.2",

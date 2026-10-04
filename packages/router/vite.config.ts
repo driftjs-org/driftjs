@@ -1,9 +1,9 @@
 import { defineConfig } from 'vite';
 import path from 'path';
-import { driftPlugin } from 'driftjs-vite-plugin';
+import { vite } from 'driftjs-unplugin';
 
 export default defineConfig({
-  plugins: [driftPlugin()],
+  plugins: [vite()],
   build: {
     lib: {
       formats: ['es', 'cjs'],

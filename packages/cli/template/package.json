@@ -16,7 +16,7 @@
   "devDependencies": {
     "driftjs-eslint-plugin": "0.0.16",
     "driftjs-prettier-plugin": "0.0.16",
-    "driftjs-vite-plugin": "0.0.16",
+    "driftjs-unplugin": "0.0.17",
     "eslint": "10.11.0",
     "prettier": "3.9.9",
     "typescript": "7.0.2",

@@ -1,15 +1,17 @@
 {
-  "name": "driftjs-vite-plugin",
+  "name": "driftjs-unplugin",
   "version": "0.0.17",
-  "description": "Vite plugin for build-time compilation of DriftJS Single File Components (.drift) into executable ESM bytecode modules.",
+  "description": "Universal build-tool plugin for DriftJS (.drift) Single File Components supporting Vite, Rollup, Webpack, esbuild, and Rspack.",
   "keywords": [
     "driftjs",
-    "vite",
+    "unplugin",
     "vite-plugin",
-    "plugin",
-    "sfc",
+    "rollup-plugin",
+    "webpack-plugin",
+    "esbuild-plugin",
+    "rspack-plugin",
     "compiler",
-    "build-tool"
+    "aot"
   ],
   "type": "module",
   "files": [
@@ -33,13 +35,24 @@
   },
   "license": "MIT",
   "dependencies": {
-    "driftjs-compiler": "workspace:*"
+    "driftjs-compiler": "workspace:*",
+    "unplugin": "^3.4.0"
   },
   "peerDependencies": {
-    "vite": "8.3.1"
+    "@rspack/core": "*",
+    "esbuild": "*",
+    "rollup": "*",
+    "vite": "*",
+    "webpack": "*"
+  },
+  "peerDependenciesMeta": {
+    "@rspack/core": { "optional": true },
+    "esbuild": { "optional": true },
+    "rollup": { "optional": true },
+    "vite": { "optional": true },
+    "webpack": { "optional": true }
   },
   "devDependencies": {
-    "driftjs-dom": "workspace:*",
     "typescript": "7.0.2",
     "vite": "8.3.1",
     "vitest": "5.0.2"

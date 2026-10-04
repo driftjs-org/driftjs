@@ -33,7 +33,7 @@
     <div class="footer-col">
       <h4>Ecosystem</h4>
       <ul>
-        <li><a href="/ecosystem/vite-plugin/">Vite Plugin</a></li>
+        <li><a href="/ecosystem/unplugin/">Unplugin</a></li>
         <li><a href="/ecosystem/router/">Client Router</a></li>
         <li><a href="/ecosystem/cli/">CLI Scaffolder</a></li>
         <li><a href="/ecosystem/eslint-plugin/">ESLint Plugin</a></li>

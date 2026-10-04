@@ -1,5 +1,5 @@
 // Ambient module declaration — lets TypeScript understand *.drift and *.css imports.
-// The actual module is synthesised at build/serve time by driftjs-vite-plugin.
+// The actual module is synthesised at build/serve time by driftjs-unplugin.
 
 declare module '*.drift' {
   const component: import('driftjs-compiler').CompiledModule;

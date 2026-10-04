@@ -83,7 +83,7 @@ DriftJS is organized as a modular monorepo:
 | **`driftjs-ssg`**             | [`packages/ssg`](packages/ssg)                         | Static Site Generation meta-framework, islands bundler, & content collections                   |
 | **`driftjs-shared`**          | [`packages/utils`](packages/utils)                     | Shared Scope, Context API (`createContext`, `provide`, `inject`), & expression evaluators |
 | **`driftjs-router`**          | [`packages/router`](packages/router)                   | Client-side SPA routing engine with HTML5 History, Hash, and Memory drivers                     |
-| **`driftjs-vite-plugin`**     | [`packages/vite-plugin`](packages/vite-plugin)         | Vite plugin transforming`.drift` SFCs into executable ESM bytecode modules                    |
+| **`driftjs-unplugin`**        | [`packages/unplugin`](packages/unplugin)               | Universal build plugin (Vite, Rollup, Webpack, esbuild, Rspack) transforming `.drift` SFCs      |
 | **`driftjs-eslint-plugin`**   | [`packages/eslint-plugin`](packages/eslint-plugin)     | ESLint plugin & parser with template variable scope analysis & Drift-specific rules             |
 | **`driftjs-prettier-plugin`** | [`packages/prettier-plugin`](packages/prettier-plugin) | Prettier formatting plugin for`.drift` SFCs with embedded Babel and CSS formatting            |
 | **`driftjs-vscode-plugin`**   | [`packages/vscode-plugin`](packages/vscode-plugin)     | VS Code Extension & Language Server for`.drift` syntax highlighting & diagnostics             |

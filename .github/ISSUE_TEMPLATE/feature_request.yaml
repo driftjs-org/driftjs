@@ -19,7 +19,7 @@ body:
         - "driftjs-dom (Client VM, Reconciler, Keyed Lists, Hydration, Event System)"
         - "driftjs-ssr (DriftServerVM, Server-Side Rendering, HTML Streaming)"
         - "driftjs-shared (Scope Engine, Expression Evaluation, AST Execution)"
-        - "driftjs-vite-plugin (Vite Plugin, AOT Build Optimizations, HMR)"
+        - "driftjs-unplugin (Universal Build Plugin for Vite, Rollup, Webpack, esbuild, Rspack, HMR)"
         - "create-drift (CLI Scaffolding Tool, Templates & Presets)"
         - "driftjs-vscode (Language Server Protocol, Syntax Highlighting, Formatting, Tooling)"
         - "Instruction Set Architecture (ISA Opcodes & Bytecode Format)"

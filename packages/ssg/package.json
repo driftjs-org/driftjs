@@ -42,7 +42,7 @@
     "driftjs-dom": "workspace:*",
     "driftjs-ssr": "workspace:*",
     "driftjs-shared": "workspace:*",
-    "driftjs-vite-plugin": "workspace:*",
+    "driftjs-unplugin": "workspace:*",
     "gray-matter": "4.0.3",
     "marked": "18.0.14",
     "path-to-regexp": "8.4.2",

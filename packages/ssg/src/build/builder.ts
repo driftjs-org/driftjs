@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createServer as createViteServer } from 'vite';
-import { driftPlugin } from 'driftjs-vite-plugin';
+import { vite as drift } from 'driftjs-unplugin';
 import pc from 'picocolors';
 import type { BuildOptions, BuildSummary, PageOutput } from '../../types/index.js';
 import { loadConfig } from '../config/index.js';
@@ -30,12 +30,12 @@ export async function build(options: BuildOptions = {}): Promise<BuildSummary> {
     console.log(`${pc.gray('▸')} Out:   ${pc.dim(config.outDir)}\n`);
   }
 
-  // 1. Create Vite SSR environment to transform & load .drift SFCs via driftPlugin
+  // 1. Create Vite SSR environment to transform & load .drift SFCs via driftjs-unplugin
   const vite = await createViteServer({
     root: config.root,
     server: { middlewareMode: true },
     appType: 'custom',
-    plugins: [driftPlugin()],
+    plugins: [drift()],
     publicDir: config.publicDir,
     ...config.vite,
   });

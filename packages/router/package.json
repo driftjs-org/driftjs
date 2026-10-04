@@ -39,7 +39,7 @@
   },
   "devDependencies": {
     "driftjs-compiler": "workspace:*",
-    "driftjs-vite-plugin": "workspace:*",
+    "driftjs-unplugin": "workspace:*",
     "typescript": "7.0.2",
     "vite": "8.3.1",
     "vitest": "5.0.2"

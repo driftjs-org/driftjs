@@ -92,8 +92,8 @@ Import the CSS file at the top of your root layout (`_layout.drift`) or specific
 > **Current Version Note:**
 > This styling convention applies **as of now only** in current versions (v0.0.x).
 > 
-> Future versions of DriftJS and the `driftjs-vite-plugin` will introduce native SFC style extraction:
-> 1. **Automated Style Extraction:** The compiler will automatically extract `<style>` blocks from `.drift` files at build time and emit them as standalone CSS modules processed by Vite.
+> Future versions of DriftJS and `driftjs-unplugin` will introduce native SFC style extraction:
+> 1. **Automated Style Extraction:** The compiler will automatically extract `<style>` blocks from `.drift` files at build time and emit them as standalone CSS modules processed by your bundler.
 > 2. **Scoped CSS Support:** Automatic class scoping (e.g. `<style scoped>`) to isolate component styles without manual naming conventions.
 > 
 > Until automated SFC style extraction is shipped in a future release, organizing styles in centralized stylesheets imported at the layout or page level is the recommended convention.

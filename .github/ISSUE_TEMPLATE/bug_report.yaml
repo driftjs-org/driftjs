@@ -19,7 +19,7 @@ body:
         - "driftjs-dom (Client VM, Keyed List Reconciler, Hydration, Event Delegation, Async Reactivity)"
         - "driftjs-ssr (DriftServerVM, renderToString, Virtual DOM Serialization)"
         - "driftjs-shared (Scope Chain, Expression Evaluator, Precompiled AST Execution)"
-        - "driftjs-vite-plugin (Vite Plugin, AOT Transform, HMR, Module Serialization)"
+        - "driftjs-unplugin (Universal Build Plugin for Vite, Rollup, Webpack, esbuild, Rspack, HMR)"
         - "create-drift (CLI Scaffolder, Starter Templates, CSR/SSR Options)"
         - "driftjs-vscode (Language Server Protocol, Syntax Highlighting, Diagnostics, Snippets)"
         - "Playground / Starter Template"

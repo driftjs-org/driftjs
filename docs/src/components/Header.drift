@@ -26,7 +26,7 @@
       <a href="/guide/introduction/" class="nav-link">Guide</a>
       <a href="/architecture/virtual-machine/" class="nav-link">Architecture</a>
       <a href="/ssg/overview/" class="nav-link">SSG & Islands</a>
-      <a href="/ecosystem/vite-plugin/" class="nav-link">Ecosystem</a>
+      <a href="/ecosystem/unplugin/" class="nav-link">Ecosystem</a>
       <a href="/api/compiler/" class="nav-link">API</a>
     </nav>
 
@@ -53,7 +53,7 @@
       <a href="/guide/introduction/" class="drawer-link">Documentation Guide</a>
       <a href="/architecture/virtual-machine/" class="drawer-link">VM Architecture</a>
       <a href="/ssg/overview/" class="drawer-link">SSG & Islands</a>
-      <a href="/ecosystem/vite-plugin/" class="drawer-link">Ecosystem Tooling</a>
+      <a href="/ecosystem/unplugin/" class="drawer-link">Ecosystem Tooling</a>
       <a href="/api/compiler/" class="drawer-link">API Reference</a>
       <a href="https://github.com/driftjs-org/driftjs" target="_blank" rel="noopener noreferrer" class="drawer-link">GitHub Repository</a>
     </nav>

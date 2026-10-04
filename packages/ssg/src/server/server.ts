@@ -4,7 +4,7 @@ import http from 'node:http';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { createServer as createViteServer, type ViteDevServer, type Plugin } from 'vite';
-import { driftPlugin } from 'driftjs-vite-plugin';
+import { vite as drift } from 'driftjs-unplugin';
 import type { DevServerOptions, DevServerInstance } from '../../types/index.js';
 import { loadConfig } from '../config/index.js';
 import { scanRoutes, matchRoute } from '../router/index.js';
@@ -83,7 +83,7 @@ export async function createDevServer(options: DevServerOptions = {}): Promise<D
       middlewareMode: true,
     },
     appType: 'custom',
-    plugins: [driftPlugin(), islandsDevPlugin],
+    plugins: [drift(), islandsDevPlugin],
     resolve: {
       alias: {
         'driftjs-dom': domPath,

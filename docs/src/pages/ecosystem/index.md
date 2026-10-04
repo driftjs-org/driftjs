@@ -13,7 +13,7 @@ DriftJS provides a full suite of first-party tools to deliver a world-class deve
 
 | Package | Name | Description |
 | :--- | :--- | :--- |
-| **`driftjs-vite-plugin`** | Build Plugin | Compiles `.drift` SFC files into synthetic ESM modules with instant HMR. |
+| **`driftjs-unplugin`** | Build Plugin | Universal plugin (Vite, Rollup, Webpack, esbuild, Rspack) compiling `.drift` SFC files. |
 | **`driftjs-router`** | Client SPA Router | Lightweight client-side router with HTML5 history, route guards, and nested routes. |
 | **`create-drift`** | Project CLI | Interactive terminal generator for CSR, SSR, and SSG projects. |
 | **`driftjs-eslint-plugin`** | ESLint Linter | Custom ESLint parser and rules for template scope and syntax validation. |
@@ -24,7 +24,7 @@ DriftJS provides a full suite of first-party tools to deliver a world-class deve
 
 ## Topics in this Section
 
-* [**driftjs-vite-plugin**](/ecosystem/vite-plugin/): Vite integration and HMR mechanics.
+* [**driftjs-unplugin**](/ecosystem/unplugin/): Universal bundler plugin and HMR mechanics.
 * [**driftjs-router**](/ecosystem/router/): SPA routing, navigation guards, and history drivers.
 * [**create-drift CLI**](/ecosystem/cli/): Scaffolding project templates.
 * [**driftjs-eslint-plugin**](/ecosystem/eslint-plugin/): ESLint parser and custom lint rules.

@@ -16,7 +16,7 @@
   "devDependencies": {
     "driftjs-eslint-plugin": "workspace:*",
     "driftjs-prettier-plugin": "workspace:*",
-    "driftjs-vite-plugin": "workspace:*",
+    "driftjs-unplugin": "workspace:*",
     "eslint": "10.11.0",
     "prettier": "3.9.9",
     "typescript": "7.0.2",

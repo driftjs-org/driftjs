@@ -38,7 +38,7 @@ bun create drift
 The interactive CLI will prompt you for:
 1. **Project name:** (e.g. `my-drift-app`)
 2. **Template type:**
-   * `Client SPA (CSR)`: Client-side single page app with `driftjs-dom` and `driftjs-vite-plugin`.
+   * `Client SPA (CSR)`: Client-side single page app with `driftjs-dom` and `driftjs-unplugin`.
    * `Static Site (SSG)`: Zero-JS static site with Islands Architecture using `driftjs-ssg`.
    * `Fullstack SSR`: Headless server rendering with `driftjs-ssr` and client hydration.
 3. **TypeScript:** Enable strict TypeScript support.
@@ -63,7 +63,7 @@ A standard DriftJS project includes:
 ```
 my-drift-app/
 ├── index.html            # HTML entry point (for SPA mode)
-├── vite.config.ts        # Vite configuration with driftPlugin()
+├── vite.config.ts        # Vite configuration with drift()
 ├── package.json
 ├── tsconfig.json
 ├── public/               # Static assets
@@ -138,17 +138,17 @@ If you already have a Vite project, install the core packages:
 
 ```bash
 pnpm add driftjs-compiler driftjs-dom driftjs-shared
-pnpm add -D driftjs-vite-plugin
+pnpm add -D driftjs-unplugin
 ```
 
 Update your `vite.config.ts`:
 
 ```ts
 import { defineConfig } from 'vite';
-import { driftPlugin } from 'driftjs-vite-plugin';
+import { vite } from 'driftjs-unplugin';
 
 export default defineConfig({
-  plugins: [driftPlugin()],
+  plugins: [vite()],
 });
 ```
 

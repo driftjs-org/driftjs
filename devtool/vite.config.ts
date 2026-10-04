@@ -1,7 +1,7 @@
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, build } from 'vite';
-import { driftPlugin } from 'driftjs-vite-plugin';
+import { vite } from 'driftjs-unplugin';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
@@ -38,7 +38,7 @@ function extensionScriptsPlugin() {
 
 export default defineConfig({
   base: './',
-  plugins: [driftPlugin() as any, extensionScriptsPlugin()],
+  plugins: [vite(), extensionScriptsPlugin()],
   build: {
     outDir: 'dist',
     emptyOutDir: true,

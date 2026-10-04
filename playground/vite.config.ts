@@ -1,8 +1,8 @@
 import { defineConfig } from 'vite';
-import { driftPlugin } from 'driftjs-vite-plugin';
+import { vite } from 'driftjs-unplugin';
 
 export default defineConfig({
-  plugins: [driftPlugin()],
+  plugins: [vite()],
   optimizeDeps: {
     include: ['monaco-editor'],
   },

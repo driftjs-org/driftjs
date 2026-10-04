@@ -104,10 +104,15 @@ driftjs/
 │   │   ├── package.json
 │   │   └── tsconfig.json
 │   │
-│   ├── vite-plugin/       # driftjs-vite-plugin — Build-time SFC Compiler
-│   │   ├── index.ts       # Package entry: driftPlugin()
+│   ├── unplugin/          # driftjs-unplugin — Build-time SFC Compiler (Universal Unplugin)
+│   │   ├── index.ts       # Package entry: re-exports src/ and types/
 │   │   ├── src/
-│   │   │   └── index.ts   # driftPlugin Vite transform hook & ESM generator
+│   │   │   ├── index.ts   # Universal unplugin factory
+│   │   │   ├── vite.ts    # Vite plugin subpath
+│   │   │   ├── rollup.ts  # Rollup plugin subpath
+│   │   │   ├── webpack.ts # Webpack plugin subpath
+│   │   │   ├── esbuild.ts # esbuild plugin subpath
+│   │   │   └── rspack.ts  # Rspack plugin subpath
 │   │   ├── types/
 │   │   │   └── index.ts   # DriftPluginOptions, DriftModule
 │   │   ├── tests/
@@ -198,7 +203,7 @@ driftjs/
 | **Vitest**         | `^4.1.10`  | Unit and integration test runner                                    |
 | **jsdom**          | `^29.1.1`  | DOM environment for headless VM browser testing                     |
 | **acorn**          | `^8.17.0`  | JavaScript parser used by compiler & transformer for AST inspection |
-| **Vite**           | `^8.1.5`   | Bundler & dev server (peer dependency of`driftjs-vite-plugin`)    |
+| **Vite**           | `^8.1.5`   | Bundler & dev server (peer dependency of `driftjs-unplugin`)      |
 | **@clack/prompts** | `^0.9.1`   | Interactive CLI UI for`create-drift`                              |
 
 ### Key Commands
@@ -211,7 +216,7 @@ pnpm typecheck        # Type-check workspace across all packages (tsc --noEmit)
 ```
 
 **Build Topological Order:**
-`driftjs-shared` -> `driftjs-compiler` -> `driftjs-dom` & `driftjs-ssr` -> `driftjs-vite-plugin` -> `create-drift` -> `driftjs-vscode`.
+`driftjs-shared` -> `driftjs-compiler` -> `driftjs-dom` & `driftjs-ssr` -> `driftjs-unplugin` -> `create-drift` -> `driftjs-vscode`.
 
 ---
 
@@ -363,7 +368,7 @@ DriftJS VM instructions are variable-length byte streams operating on 256 intern
 | `packages/dom/tests/hydration.test.ts`        | `driftjs-dom`         | SSR hydration, cursor claiming, event attachment                  |
 | `packages/ssr/tests/ssr.test.ts`              | `driftjs-ssr`         | Server rendering, HTML escaping, comment anchors                  |
 | `packages/ssr/tests/context.test.ts`          | `driftjs-ssr`         | Server-side context propagation                                   |
-| `packages/vite-plugin/tests/plugin.test.ts`   | `driftjs-vite-plugin` | `.drift` SFC to ESM module transformation                       |
+| `packages/unplugin/tests/plugin.test.ts`      | `driftjs-unplugin`    | `.drift` SFC universal unplugin transformation                    |
 | `packages/cli/tests/cli.test.ts`              | `create-drift`        | Scaffolding, dependency sanitization, CSR/SSR template selection  |
 | `packages/eslint-plugin/tests/plugin.test.ts` | `driftjs-eslint-plugin` | ESLint parser, template variable tracking, custom Drift rules   |
 | `packages/prettier-plugin/tests/plugin.test.ts`| `driftjs-prettier-plugin`| Prettier SFC formatting, embedded Babel/CSS, directives        |
@@ -384,7 +389,7 @@ DriftJS VM instructions are variable-length byte streams operating on 256 intern
 4. **No `with` Statements:** Transpiled JavaScript strings emitted by `astToJS` must never use `with (scope)`. Identifier lookups must explicitly query the scope chain.
 5. **No Direct DOM Manipulation in Core VM Loop:** Keep DOM construction logic abstracted to ensure SSR / Client VM architectural symmetry.
 6. **Report Bugs in `docs/BUGS.md`:** Any newly discovered defects, type errors, or spec mismatches should be documented with severity and reproduction in [`docs/BUGS.md`](file:///home/hrutav-modha/Documents/driftjs/docs/BUGS.md).
-7. **Author Components as `.drift` SFC Files:** Whenever the context calls for creating, providing, or testing DriftJS components (for libraries, plugins, UI features, or templates), author them as declarative `.drift` Single File Components combining `<script>` logic and template markup, processed through the `driftjs-compiler` pipeline (`compile()` / `driftPlugin`). Do not hand-craft raw VM bytecode arrays or manually construct `CompiledModule` objects in TypeScript or JavaScript files.
+7. **Author Components as `.drift` SFC Files:** Whenever the context calls for creating, providing, or testing DriftJS components (for libraries, plugins, UI features, or templates), author them as declarative `.drift` Single File Components combining `<script>` logic and template markup, processed through the `driftjs-compiler` pipeline (`compile()` / `driftjs-unplugin`). Do not hand-craft raw VM bytecode arrays or manually construct `CompiledModule` objects in TypeScript or JavaScript files.
 8. **No Code Duplication (DRY & Single Source of Truth):** Never duplicate logic, algorithms, constants, or helper routines across packages or within the same module. Whenever a utility, constant, or algorithmic pattern is needed in multiple locations, abstract it into a shared module and reuse it. Always maintain a single source of truth across the monorepo instead of creating parallel, divergent, or copy-pasted implementations.
 9. **No Redundant Re-implementations (Leverage Native Runtime & Ecosystem Capabilities):** Never author custom implementations for functionality, algorithms, data structures, or file/string operations that are already natively provided by modern JavaScript/TypeScript runtimes, standard platform APIs, or existing workspace packages. Always leverage established runtime built-ins and dependencies instead of reinventing them.
 

@@ -13,7 +13,7 @@ This document outlines the strategic technical roadmap for DriftJS, covering upc
 | **Milestone 3** | Compiler & Register VM Architecture Refactoring | 📋 Planned |
 | **Milestone 4** | Two-Way Form Data Binding, Component Content Projection (Slots) & Metadata Management | 📋 Planned |
 | **Milestone 5** | Tooling & TypeScript SFC Integration (`<script lang="ts">`, VSCode, ESLint) | 📋 Planned |
-| **Milestone 6** | Examples Showcase & Compiler Fixtures Infrastructure | 🚧 In Progress |
+| **Milestone 6** | Examples Showcase & Consumer Fixtures Infrastructure | 🚧 In Progress |
 | **Milestone 7** | Cross-Browser Matrix Testing (Gecko, WebKit, Blink) & Benchmarks | ✅ Done |
 
 ---
@@ -168,7 +168,7 @@ This document outlines the strategic technical roadmap for DriftJS, covering upc
 
 ---
 
-## Milestone 6: Examples Showcase & Compiler Fixtures Infrastructure (🚧 In Progress)
+## Milestone 6: Examples Showcase & Consumer Fixtures Infrastructure (🚧 In Progress)
 
 ### 6.1 `examples/` Directory (Official Runnable Demonstrations)
 
@@ -178,12 +178,21 @@ This document outlines the strategic technical roadmap for DriftJS, covering upc
 - [ ] **Basic Directives Sandbox (`examples/basic`)**: Clean, minimal playground showcasing directives (`@if`, `@else if`, `@else`, `@for`, `@switch`), event delegation, and scope bindings.
 - [ ] **E-Commerce Cart (`examples/cart`)**: Demonstrates derived sub-totals, coupon code recalculation, and fast-path row patching.
 
-### 6.2 `fixtures/` Directory (Compiler & Runtime Golden Test Cases)
+### 6.2 `fixtures/` Directory (Consumer & Packaging Integration Fixtures)
 
-- [ ] **AST & Token Fixtures (`fixtures/compiler/ast`)**: Golden AST snapshots for diverse template combinations (nested control flow, comments, self-closing tags).
-- [ ] **Bytecode Golden Disassembly (`fixtures/compiler/bytecode`)**: Expected bytecode instruction streams for every directive pattern to catch compiler regressions.
-- [ ] **Hydration Mismatch Fixtures (`fixtures/dom/hydration`)**: Test cases verifying hydration behavior when server HTML diverges from client state.
-- [ ] **Syntax Error Diagnostics (`fixtures/compiler/diagnostics`)**: Golden compiler error messages verifying line/column precision for invalid template syntax.
+Maintainer-facing minimal consumer projects to verify package distribution, bundling, and TypeScript declaration resolution in CI (distinct from module unit tests and human-facing examples):
+
+- [ ] **Basic Vite Consumer (`fixtures/basic`)**:
+  - Minimal consumer project (`package.json`, `vite.config.ts`, `App.drift`) consuming built packages as external dependencies.
+  - Verifies `driftjs-unplugin` transform pipeline, template compilation, DOM mounting, and event delegation from a consumer perspective.
+- [ ] **SSR & Hydration Consumer (`fixtures/ssr`)**:
+  - Minimal Node.js application performing server-side HTML generation with `driftjs-ssr` and client-side hydration via `driftjs-dom`.
+  - Verifies server-side HTML rendering, comment anchor preservation, and hydration parity without workspace source links.
+- [ ] **Published Package / NPM Consumer (`fixtures/npm-consumer`)**:
+  - Independent project consuming local package tarballs (`pnpm pack`) or published npm releases.
+  - Verifies `package.json` `"exports"` field mappings, ESM/CJS compatibility, and TypeScript declaration (`index.d.ts`) resolution.
+- [ ] **Automated CI Build & Verification Suite**:
+  - Automated CI task running `pnpm build` across all fixture projects to catch packaging, export, or bundler plugin regressions before releases.
 
 ---
 

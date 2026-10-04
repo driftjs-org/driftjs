@@ -1,6 +1,6 @@
 import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
-import { driftPlugin } from './packages/vite-plugin/src/index.js';
+import { vite } from './packages/unplugin/src/index.js';
 
 export default defineConfig({
   test: {
@@ -34,9 +34,9 @@ export default defineConfig({
       },
       {
         test: {
-          name: 'vite-plugin',
-          include: ['packages/vite-plugin/tests/**/*.test.ts'],
-          exclude: ['packages/vite-plugin/dist'],
+          name: 'unplugin',
+          include: ['packages/unplugin/tests/**/*.test.ts'],
+          exclude: ['packages/unplugin/dist'],
           environment: 'node',
         },
       },
@@ -73,7 +73,7 @@ export default defineConfig({
         },
       },
       {
-        plugins: [driftPlugin()],
+        plugins: [vite()],
         test: {
           name: 'dom',
           include: ['packages/dom/tests/**/*.test.ts'],
@@ -92,7 +92,7 @@ export default defineConfig({
         },
       },
       {
-        plugins: [driftPlugin()],
+        plugins: [vite()],
         test: {
           name: 'router',
           include: ['packages/router/tests/**/*.test.ts'],

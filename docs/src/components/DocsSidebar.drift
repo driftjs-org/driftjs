@@ -13,7 +13,7 @@
       <li><a href="/guide/introduction/" class="sidebar-link">Guide</a></li>
       <li><a href="/architecture/virtual-machine/" class="sidebar-link">VM Architecture</a></li>
       <li><a href="/ssg/overview/" class="sidebar-link">SSG & Islands</a></li>
-      <li><a href="/ecosystem/vite-plugin/" class="sidebar-link">Ecosystem</a></li>
+      <li><a href="/ecosystem/unplugin/" class="sidebar-link">Ecosystem</a></li>
       <li><a href="/api/compiler/" class="sidebar-link">API Reference</a></li>
     </ul>
   </div>
@@ -70,7 +70,7 @@
   <div class="sidebar-group">
     <div class="sidebar-title">Ecosystem Tooling</div>
     <ul class="sidebar-links">
-      <li><a href="/ecosystem/vite-plugin/" class="sidebar-link">Vite Plugin</a></li>
+      <li><a href="/ecosystem/unplugin/" class="sidebar-link">Unplugin</a></li>
       <li><a href="/ecosystem/router/" class="sidebar-link">Router</a></li>
       <li><a href="/ecosystem/cli/" class="sidebar-link">Create Drift CLI</a></li>
       <li><a href="/ecosystem/eslint-plugin/" class="sidebar-link">ESLint Plugin</a></li>

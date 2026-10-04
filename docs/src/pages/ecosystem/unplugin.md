@@ -1,36 +1,85 @@
 ---
-title: "DriftJS Vite Plugin"
-description: "Build-time SFC compiler and Hot Module Replacement (HMR) plugin for Vite."
+title: "DriftJS Unplugin"
+description: "Universal build plugin for Vite, Rollup, Webpack, esbuild, and Rspack."
 ---
 
-# DriftJS Vite Plugin
+# DriftJS Unplugin
 
-The `driftjs-vite-plugin` is the official Vite integration that turns `.drift` Single File Components into standard ECMAScript Modules (ESM) during development and production builds.
+`driftjs-unplugin` is the official build-tool agnostic plugin powered by [unplugin](https://github.com/unjs/unplugin) that turns `.drift` Single File Components into standard ECMAScript Modules (ESM) across Vite, Rollup, Webpack, esbuild, and Rspack.
 
 ---
 
 ## Installation
 
 ```bash
-pnpm add -D driftjs-vite-plugin
+pnpm add -D driftjs-unplugin
 ```
 
 ---
 
-## Configuration
+## Usage
 
-Add the plugin to your `vite.config.ts` or `vite.config.js`:
+### Vite
 
 ```ts
+// vite.config.ts
 import { defineConfig } from 'vite';
-import { driftPlugin } from 'driftjs-vite-plugin';
+import { vite } from 'driftjs-unplugin';
 
 export default defineConfig({
-  plugins: [driftPlugin()],
+  plugins: [vite()],
 });
 ```
 
-### Options
+### Rollup
+
+```js
+// rollup.config.js
+import { rollup } from 'driftjs-unplugin';
+
+export default {
+  plugins: [rollup()],
+};
+```
+
+### Webpack
+
+```js
+// webpack.config.js
+const { webpack } = require('driftjs-unplugin');
+
+module.exports = {
+  plugins: [webpack()],
+};
+```
+
+### esbuild
+
+```js
+// esbuild.config.js
+import { build } from 'esbuild';
+import { esbuild } from 'driftjs-unplugin';
+
+build({
+  plugins: [esbuild()],
+});
+```
+
+### Rspack
+
+```js
+// rspack.config.js
+const { rspack } = require('driftjs-unplugin');
+
+module.exports = {
+  plugins: [rspack()],
+};
+```
+
+---
+
+## Options
+
 ```ts
 export interface DriftPluginOptions {
   /** Enable compiler debug diagnostics and bytecode dump. Defaults to false. */
@@ -43,27 +92,13 @@ export interface DriftPluginOptions {
 ## How It Works
 
 ### Source Transformation Hook
-When Vite encounters an import matching `*.drift`:
-1. It invokes `compile(src)` from `driftjs-compiler`.
-2. It serializes the resulting `CompiledModule` (bytecode, constant pool, reactive bindings, and imports) into a synthetic JavaScript ESM module.
-3. The synthetic ESM module is returned to Vite for bundling.
+When the bundler encounters an import matching `*.drift`:
+1. It invokes `compileToESM(src, options)` from `driftjs-compiler`.
+2. The compiler runs lexing, parsing, AST transformation, and bytecode generation, then emits CSP-safe ESM JavaScript code.
+3. The synthetic ESM module is returned to the bundler for packaging.
 
-```js
-// Synthetic ESM emitted by driftPlugin
-import Header from "./Header.drift";
-
-const compiledModule = {
-  bytecode: new Uint32Array([1, 0, 0, 5, 0, 1, 2, 0, 0, 0]),
-  constants: ["div", "class", "app"],
-  reactiveBindings: [],
-  declaredVars: [],
-  scope: { Header },
-};
-
-export default compiledModule;
-```
-
-### Hot Module Replacement Hook
+### Hot Module Replacement Hook (Vite)
 During development (`vite dev`), editing any `.drift` file triggers the plugin's HMR handler:
 * The module graph node for the file is invalidated.
 * A reload notification is pushed through Vite's WebSocket channel to instantly update the running client.
+

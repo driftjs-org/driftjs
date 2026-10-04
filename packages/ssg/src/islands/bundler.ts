@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { build as viteBuild, type InlineConfig } from 'vite';
-import { driftPlugin } from 'driftjs-vite-plugin';
+import { vite } from 'driftjs-unplugin';
 import type { IslandDescriptor, DriftSSGConfig, IslandBundleResult } from '../../types/index.js';
 
 export type { IslandBundleResult };
@@ -119,7 +119,7 @@ export async function bundleIslands(
 
     const viteConfig: InlineConfig = {
       root: config.root,
-      plugins: [driftPlugin()],
+      plugins: [vite()],
       resolve: {
         alias: {
           'driftjs-dom': domPath,

@@ -24,7 +24,7 @@
     "monaco-editor": "^0.57.0"
   },
   "devDependencies": {
-    "driftjs-vite-plugin": "workspace:*",
+    "driftjs-unplugin": "workspace:*",
     "typescript": "7.0.2",
     "vite": "8.3.1"
   }

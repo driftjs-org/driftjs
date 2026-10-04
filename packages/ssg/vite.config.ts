@@ -15,7 +15,7 @@ export default defineConfig({
         'driftjs-dom',
         'driftjs-ssr',
         'driftjs-shared',
-        'driftjs-vite-plugin',
+        'driftjs-unplugin',
         'gray-matter',
         'marked',
         'path-to-regexp',

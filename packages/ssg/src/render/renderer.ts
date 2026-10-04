@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createServer as createViteServer } from 'vite';
-import { driftPlugin } from 'driftjs-vite-plugin';
+import { vite as drift } from 'driftjs-unplugin';
 import { compile, type CompiledModule } from 'driftjs-compiler';
 import { DriftServerVM, serializeNode, type ServerNode } from 'driftjs-ssr';
 import type { RouteRecord, RouteParams, RenderPageOptions, RenderResult } from '../../types/index.js';
@@ -79,7 +79,7 @@ export async function renderLayout(
     root: path.dirname(layoutFilePath),
     server: { middlewareMode: true },
     appType: 'custom',
-    plugins: [driftPlugin()],
+    plugins: [drift()],
   });
   try {
     const mod = await vite.ssrLoadModule(layoutFilePath);
@@ -130,7 +130,7 @@ export async function renderPage(options: RenderPageOptions): Promise<RenderResu
         root: path.dirname(route.filePath),
         server: { middlewareMode: true },
         appType: 'custom',
-        plugins: [driftPlugin()],
+        plugins: [drift()],
       });
       try {
         const mod = await vite.ssrLoadModule(route.filePath);

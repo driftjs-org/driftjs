@@ -11,11 +11,12 @@ ext.runtime.onConnect.addListener((port: any) => {
 
     const panelListener = (message: any) => {
       if (message.type === 'INIT_PANEL' && message.tabId) {
-        panelTabId = message.tabId;
-        devtoolsPorts.set(panelTabId, port);
+        const id = Number(message.tabId);
+        panelTabId = id;
+        devtoolsPorts.set(id, port);
 
         // Notify content script that devtools panel has opened
-        const contentPort = contentPorts.get(panelTabId);
+        const contentPort = contentPorts.get(id);
         if (contentPort) {
           contentPort.postMessage({ type: 'INIT_PANEL' });
         }

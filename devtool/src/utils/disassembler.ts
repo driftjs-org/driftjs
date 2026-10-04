@@ -48,12 +48,16 @@ export function disassembleBytecode(
   while (pc < len) {
     const startPc = pc;
     const op = bytecode[pc++];
+    if (op === undefined) break;
     const mnemonic = OPCODE_NAMES[op] || `OP_0x${op.toString(16).toUpperCase()}`;
     const opCount = OPCODE_OPERAND_COUNTS[op] || 0;
     const operands: number[] = [];
 
     for (let i = 0; i < opCount && pc < len; i++) {
-      operands.push(bytecode[pc++]);
+      const operand = bytecode[pc++];
+      if (operand !== undefined) {
+        operands.push(operand);
+      }
     }
 
     let annotation = '';

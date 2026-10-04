@@ -15,7 +15,7 @@ export function registerDriftCompletions(monaco: typeof monacoType): monacoType.
         endColumn: word.endColumn,
       };
 
-      const suggestions: monaco.languages.CompletionItem[] = [
+      const suggestions: monacoType.languages.CompletionItem[] = [
         // Directives
         {
           label: '@if',

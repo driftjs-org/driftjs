@@ -4,7 +4,8 @@ import { driftPlugin } from './packages/vite-plugin/src/index.js';
 
 export default defineConfig({
   test: {
-    
+    fileParallelism: false,
+    maxConcurrency: 1,
     projects: [
       {
         test: {

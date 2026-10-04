@@ -4,6 +4,14 @@ export { DriftLexer } from './lexer.js';
 export { DriftParser } from './parser.js';
 export { DriftTransformer, traverseTemplateAST } from './transformer.js';
 export { DriftGenerator, astToJS, extractBindingNames } from './generator.js';
+export {
+  serializeValueToJS,
+  serializeConstants,
+  generateESM,
+  compileToESM,
+  type CompileToESMOptions,
+  type CompileToESMResult,
+} from './esm.js';
 
 import { DriftLexer } from './lexer.js';
 import { DriftParser } from './parser.js';

@@ -9,7 +9,7 @@ declare module 'driftjs-dom' {
     injectContext,
     effect,
     onMount,
-    onUnmount
+    onUnmount,
     type Context,
   } from 'driftjs-shared';
 

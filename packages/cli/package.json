@@ -24,14 +24,14 @@
     "create-drift": "./bin/create-drift.js",
     "drift": "./bin/create-drift.js"
   },
-  "main": "./dist/index-cjs.js",
+  "main": "./dist/index.cjs",
   "module": "./dist/index.js",
-  "types": "./src/index.ts",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./src/index.ts",
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "require": "./dist/index-cjs.js",
+      "require": "./dist/index.cjs",
       "default": "./dist/index.js"
     }
   },

@@ -70,6 +70,8 @@
   <header class="app-header">
     <div class="brand">
       <h1 class="brand-title">DriftJS Playground</h1>
+      <!-- [UI SOURCE MAP TEST] Intentional error in template markup -->
+      <span>{undefinedUIObject.intentionalError}</span>
     </div>
 
     <div class="header-center">

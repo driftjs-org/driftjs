@@ -68,8 +68,10 @@ describe('driftjs-unplugin – Universal Build Tool Plugin', () => {
 
       const result = transform(source, 'src/App.drift');
       expect(result).not.toBeNull();
-      expect(result!.code).toContain('import Header from "./Header.drift";');
+      expect(result!.code).toContain("import Header from './Header.drift';");
       expect(result!.code).toContain('Header');
+      expect(result!.map).not.toBeNull();
+      expect(result!.map.version).toBe(3);
     });
 
     it('throws a formatted error on syntax failure', () => {

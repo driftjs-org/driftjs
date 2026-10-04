@@ -17,7 +17,7 @@ export default defineConfig({
       fileName: (format: string) => `index-${format}.js`,
     },
     rolldownOptions: {
-      external: ['acorn', 'acorn-walk', 'driftjs-shared'],
+      external: ['acorn', 'acorn-walk', 'driftjs-shared', 'magic-string'],
     },
   },
 });

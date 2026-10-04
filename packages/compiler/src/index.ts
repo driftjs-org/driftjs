@@ -8,6 +8,8 @@ export {
   serializeValueToJS,
   serializeConstants,
   generateESM,
+  generateESMWithSourceMap,
+  extractImportRanges,
   compileToESM,
   type CompileToESMOptions,
   type CompileToESMResult,

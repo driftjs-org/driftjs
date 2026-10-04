@@ -434,19 +434,38 @@ declare module 'driftjs-compiler' {
   export function extractBindingNames(node: any): string[];
   export function compile(src: string, debug?: boolean): CompiledModule;
 
+  export interface SourceMapV3 {
+    version: number;
+    file?: string;
+    sources: string[];
+    sourcesContent?: (string | null)[];
+    names: string[];
+    mappings: string;
+    toString(): string;
+    toUrl(): string;
+  }
+
   export interface CompileToESMOptions {
     filename?: string;
     debug?: boolean;
+    sourceMap?: boolean;
   }
 
   export interface CompileToESMResult {
     code: string;
-    map?: null;
+    map: SourceMapV3 | null;
     compiledModule: CompiledModule;
   }
 
   export function serializeValueToJS(val: unknown): string;
   export function serializeConstants(constants: readonly unknown[]): string;
   export function generateESM(mod: CompiledModule, filePath?: string): string;
+  export function extractImportRanges(ast: ProgramNode): { start: number; end: number }[];
+  export function generateESMWithSourceMap(
+    src: string,
+    filePath: string,
+    mod: CompiledModule,
+    importRanges: { start: number; end: number }[]
+  ): { code: string; map: SourceMapV3 };
   export function compileToESM(src: string, options?: CompileToESMOptions): CompileToESMResult;
 }

@@ -38,7 +38,8 @@
   "dependencies": {
     "acorn": "8.18.0",
     "acorn-walk": "8.3.5",
-    "driftjs-shared": "workspace:*"
+    "driftjs-shared": "workspace:*",
+    "magic-string": "^1.4.2"
   },
   "devDependencies": {
     "@types/acorn": "6.0.4",

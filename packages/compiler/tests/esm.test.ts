@@ -68,7 +68,7 @@ describe('driftjs-compiler – ESM Code Generation & Serialization', () => {
   });
 
   describe('compileToESM', () => {
-    it('compiles a simple component into valid executable ESM code', () => {
+    it('compiles a simple component into valid executable ESM code with v3 source map', () => {
       const source = `
         <script>
           let count = 0;
@@ -80,7 +80,12 @@ describe('driftjs-compiler – ESM Code Generation & Serialization', () => {
       const result = compileToESM(source, { filename: 'Counter.drift' });
 
       expect(result).toHaveProperty('code');
-      expect(result.map).toBeNull();
+      expect(result.map).toBeDefined();
+      expect(result.map?.version).toBe(3);
+      expect(result.map?.sources).toContain('Counter.drift');
+      expect(result.map?.sourcesContent?.[0]).toBe(source);
+      expect(typeof result.map?.mappings).toBe('string');
+      expect(result.map?.mappings.length).toBeGreaterThan(0);
       expect(result.compiledModule).toBeDefined();
 
       // Check header and export
@@ -95,7 +100,7 @@ describe('driftjs-compiler – ESM Code Generation & Serialization', () => {
       }).not.toThrow();
     });
 
-    it('handles imported components and binds them into scope object', () => {
+    it('handles imported components and preserves authored import syntax in code and source map', () => {
       const source = `
         <script>
           import Header from './Header.drift';
@@ -110,11 +115,11 @@ describe('driftjs-compiler – ESM Code Generation & Serialization', () => {
 
       const result = compileToESM(source, { filename: 'App.drift' });
 
-      expect(result.code).toContain("import Header from \"./Header.drift\";");
-      expect(result.code).toContain("import { Button as Button } from \"./ui.js\";");
-      expect(result.code).toContain("import { Card as Card } from \"./ui.js\";");
-      expect(result.code).toContain("import * as Icons from \"./icons.js\";");
-      expect(result.code).toContain("import \"./global.css\";");
+      // Preserves original import statements character-for-character
+      expect(result.code).toContain("import Header from './Header.drift';");
+      expect(result.code).toContain("import { Button, Card } from './ui.js';");
+      expect(result.code).toContain("import * as Icons from './icons.js';");
+      expect(result.code).toContain("import './global.css';");
 
       // Scope object should bind imported components
       expect(result.code).toContain('scope: {');
@@ -127,6 +132,29 @@ describe('driftjs-compiler – ESM Code Generation & Serialization', () => {
       expect(() => {
         acorn.parse(result.code, { ecmaVersion: 'latest', sourceType: 'module' });
       }).not.toThrow();
+
+      // Source map contains correct metadata
+      expect(result.map).not.toBeNull();
+      expect(result.map?.version).toBe(3);
+      expect(result.map?.file).toBe('App.drift.js');
+      expect(result.map?.sources).toContain('App.drift');
+      expect(result.map?.sourcesContent?.[0]).toBe(source);
+    });
+
+    it('returns map: null when sourceMap: false is specified', () => {
+      const source = '<p>No Source Map</p>';
+      const result = compileToESM(source, { filename: 'NoMap.drift', sourceMap: false });
+
+      expect(result.map).toBeNull();
+      expect(result.code).toContain('// [DriftJS] Auto-generated from: NoMap.drift');
+      expect(result.code).toContain('export default compiledModule;');
+    });
+
+    it('generateESM standalone produces valid ESM with fallback import generator', () => {
+      const compiled = compile('<script>import Foo from "./Foo.drift";</script><Foo />');
+      const esm = generateESM(compiled, 'Manual.drift');
+      expect(esm).toContain('import Foo from "./Foo.drift";');
+      expect(esm).toContain('export default compiledModule;');
     });
   });
 });

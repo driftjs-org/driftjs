@@ -8,6 +8,13 @@
   <img src="assets/icon.png" alt="DriftJS Logo" width="180" />
   <br /><br />
 
+  <a href="https://www.npmjs.com/package/create-drift"><img src="https://img.shields.io/badge/version-v0.0.17-blue.svg?style=flat-square" alt="NPM Version" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square" alt="License: MIT" /></a>
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-7.0-3178C6.svg?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" /></a>
+  <a href="packages"><img src="https://img.shields.io/badge/tests-565%2B%20passing-brightgreen.svg?style=flat-square&logo=vitest&logoColor=white" alt="Vitest Tests" /></a>
+  <a href="https://discord.gg/T66TStRvd"><img src="https://img.shields.io/badge/Join%20Discord-5865F2?style=flat-square&logo=discord&logoColor=white" alt="Join Discord" /></a>
+</div>
+
 <br />
 
 Have questions, feature ideas, or want to discuss compiler optimizations and register VM architecture? Connect with the core developers on [Discord](https://discord.gg/T66TStRvd), share feedback, and help shape the future of DriftJS.

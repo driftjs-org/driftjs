@@ -1,20 +1,20 @@
 # DriftJS Project Roadmap & TODO
 
-This document outlines the strategic technical roadmap for DriftJS, covering the upcoming major version milestones, architecture refactoring, state engine redesign, and ecosystem tooling.
+This document outlines the strategic technical roadmap for DriftJS, covering upcoming version milestones, architecture refactoring, state engine redesign, and ecosystem tooling.
 
 ---
 
 ## 🗺️ Milestone Overview
 
-| Milestone             | Focus Area                                                                | Status     |
-| :-------------------- | :------------------------------------------------------------------------ | :--------- |
-| **Milestone 1** | DevTools Cross-Browser Packaging & Release Automation                     | 📋 Planned |
-| **Milestone 2** | Explicit State Declaration API (`$state`, `$derived`, `$effect`)    | 📋 Planned |
-| **Milestone 3** | Compiler & Register VM Architecture Refactoring                           | 📋 Planned |
-| **Milestone 4** | Two-Way Binding (`@bind`), Component Slots & `<Head>` Metadata        | 📋 Planned |
-| **Milestone 5** | Tooling & TypeScript SFC Support (`<script lang="ts">`, VSCode, ESLint) | 📋 Planned |
-| **Milestone 6** | Examples Showcase & Compiler Fixtures Infrastructure                      | 🚧 In Progress |
-| **Milestone 7** | Cross-Browser Matrix Testing (Gecko, WebKit, Blink) & Benchmarks          | ✅ Done        |
+| Milestone | Focus Area | Status |
+| :--- | :--- | :--- |
+| **Milestone 1** | DevTools Cross-Browser Packaging & Release Automation | 📋 Planned |
+| **Milestone 2** | Fine-Grained Reactive State Primitives (Signals, Computed Nodes, Effects, Props) | 📋 Planned |
+| **Milestone 3** | Compiler & Register VM Architecture Refactoring | 📋 Planned |
+| **Milestone 4** | Two-Way Form Data Binding, Component Content Projection (Slots) & Metadata Management | 📋 Planned |
+| **Milestone 5** | Tooling & TypeScript SFC Integration (`<script lang="ts">`, VSCode, ESLint) | 📋 Planned |
+| **Milestone 6** | Examples Showcase & Compiler Fixtures Infrastructure | 🚧 In Progress |
+| **Milestone 7** | Cross-Browser Matrix Testing (Gecko, WebKit, Blink) & Benchmarks | ✅ Done |
 
 ---
 
@@ -24,9 +24,9 @@ This document outlines the strategic technical roadmap for DriftJS, covering the
 
 - [ ] Configure `devtool/vite.config.ts` with target environment flag (`TARGET=firefox | chrome`).
 - [ ] Generate browser-specific manifest outputs:
-  - **Firefox**: `"background": { "scripts": ["background.js"] }` + Gecko metadata.
-  - **Chrome/Edge**: `"background": { "service_worker": "background.js" }`.
-- [ ] Add dual packaging npm scripts in `devtool/package.json`:
+  - **Firefox**: WebExtensions Manifest v2/v3 with background script declarations and Gecko ID metadata.
+  - **Chrome/Edge**: Manifest v3 with background service worker integration.
+- [ ] Add dual packaging scripts in `devtool/package.json`:
   ```bash
   pnpm --filter devtool build:firefox   # Emits dist/firefox & drift-devtools-firefox.zip
   pnpm --filter devtool build:chrome    # Emits dist/chrome & drift-devtools-chrome.zip
@@ -40,62 +40,40 @@ This document outlines the strategic technical roadmap for DriftJS, covering the
   - Attach signed `.xpi` (Firefox) and `.zip` (Chrome) to GitHub Releases.
 - [ ] Submit public listing to **Mozilla Add-ons (AMO)** store.
 - [ ] Submit public listing to **Chrome Web Store**.
-- [ ] Host self-installable `.xpi` link on the official DriftJS website/docs.
+- [ ] Host self-installable `.xpi` link on the official documentation site.
 
 ### 1.3 DevTools Feature Enhancements
 
-- [ ] **Component Filter/Search**: Real-time search box in sidebar to filter VM instances by name or ID.
-- [ ] **State Time-Travel / History**: Record scope mutations with an undo/redo slider in the Timeline.
+- [ ] **Component Filter/Search**: Real-time search in sidebar to filter VM instances by name or instance ID.
+- [ ] **State Time-Travel / History**: Record scope mutations with an undo/redo slider in the Timeline panel.
 - [ ] **Interactive VM Stepper**: Step-by-step bytecode instruction execution for debugging reactive updates.
 - [ ] **Performance Profiling**: Microtask flush timings, reconciliation duration, and DOM patch counters.
 
 ---
 
-## Milestone 2: Explicit State Primitives Rewrite
+## Milestone 2: Fine-Grained Reactive State Primitives
 
-### 2.1 Problem Statement with Implicit Reactivity
+### 2.1 Limitations of Heuristic Scope Reactivity
 
-*Currently, all `let` variables in `<script>` are heuristically treated as potentially reactive, leading to:*
+- Ambiguity between transient local variables and tracked component state.
+- Over-broad dependency tracking and unnecessary reactive binding entries in constant pools.
+- Inability to declare memoized computed values cleanly without runtime function execution overhead.
 
-- Ambiguity between local transient helpers and tracked component state.
-- Over-broad dependency tracking and unnecessary reactive binding entries.
-- Inability to declare read-only derived computations cleanly without manual function calls.
+### 2.2 Technical Primitive Specifications
 
-### 2.2 New Explicit State Declaration API
-
-- [ ] **`$state(initialValue)`**:
-  - Explicit reactive state primitive.
-  - Replaces arbitrary `let` tracking with unambiguous reactive state cells.
-
-  ```typescript
-  // In .drift <script>
-  let count = $state(0);
-  let user = $state({ name: 'Alice', active: true });
-  ```
-- [ ] **`$derived(expression)`**:
-  - Memoized reactive computed value.
-  - Automatically tracks dependencies and re-evaluates only when source state cells mutate.
-
-  ```typescript
-  let double = $derived(count * 2);
-  let statusText = $derived(user.active ? 'Online' : 'Offline');
-  ```
-- [ ] **`$effect(callback)`**:
-  - Declarative side-effect runner with automatic teardown/cleanup support.
-  - Runs after microtask flush when dependencies change.
-
-  ```typescript
-  $effect(() => {
-    console.log(`Count changed to: ${count}`);
-    return () => console.log('Cleanup before next run');
-  });
-  ```
-- [ ] **`$props()`**:
-  - Explicit component input property definition with type safety and default fallbacks.
-
-  ```typescript
-  let { title = 'Default', count = 0 } = $props();
-  ```
+- [ ] **Reactive State Cells (Signals)**:
+  - Explicit reactive state primitive holding atomic values or reactive references.
+  - Eliminates broad `let` tracking in favor of precise state cells.
+  - Notifies subscribers on mutation via strict equality checks (`Object.is`).
+- [ ] **Computed / Derived State Nodes**:
+  - Pure, memoized reactive derivation nodes.
+  - Automatically track dependencies and re-evaluate only when upstream source state cells mutate.
+  - Cache results across multiple reads within the same render pass.
+- [ ] **Side-Effect Subscriptions**:
+  - Declarative side-effect runner with automatic teardown and cleanup callbacks.
+  - Executes post-microtask flush when tracked dependencies change.
+- [ ] **Component Input Specifications (Props)**:
+  - Explicit component input contract definition with compile-time type validation, immutability, and default fallback values.
 
 ---
 
@@ -104,68 +82,62 @@ This document outlines the strategic technical roadmap for DriftJS, covering the
 ### 3.1 Compiler Overhaul (`driftjs-compiler`)
 
 - [ ] **Transformer AST Visitor**:
-  - Detect `$state`, `$derived`, `$effect`, and `$props` AST call nodes during Acorn pass.
+  - Detect state declarations, computed nodes, effect subscriptions, and props declarations during Acorn AST traversal.
   - Segregate component scope into:
-    - `reactiveState`: Variables declared with `$state`.
-    - `derivedState`: Variables declared with `$derived`.
-    - `staticVars`: Plain local variables and helper functions.
-  - Build fine-grained dependency graph for `$derived` computations.
+    - `reactiveState`: State cells triggering dependency invalidation.
+    - `derivedState`: Memoized computed nodes.
+    - `staticVars`: Immutable local variables and static helper functions.
+  - Build fine-grained dependency graph for computed derivations.
 - [ ] **Bytecode Generator Updates**:
-  - New opcode emission for explicit state primitives:
-    - `OP_UPDATE_STATE` (`0x10`): In-place atomic state cell update.
+  - Dedicated opcode emission for fine-grained state primitives:
+    - `OP_UPDATE_STATE` (`0x10`): In-place atomic state cell mutation.
     - `OP_EVAL_DERIVED` (`0x11`): Trigger cached derived re-computation.
-    - `OP_REGISTER_EFFECT` (`0x12`): Register post-flush effect callback.
-  - Eliminate dead-code reactive bindings for non-state variables.
+    - `OP_REGISTER_EFFECT` (`0x12`): Register post-flush side-effect callback.
+  - Eliminate dead-code reactive bindings for non-reactive local variables.
 
 ### 3.2 Client Runtime Engine (`driftjs-dom`)
 
 - [ ] **`DriftClientVM` State Core**:
-  - Replace prototype-chain scope mutations with direct Signal/Cell subscription graph.
-  - Fast-path dirty checking: only notify downstream regions when `$state` value actually changes (`Object.is` check).
-  - Clean up microtask batching to flush `$derived` re-evaluations before DOM reconciliation.
+  - Replace prototype-chain scope mutations with direct signal/cell dependency graph.
+  - Fast-path dirty checking: only notify downstream regions when state values actually change (`Object.is` check).
+  - Synchronized microtask batching to flush derived re-evaluations before DOM reconciliation.
 - [ ] **SSR Synchronization (`driftjs-ssr`)**:
-  - Adapt `DriftServerVM` to execute `$state` and `$derived` synchronously during initial HTML serialization.
+  - Adapt `DriftServerVM` to evaluate state cells and derived expressions synchronously during initial HTML serialization.
 
 ---
 
-## Milestone 4: Directives & Component Composition
+## Milestone 4: Directives, Form Synchronization & Component Projection
 
-### 4.1 Two-Way Binding (`@bind`)
+### 4.1 Two-Way Form Data Binding & Input Synchronization
 
-- [ ] **Input Bindings**:
-  - `@bind:value` on text inputs and textareas (auto-sync `value` property and `input` events).
-  - `@bind:checked` on checkboxes and radio buttons.
-  - `@bind:group` for radio and multi-checkbox collections.
+- [ ] **Form Control Synchronization**:
+  - Bidirectional data synchronization for text inputs and textareas (auto-syncing `value` property and `input` events).
+  - Boolean property synchronization for checkboxes and radio buttons (`checked` property).
+  - Collection synchronization for grouped radio and multi-checkbox controls.
+  - Native support for Input Method Editor (IME) composition sessions to prevent dropped keystrokes.
 - [ ] **Compiler Desugaring**:
-  - Desugar `@bind:value={name}` into pair of:
-    - Dynamic attribute assignment: `value={name}`.
-    - Delegated event listener: `oninput={(e) => { name = e.target.value; }}`.
+  - Desugar bidirectional form directives into paired:
+    - Unidirectional dynamic property assignment.
+    - Centralized delegated event listener dispatch.
 
-### 4.2 Component Slots & Content Projection
+### 4.2 Component Content Projection (Slots)
 
-- [ ] Default slot projection (`<slot />` inside component sub-modules).
-- [ ] Named slots (`<slot name="header" />` and `<div slot="header">`).
-- [ ] Scoped slots: passing data from child VM to parent projection slot (`<slot {item} />`).
+- [ ] Default content projection outlet (`<slot />` inside component sub-modules).
+- [ ] Named projection outlets for multi-slot component composition.
+- [ ] Scoped content projection: passing child VM parameters back to parent projection templates.
 - [ ] Dynamic component mounting opcode (`OP_MOUNT_DYNAMIC`).
 
-### 4.3 Declarative `<Head>` & Document Metadata Management (⚡ High Priority)
+### 4.3 Declarative Document Metadata Management (`<Head>`)
 
-- [ ] **`<Head>` Template Tag Support**:
-  - Declarative `<Head>` element inside `.drift` components to manage `<title>`, `<meta>`, `<link>`, and OpenGraph social tags:
-    ```html
-    <Head>
-      <title>{post.title} - DriftJS</title>
-      <meta name="description" content={post.summary} />
-      <meta property="og:image" content={post.coverUrl} />
-    </Head>
-    ```
+- [ ] **`<Head>` Component Element**:
+  - Declarative `<Head>` component inside `.drift` templates to manage `<title>`, `<meta>`, `<link>`, and OpenGraph social tags.
 - [ ] **SSR Head Hoisting (`driftjs-ssr`)**:
   - Collect all `<Head>` child nodes during `renderToString` / `renderToStream`.
   - Hoist and inject tags into the server HTML document `<head>` without rendering comment anchors in the body.
 - [ ] **CSR Dynamic Head Sync (`driftjs-dom`)**:
   - Dynamically patch `document.title` and `<head>` metadata in browser client on route transitions or reactive state updates.
-  - Automatically de-duplicate meta tags by `name` or `property` attribute to avoid duplicate tag pollution.
-  - Cleanup/restore previous tags on component unmount.
+  - Automatically deduplicate meta tags by `name` or `property` attributes to prevent tag pollution.
+  - Clean up and restore previous tags on component unmount.
 
 ---
 
@@ -179,19 +151,19 @@ This document outlines the strategic technical roadmap for DriftJS, covering the
 
 ### 5.2 VSCode Extension (`driftjs-vscode`)
 
-- [ ] Syntax highlighting grammar for `$state`, `$derived`, `$effect`, `$props`, and `@bind`.
+- [ ] Syntax highlighting grammar for state primitives, form bindings, metadata elements, and component directives.
 - [ ] Hover tooltips showing type signatures and reactive dependency links.
-- [ ] Autocomplete snippets for explicit state primitives, `<Head>`, and component directives.
+- [ ] Autocomplete snippets for explicit state primitives, `<Head>`, and component contracts.
 
 ### 5.3 ESLint Plugin (`driftjs-eslint-plugin`)
 
-- [ ] Rule: `drift/no-untracked-mutations` — Warn when reassigning variables not declared with `$state()`.
-- [ ] Rule: `drift/no-derived-side-effects` — Forbid side-effects inside `$derived()` expressions.
+- [ ] Rule: `drift/no-untracked-mutations` — Warn when reassigning variables outside reactive state cell declarations.
+- [ ] Rule: `drift/no-derived-side-effects` — Forbid side-effects inside computed expressions.
 - [ ] Rule: `drift/valid-slot-names` — Validate slot usage against component declarations.
 
 ### 5.4 Prettier Plugin (`driftjs-prettier-plugin`)
 
-- [ ] Formatter rules for `@bind` directive syntax, `<Head>` tags, and `$state` declarations.
+- [ ] Formatter rules for form binding attributes, `<Head>` tags, and state primitive declarations.
 - [ ] Clean multiline formatting for reactive directive attributes.
 
 ---
@@ -220,8 +192,7 @@ This document outlines the strategic technical roadmap for DriftJS, covering the
 ### 7.1 Cross-Browser Testing Matrix (Gecko, WebKit, Chromium)
 
 - [x] **Multi-Browser Runner Integration**:
-  - Currently, browser-mode Vitest runs on **Chromium** only.
-  - Expand `@vitest/browser` and Playwright configuration to run across all three major browser engines:
+  - Configure `@vitest/browser` and Playwright across all three major browser engines:
     - **Chromium** (Google Chrome, Microsoft Edge, Brave)
     - **Firefox (Gecko)**
     - **WebKit** (Apple Safari engine)

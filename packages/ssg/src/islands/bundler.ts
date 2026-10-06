@@ -47,10 +47,11 @@ export function generateIslandBootstrapSource(
           : `/${rel.replace(/^\/+/, '')}`;
       }
     }
+    const specifier = JSON.stringify(resolvedImport);
     importLines.push(
       island.exportName
-        ? `import { ${island.exportName} as ${importName} } from '${resolvedImport}';`
-        : `import ${importName} from '${resolvedImport}';`
+        ? `import { ${island.exportName} as ${importName} } from ${specifier};`
+        : `import ${importName} from ${specifier};`
     );
     componentRegistrations.push(`  ${JSON.stringify(name)}: ${importName}`);
   }

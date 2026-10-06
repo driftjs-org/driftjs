@@ -166,9 +166,63 @@ describe('Drift SSG Islands Scanner & Wrapper', () => {
       '/root'
     );
 
-    expect(source).toContain("import { DriftCodeEditor as __drift_comp_0 } from 'driftjs-playground';");
-    expect(source).toContain("import __drift_comp_1 from '/@fs/abs/components/Counter.drift';");
+    expect(source).toContain('import { DriftCodeEditor as __drift_comp_0 } from "driftjs-playground";');
+    expect(source).toContain('import __drift_comp_1 from "/@fs/abs/components/Counter.drift";');
     expect(source).toContain('"DriftCodeEditor": __drift_comp_0');
+  });
+
+  describe('Security & Escaping (BUG-05 & BUG-06)', () => {
+    it('escapes islandName to prevent attribute injection sinks (BUG-05)', () => {
+      const wrapped = wrapIslandHtml('foo" data-injected="true', '<p>Test</p>');
+      expect(wrapped).toContain('data-drift-island="foo&quot; data-injected=&quot;true"');
+      expect(wrapped).not.toContain('data-injected="true"');
+    });
+
+    it('validates islandTag against valid HTML element tag names and falls back to div (BUG-05)', () => {
+      const xssTag = wrapIslandHtml('MyIsland', '<p>Test</p>', { islandTag: 'div onmouseover=alert(1)' });
+      expect(xssTag.startsWith('<div ')).toBe(true);
+      expect(xssTag).not.toContain('onmouseover');
+
+      const scriptTag = wrapIslandHtml('MyIsland', '<p>Test</p>', { islandTag: '<script>' });
+      expect(scriptTag.startsWith('<div ')).toBe(true);
+
+      const customTag = wrapIslandHtml('MyIsland', '<p>Test</p>', { islandTag: 'section' });
+      expect(customTag.startsWith('<section ')).toBe(true);
+      expect(customTag.endsWith('</section>')).toBe(true);
+    });
+
+    it('escapes className, media, rootMargin, and props attributes (BUG-05)', () => {
+      const wrapped = wrapIslandHtml('MyIsland', '<p>Test</p>', {
+        className: 'test" onclick="alert(1)',
+        media: '(min-width: 600px)" onload="evil()',
+        rootMargin: '10px" data-x="y',
+        props: { message: '<script>alert(1)</script>' },
+      });
+
+      expect(wrapped).toContain('class="test&quot; onclick=&quot;alert(1)"');
+      expect(wrapped).toContain('data-drift-media="(min-width: 600px)&quot; onload=&quot;evil()"');
+      expect(wrapped).toContain('data-drift-root-margin="10px&quot; data-x=&quot;y"');
+      expect(wrapped).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
+      expect(wrapped).not.toContain('onclick="alert(1)"');
+      expect(wrapped).not.toContain('onload="evil()"');
+    });
+
+    it('escapes module specifiers in generated island bootstrap code to prevent JS code injection (BUG-06)', () => {
+      const source = generateIslandBootstrapSource(
+        [
+          {
+            name: 'MaliciousComp',
+            componentPath: "some-package'; /* injected code */",
+            trigger: 'eager',
+            props: {},
+          },
+        ],
+        '/root'
+      );
+
+      expect(source).toContain('import __drift_comp_0 from "some-package\'; /* injected code */";');
+      expect(source).not.toContain("'some-package'; /* injected code */'");
+    });
   });
 });
 

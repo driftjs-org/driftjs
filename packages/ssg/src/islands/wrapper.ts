@@ -1,3 +1,4 @@
+import { escapeHtml, isValidHtmlTagName } from 'driftjs-shared';
 import type { IslandTriggerStrategy } from '../../types/index.js';
 
 export interface WrapIslandOptions {
@@ -18,26 +19,27 @@ export function wrapIslandHtml(
   innerHtml: string,
   options: WrapIslandOptions = {}
 ): string {
-  const tag = options.islandTag || 'div';
+  const rawTag = options.islandTag || 'div';
+  const tag = isValidHtmlTagName(rawTag) ? rawTag : 'div';
   const trigger = options.trigger || 'idle';
-  let attrs = ` data-drift-island="${islandName}" data-drift-trigger="${trigger}"`;
+  let attrs = ` data-drift-island="${escapeHtml(islandName)}" data-drift-trigger="${escapeHtml(trigger)}"`;
 
   if (options.className) {
-    attrs = ` class="${options.className.replace(/"/g, '&quot;')}"` + attrs;
+    attrs = ` class="${escapeHtml(options.className)}"` + attrs;
   }
 
   if (options.props && Object.keys(options.props).length > 0) {
-    const safeProps = JSON.stringify(options.props).replace(/"/g, '&quot;');
+    const safeProps = escapeHtml(JSON.stringify(options.props));
     attrs += ` data-drift-props="${safeProps}"`;
   }
   if (options.timeout !== undefined) {
-    attrs += ` data-drift-timeout="${options.timeout}"`;
+    attrs += ` data-drift-timeout="${Number(options.timeout)}"`;
   }
   if (options.media) {
-    attrs += ` data-drift-media="${options.media.replace(/"/g, '&quot;')}"`;
+    attrs += ` data-drift-media="${escapeHtml(options.media)}"`;
   }
   if (options.rootMargin) {
-    attrs += ` data-drift-root-margin="${options.rootMargin.replace(/"/g, '&quot;')}"`;
+    attrs += ` data-drift-root-margin="${escapeHtml(options.rootMargin)}"`;
   }
 
   return `<${tag}${attrs}>${innerHtml}</${tag}>`;

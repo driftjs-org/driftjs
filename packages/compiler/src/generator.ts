@@ -15,6 +15,7 @@ import type {
   DerivedBinding,
   EffectBinding,
   ImportSpec,
+  SourceRange,
 } from '../types/index.js';
 import {
   ASTNodeType,
@@ -183,7 +184,7 @@ export class DriftGenerator {
       if (child.type === ASTNodeType.Text && typeof child.content === 'object' && child.content !== null) {
         const filtered = this.filterRuntimeScriptAst(child.content);
         if (filtered !== null && (!Array.isArray(filtered) || filtered.length > 0)) {
-          const scriptBodyIdx = this.addScriptConstant(filtered);
+          const scriptBodyIdx = this.addScriptConstant(filtered, child.loc);
           this.emit(Opcode.EXEC_SCRIPT, scriptBodyIdx);
         }
       }
@@ -213,7 +214,8 @@ export class DriftGenerator {
             if (expr && typeof expr === 'object' && expr.type) {
               const codeStr = astToJS(expr);
               propsSpec[attr.name] = {
-                __drift_fn__: `(scope, declaredVars, setScopeValue, inScopeChain, resolveIterable, getScopeValue) => (${codeStr})`
+                __drift_fn__: `(scope, declaredVars, setScopeValue, inScopeChain, resolveIterable, getScopeValue) => (${codeStr})`,
+                loc: attr.value.loc,
               };
             } else {
               propsSpec[attr.name] = expr;
@@ -287,7 +289,7 @@ export class DriftGenerator {
       const valIdx = this.addConstant(attr.value);
       this.emit(Opcode.SET_ATTR, elemReg, nameIdx, valIdx, 0);
     } else if (attr.value.type === ASTNodeType.Interpolation) {
-      const exprIdx = this.addExpressionConstant(attr.value.expression);
+      const exprIdx = this.addExpressionConstant(attr.value.expression, attr.value.loc);
       const pc = this.bytecode.length;
       this.emit(Opcode.SET_ATTR, elemReg, nameIdx, exprIdx, 1);
       this.emit(Opcode.RETURN);
@@ -304,7 +306,7 @@ export class DriftGenerator {
 
   private compileInterpolationNode(node: InterpolationNode, parentReg: number): void {
     const textReg = this.allocRegister();
-    const exprConstIdx = this.addExpressionConstant(node.expression);
+    const exprConstIdx = this.addExpressionConstant(node.expression, node.loc);
     const pc = this.bytecode.length;
     this.emit(Opcode.INTERPOLATE_TEXT, textReg, exprConstIdx);
     this.emit(Opcode.RETURN);
@@ -419,14 +421,14 @@ export class DriftGenerator {
     }
     const depsIdx = this.addConstant(Array.from(depsSet));
 
-    const condIdx = this.addExpressionConstant(node.test);
+    const condIdx = this.addExpressionConstant(node.test, node.loc);
 
     // REACTIVE_IF parentReg condIdx consIdx altIdx depsIdx  (5 operand bytes)
     this.emit(Opcode.REACTIVE_IF, parentReg, condIdx, consIdx, altIdx, depsIdx);
   }
 
   private compileSwitchNode(node: SwitchNode, parentReg: number): void {
-    const discIdx = this.addExpressionConstant(node.discriminant);
+    const discIdx = this.addExpressionConstant(node.discriminant, node.loc);
 
     const casesTable: { testIdx: number; modIdx: number }[] = [];
     let defaultModIdx = 0xFF;
@@ -440,7 +442,7 @@ export class DriftGenerator {
         defaultModIdx = this.addConstant(defaultMod);
       } else {
         // @case branch
-        const testIdx = this.addExpressionConstant(c.expression);
+        const testIdx = this.addExpressionConstant(c.expression, c.loc);
         const caseMod = this.compileNodesToSubModule(c.body);
         allSubMods.push(caseMod);
         const modIdx = this.addConstant(caseMod);
@@ -507,10 +509,10 @@ export class DriftGenerator {
 
     const bodyIdx = this.addConstant(bodyMod);
 
-    const iterIdx = this.addExpressionConstant(node.iterable);
+    const iterIdx = this.addExpressionConstant(node.iterable, node.loc);
     const itemNameIdx = this.addConstant(node.item);
     const indexNameIdx = node.index !== null ? this.addConstant(node.index) : 0xFF;
-    const keyIdx = node.key ? this.addExpressionConstant(node.key) : 0xFF;
+    const keyIdx = node.key ? this.addExpressionConstant(node.key, node.loc) : 0xFF;
 
     // BUG-112 fix: emit an AOT item populator function using the retained Acorn pattern AST.
     // The populator is a curried __drift_fn__ that returns a (itemVal, indexVal) => void.
@@ -611,7 +613,7 @@ export class DriftGenerator {
       });
     }
 
-    const promiseIdx = this.addExpressionConstant(node.promise);
+    const promiseIdx = this.addExpressionConstant(node.promise, node.loc);
     const aliasIdx = this.addConstant(node.alias);
 
     // BUG-115 fix: emit an AOT alias populator using the retained aliasAst from the parser.
@@ -753,6 +755,9 @@ export class DriftGenerator {
       }
 
       const exprIdx = this.addConstant(fnVal);
+      if (arg?.loc) {
+        fnVal.loc = arg.loc;
+      }
       this.derivedBindings.push({ name, deps, exprIdx });
     }
   }
@@ -787,6 +792,9 @@ export class DriftGenerator {
         fnVal = {
           __drift_fn__: `${asyncPrefix}(scope, declaredVars, setScopeValue, inScopeChain, resolveIterable, getScopeValue) => (${codeStr})`
         };
+      }
+      if (arg?.loc) {
+        fnVal.loc = arg.loc;
       }
 
       const exprIdx = this.addConstant(fnVal);
@@ -851,24 +859,30 @@ export class DriftGenerator {
     return this.nextRegisterId++;
   }
 
-  private addExpressionConstant(ast: any): number {
+  private addExpressionConstant(ast: any, loc?: SourceRange): number {
     const codeStr = astToJS(ast);
     const deps: string[] = [];
     for (const name of this.extractIdentifiers(ast)) {
       if (this.declaredVars.has(name)) deps.push(name);
     }
-    const fnVal = {
+    const fnVal: any = {
       __drift_fn__: `(scope, declaredVars, setScopeValue, inScopeChain, resolveIterable, getScopeValue) => (${codeStr})`,
       deps,
     };
+    if (loc) {
+      fnVal.loc = loc;
+    }
     return this.addConstant(fnVal);
   }
 
-  private addScriptConstant(ast: any): number {
+  private addScriptConstant(ast: any, loc?: SourceRange): number {
     const codeStr = astToJS(ast);
-    const fnVal = {
+    const fnVal: any = {
       __drift_fn__: `(scope, declaredVars, setScopeValue, inScopeChain, resolveIterable, getScopeValue, setScopeProp) => { ${codeStr}; }`
     };
+    if (loc) {
+      fnVal.loc = loc;
+    }
     return this.addConstant(fnVal);
   }
 

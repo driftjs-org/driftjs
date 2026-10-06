@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { renderMarkdown, getCollection, getEntry, slugify, scanMarkdownIslands, stripFrontmatter } from '../src/index.js';
+import { unescapeHtml } from 'driftjs-shared';
 
 describe('Drift SSG Content Collections & Markdown Engine', () => {
   let tmpContentDir: string;
@@ -136,9 +137,8 @@ const vm = new DriftServerVM();
       expect(result.html).toContain('class="drift-md-editor"');
       expect(result.html).not.toContain('<pre><code class="language-drift exe">');
 
-      const props = JSON.parse(
-        /data-drift-props="([^"]*)"/.exec(result.html)![1]!.replace(/&quot;/g, '"')
-      );
+      const rawProps = /data-drift-props="([^"]*)"/.exec(result.html)![1]!;
+      const props = JSON.parse(unescapeHtml(rawProps));
       expect(props.code).toBe('<h1>Hello {name}</h1>');
       expect(props.height).toBe('440px');
       expect(props.width).toBe('100%');

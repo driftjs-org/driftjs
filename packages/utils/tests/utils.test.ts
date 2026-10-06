@@ -12,6 +12,8 @@ import {
   camelToKebab,
   MAX_REGISTERS,
   VOID_ELEMENTS,
+  escapeHtml,
+  isValidHtmlTagName,
 } from '../src/index.js';
 
 describe('driftjs-shared Module', () => {
@@ -240,6 +242,24 @@ describe('driftjs-shared Module', () => {
     it('safely handles non-object scope arguments', () => {
       expect(setScopeProp(null as any, 'key', 123)).toBe(123);
       expect(setScopeProp(undefined as any, 'key', 123)).toBe(123);
+    });
+  });
+
+  describe('HTML escaping and validation', () => {
+    it('escapes special characters to prevent HTML/attribute injection', () => {
+      expect(escapeHtml('<script>alert("xss & \'1\'")</script>')).toBe(
+        '&lt;script&gt;alert(&quot;xss &amp; &#39;1&#39;&quot;)&lt;/script&gt;'
+      );
+    });
+
+    it('validates safe HTML element tag names', () => {
+      expect(isValidHtmlTagName('div')).toBe(true);
+      expect(isValidHtmlTagName('my-island')).toBe(true);
+      expect(isValidHtmlTagName('span_1')).toBe(true);
+      expect(isValidHtmlTagName('div onmouseover=alert(1)')).toBe(false);
+      expect(isValidHtmlTagName('<script>')).toBe(false);
+      expect(isValidHtmlTagName('')).toBe(false);
+      expect(isValidHtmlTagName(null as any)).toBe(false);
     });
   });
 });

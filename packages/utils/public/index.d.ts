@@ -59,4 +59,11 @@ declare module 'driftjs-shared' {
   /** CSS Style normalizers */
   export function camelToKebab(str: string): string;
   export function normalizeStyle(value: any): string;
+
+  /** HTML validation and escaping helpers */
+  export const VALID_TAG_NAME_REGEX: RegExp;
+  export const VALID_ATTR_NAME_REGEX: RegExp;
+  export function escapeHtml(str: string): string;
+  export function unescapeHtml(str: string): string;
+  export function isValidHtmlTagName(tag: string): boolean;
 }

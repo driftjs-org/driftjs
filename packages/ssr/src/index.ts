@@ -17,6 +17,10 @@ import {
   onMount,
   onUnmount,
   type Context,
+  escapeHtml,
+  isValidHtmlTagName,
+  VALID_TAG_NAME_REGEX,
+  VALID_ATTR_NAME_REGEX,
 } from "driftjs-shared";
 import type { SSRExecutionOptions, StreamOptions, DriftStream, ServerNode, IslandRenderOptions } from "../types/index.js";
 
@@ -32,18 +36,6 @@ export {
   onUnmount,
   type Context,
 };
-
-/**
- * Escapes special HTML characters to prevent XSS.
- */
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
 
 const FORBIDDEN_SCOPE_KEYS = new Set(['__proto__', 'constructor', 'prototype', '__drift_mark_dirty__']);
 
@@ -77,9 +69,6 @@ function populateAsyncValue(
   }
   setLoopVar(childScope, alias, val);
 }
-
-const VALID_ATTR_NAME_REGEX = /^[a-zA-Z_:][a-zA-Z0-9_.:-]*$/;
-const VALID_TAG_NAME_REGEX = /^[a-zA-Z_:][a-zA-Z0-9_.:-]*$/;
 
 /**
  * Register-based Virtual Machine for Server-Side Rendering (SSR) in DriftJS.
@@ -639,7 +628,8 @@ export function renderIslandToString(
   component: CompiledModule,
   options: IslandRenderOptions = {}
 ): string {
-  const tag = options.islandTag || 'div';
+  const rawTag = options.islandTag || 'div';
+  const tag = isValidHtmlTagName(rawTag) ? rawTag : 'div';
   const trigger = options.trigger || 'idle';
   let attrs = ` data-drift-island="${escapeHtml(islandName)}"`;
   if (trigger) {

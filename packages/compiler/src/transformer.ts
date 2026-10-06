@@ -212,7 +212,7 @@ export class DriftTransformer {
         if (typeof node.test === 'string' && node.test.trim().length > 0) {
           return {
             ...node,
-            test: acorn.parseExpressionAt(node.test, 0, { ecmaVersion: 'latest' }),
+            test: acorn.parseExpressionAt(node.test, 0, { ecmaVersion: 'latest', locations: true, ranges: true }),
           };
         }
       },
@@ -221,24 +221,24 @@ export class DriftTransformer {
           ...node,
           iterable:
             typeof node.iterable === 'string'
-              ? acorn.parseExpressionAt(node.iterable, 0, { ecmaVersion: 'latest' })
+              ? acorn.parseExpressionAt(node.iterable, 0, { ecmaVersion: 'latest', locations: true, ranges: true })
               : node.iterable,
           key:
             typeof node.key === 'string' && node.key.trim().length > 0
-              ? acorn.parseExpressionAt(node.key, 0, { ecmaVersion: 'latest' })
+              ? acorn.parseExpressionAt(node.key, 0, { ecmaVersion: 'latest', locations: true, ranges: true })
               : (node.key ?? null),
         };
       },
       Switch: (node) => {
         const discAst =
           typeof node.discriminant === 'string' && node.discriminant.trim().length > 0
-            ? acorn.parseExpressionAt(node.discriminant, 0, { ecmaVersion: 'latest' })
+            ? acorn.parseExpressionAt(node.discriminant, 0, { ecmaVersion: 'latest', locations: true, ranges: true })
             : node.discriminant;
 
         const enrichedCases = node.cases.map((c) => {
           const caseExpr =
             c.expression !== null && typeof c.expression === 'string' && c.expression.trim().length > 0
-              ? acorn.parseExpressionAt(c.expression, 0, { ecmaVersion: 'latest' })
+              ? acorn.parseExpressionAt(c.expression, 0, { ecmaVersion: 'latest', locations: true, ranges: true })
               : c.expression;
           return {
             ...c,
@@ -257,7 +257,7 @@ export class DriftTransformer {
           ...node,
           promise:
             typeof node.promise === 'string' && node.promise.trim().length > 0
-              ? acorn.parseExpressionAt(node.promise, 0, { ecmaVersion: 'latest' })
+              ? acorn.parseExpressionAt(node.promise, 0, { ecmaVersion: 'latest', locations: true, ranges: true })
               : node.promise,
         };
       },
@@ -281,6 +281,8 @@ export class DriftTransformer {
       parsedExpr = acorn.parseExpressionAt(node.expression, 0, {
         ecmaVersion: 'latest',
         allowAwaitOutsideFunction: true,
+        locations: true,
+        ranges: true,
       });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -311,6 +313,8 @@ export class DriftTransformer {
             sourceType: 'module',
             allowAwaitOutsideFunction: true,
             allowReturnOutsideFunction: true,
+            locations: true,
+            ranges: true,
           });
 
           if (program.body.length === 1 && program.body[0] !== undefined) {

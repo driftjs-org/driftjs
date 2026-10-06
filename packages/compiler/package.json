@@ -42,6 +42,7 @@
     "magic-string": "^1.4.2"
   },
   "devDependencies": {
+    "@jridgewell/trace-mapping": "^0.3.31",
     "@types/acorn": "6.0.4",
     "@types/estree": "1.0.9",
     "typescript": "7.0.2",

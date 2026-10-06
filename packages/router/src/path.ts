@@ -1,13 +1,4 @@
-/**
- * Normalizes a URL path string (strips redundant slashes and trailing slashes).
- */
-export function normalizePath(path: string): string {
-  if (!path || path === '/') return '/';
-  let norm = path.replace(/\/+/g, '/');
-  if (!norm.startsWith('/')) norm = '/' + norm;
-  if (norm.length > 1 && norm.endsWith('/')) norm = norm.slice(0, -1);
-  return norm;
-}
+export { normalizePath } from 'driftjs-shared';
 
 /**
  * Normalizes a base URL to ensure consistent leading and no redundant trailing slashes.

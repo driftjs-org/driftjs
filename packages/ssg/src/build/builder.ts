@@ -8,7 +8,7 @@ import { loadConfig } from '../config/index.js';
 import { scanRoutes } from '../router/index.js';
 import { resolveAllRoutePaths } from '../router/index.js';
 import { renderPage, buildHeadTags } from '../render/index.js';
-import { bundleIslands, scanIslands, extractCssImports } from '../islands/index.js';
+import { bundleIslands, scanIslands, extractCssImports, clearSourceAnalysisCache, analyzeDriftSource } from '../islands/index.js';
 import { generateSitemap, generateRobotsTxt } from '../render/index.js';
 import { scanMarkdownIslands, stripFrontmatter } from '../content/index.js';
 
@@ -19,6 +19,7 @@ export type { BuildOptions, BuildSummary, PageOutput };
  */
 export async function build(options: BuildOptions = {}): Promise<BuildSummary> {
   const startTime = Date.now();
+  clearSourceAnalysisCache();
   const config = await loadConfig(options.root, options.configFile, {
     outDir: options.outDir,
   });
@@ -72,8 +73,9 @@ export async function build(options: BuildOptions = {}): Promise<BuildSummary> {
       if (!fs.existsSync(filePath)) return;
       const src = fs.readFileSync(filePath, 'utf8');
       if (filePath.endsWith('.drift')) {
+        const analysis = analyzeDriftSource(src, filePath);
         siteIslands.push(...scanIslands(src, {}, filePath));
-        for (const imp of extractCssImports(src, filePath)) {
+        for (const imp of analysis.cssImports) {
           if (imp.startsWith('.')) {
             const resolved = path.resolve(path.dirname(filePath), imp);
             if (fs.existsSync(resolved)) siteCssFiles.add(resolved);

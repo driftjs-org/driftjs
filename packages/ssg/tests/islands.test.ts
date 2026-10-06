@@ -1,6 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import path from 'node:path';
-import { scanIslands, wrapIslandHtml, extractIslandImports, generateIslandBootstrapSource } from '../src/index.js';
+import {
+  scanIslands,
+  wrapIslandHtml,
+  extractIslandImports,
+  extractCssImports,
+  analyzeDriftSource,
+  clearSourceAnalysisCache,
+  generateIslandBootstrapSource,
+} from '../src/index.js';
 
 describe('Drift SSG Islands Scanner & Wrapper', () => {
   it('extracts component import specifiers from SFC script tag', () => {
@@ -222,6 +230,66 @@ describe('Drift SSG Islands Scanner & Wrapper', () => {
 
       expect(source).toContain('import __drift_comp_0 from "some-package\'; /* injected code */";');
       expect(source).not.toContain("'some-package'; /* injected code */'");
+    });
+  });
+
+  describe('Single-Pass Analysis & Caching (BUG-02)', () => {
+    it('analyzes template in a single pass extracting AST, compiled module, css, and islands', () => {
+      clearSourceAnalysisCache();
+      const sfc = `
+        <script>
+          import './styles.css';
+          import Counter from './Counter.drift';
+        </script>
+        <div>
+          <Counter client:visible count={10} />
+        </div>
+      `;
+
+      const analysis = analyzeDriftSource(sfc);
+      expect(analysis).toBeDefined();
+      expect(analysis.ast).toBeDefined();
+      expect(analysis.compiled).toBeDefined();
+      expect(analysis.compiled.bytecode.length).toBeGreaterThan(0);
+      expect(analysis.cssImports).toEqual(['./styles.css']);
+      expect(analysis.scriptImports['Counter']).toEqual({
+        source: './Counter.drift',
+        importedName: 'default',
+      });
+      expect(analysis.islands.length).toBe(1);
+      expect(analysis.islands[0]!.name).toBe('Counter');
+      expect(analysis.islands[0]!.trigger).toBe('visible');
+      expect(analysis.islands[0]!.props).toEqual({ count: '10' });
+    });
+
+    it('reuses cached analysis on identical sources and clears cache when requested', () => {
+      clearSourceAnalysisCache();
+      const sfc = `
+        <script>
+          import Counter from './Counter.drift';
+        </script>
+        <Counter client:idle />
+      `;
+
+      const first = analyzeDriftSource(sfc, '/path/to/page.drift');
+      const second = analyzeDriftSource(sfc, '/path/to/page.drift');
+      expect(first).toBe(second);
+
+      // scanIslands, extractIslandImports, extractCssImports all reuse the cached analysis
+      const islands = scanIslands(sfc, {}, '/path/to/page.drift');
+      expect(islands.length).toBe(1);
+
+      const imports = extractIslandImports(sfc, '/path/to/page.drift');
+      expect(imports['Counter']).toBe('./Counter.drift');
+
+      const css = extractCssImports(sfc, '/path/to/page.drift');
+      expect(css).toEqual([]);
+
+      // Clears cache cleanly
+      clearSourceAnalysisCache();
+      const third = analyzeDriftSource(sfc, '/path/to/page.drift');
+      expect(third).not.toBe(first);
+      expect(third.islands).toEqual(first.islands);
     });
   });
 });

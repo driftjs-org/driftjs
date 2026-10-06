@@ -5,3 +5,4 @@ export * from './evaluator.js';
 export * from './context.js';
 export * from './style.js';
 export * from './html.js';
+export * from './path.js';

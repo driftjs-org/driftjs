@@ -6,10 +6,10 @@ This document tracks identified bugs, architectural defects, and security vulner
 
 | ID | Category | Severity | Summary | Status |
 | :--- | :--- | :---: | :--- | :---: |
-| **BUG-01** | #1 Duplicated Localized Implementations / #3 Correct-but-Poor | 🟡 P2 | `normalizePath()` duplicated between Router and SSG | **Open** |
-| **BUG-02** | #3 Correct-but-Poor Implementation | 🟡 P2 | SSG recompiles the same `.drift` source multiple times during one build | **Open** |
-| **BUG-03** | #3 Correct-but-Poor / #5 Missed Optimizations | 🟡 P2 | Compiler constant-pool deduplication is potentially $O(n^2)$ + repeated `JSON.stringify()` | **Open** |
-| **BUG-04** | #5 Compiler Optimization / Architectural Inefficiency | 🟡 P2 | Compiler walks expression ASTs repeatedly for dependency extraction | **Open** |
+| **BUG-01** | #1 Duplicated Localized Implementations / #3 Correct-but-Poor | 🟡 P2 | `normalizePath()` duplicated between Router and SSG | **Fixed** |
+| **BUG-02** | #3 Correct-but-Poor Implementation | 🟡 P2 | SSG recompiles the same `.drift` source multiple times during one build | **Fixed** |
+| **BUG-03** | #3 Correct-but-Poor / #5 Missed Optimizations | 🟡 P2 | Compiler constant-pool deduplication is potentially $O(n^2)$ + repeated `JSON.stringify()` | **Fixed** |
+| **BUG-04** | #5 Compiler Optimization / Architectural Inefficiency | 🟡 P2 | Compiler walks expression ASTs repeatedly for dependency extraction | **Fixed** |
 | **BUG-05** | #4 Security | 🔴 P1 | `wrapIslandHtml()` allows raw HTML attribute injection | **Fixed** |
 | **BUG-06** | #4 Security | 🔴 P1 | `generateIslandBootstrapSource()` generates import statements without escaping module specifiers | **Fixed** |
 | **BUG-07** | #3 Correct-but-Poor Implementation | 🔴 P1 | Version bump scripts fail to update CLI template package versions | **Open** |
@@ -22,36 +22,20 @@ This document tracks identified bugs, architectural defects, and security vulner
 
 - **Category:** #1 Duplicated Localized Implementations / #3 Correct-but-Poor
 - **Severity:** 🟡 P2
-- **Status:** **Open**
+- **Status:** **Fixed**
 - **Affected Files:**
+  - `packages/utils/src/path.ts`
   - `packages/router/src/path.ts`
   - `packages/ssg/src/router/scanner.ts`
 - **Description:**
-  Two separate, localized implementations of path normalization exist across packages:
-  - `packages/router/src/path.ts`:
-    ```ts
-    export function normalizePath(path: string): string {
-      if (!path || path === '/') return '/';
-      let norm = path.replace(/\/+/g, '/');
-      if (!norm.startsWith('/')) norm = '/' + norm;
-      if (norm.length > 1 && norm.endsWith('/')) norm = norm.slice(0, -1);
-      return norm;
-    }
-    ```
-  - `packages/ssg/src/router/scanner.ts`:
-    ```ts
-    export function normalizePath(p: string): string {
-      if (!p || p === '/') return '/';
-      let clean = p.replace(/\/+/g, '/');
-      if (clean.length > 1 && clean.endsWith('/')) {
-        clean = clean.slice(0, -1);
-      }
-      return clean.startsWith('/') ? clean : `/${clean}`;
-    }
-    ```
-  While currently producing identical outputs for common paths, having two divergent implementations risks subtle behavioral discrepancies as router path handling evolves.
-- **Action Plan:**
-  Extract a canonical `normalizePath` utility to `packages/utils/src/path.ts` (`driftjs-shared`) and consume it in both Router and SSG.
+  Two separate, localized implementations of path normalization existed across packages:
+  - `packages/router/src/path.ts`
+  - `packages/ssg/src/router/scanner.ts`
+  While producing identical outputs for common paths, having two divergent implementations risked subtle behavioral discrepancies as router path handling evolved.
+- **Resolution:**
+  - Extracted the canonical `normalizePath` utility to `driftjs-shared` (`packages/utils/src/path.ts`).
+  - Re-exported `normalizePath` from `packages/router/src/path.ts` and `packages/ssg/src/router/scanner.ts` to preserve public API compatibility.
+  - Added unit test coverage in `packages/utils/tests/utils.test.ts`.
 
 ---
 
@@ -59,19 +43,25 @@ This document tracks identified bugs, architectural defects, and security vulner
 
 - **Category:** #3 Correct-but-Poor Implementation
 - **Severity:** 🟡 P2
-- **Status:** **Open**
+- **Status:** **Fixed**
 - **Affected Files:**
+  - `packages/ssg/types/islands.ts`
   - `packages/ssg/src/islands/scanner.ts`
   - `packages/ssg/src/build/builder.ts`
+  - `packages/ssg/src/router/paths.ts`
+  - `packages/ssg/src/render/renderer.ts`
 - **Description:**
-  During static site generation, the same `.drift` file is repeatedly scanned, parsed, and compiled:
-  1. `scanIslands()` calls `collectScriptImports(templateSource)` which invokes `compile(templateSource)`.
-  2. `scanIslands()` immediately afterwards separately lexes and parses the same source with `new DriftLexer()` and `new DriftParser()`.
-  3. `builder.ts` calls `extractCssImports(src, filePath)` which invokes `compile(templateSource)` again.
-  4. Later, during page resolution and layout application, `scanIslands()` is called again for the page and layout components.
-  For projects with dozens or hundreds of pages and components, this results in significant redundant CPU overhead.
-- **Action Plan:**
-  Implement a unified source analysis pass (e.g., `analyzeDriftSource()`) that compiles/parses once and caches/reuses the AST, compiled bytecode module, island metadata, and imports throughout the SSG pipeline.
+  During static site generation, the same `.drift` file was repeatedly scanned, parsed, and compiled:
+  1. `scanIslands()` called `collectScriptImports()` which invoked `compile()`.
+  2. `scanIslands()` immediately afterwards separately lexed and parsed the source with `DriftLexer` and `DriftParser`.
+  3. `builder.ts` called `extractCssImports()` which invoked `compile()` again.
+  4. Later, during page resolution and layout application, `scanIslands()` was called repeatedly for every page and each enclosing layout.
+- **Resolution:**
+  - Defined `DriftSourceAnalysis` in `packages/ssg/types/islands.ts`.
+  - Implemented `analyzeDriftSource()` in `packages/ssg/src/islands/scanner.ts`, executing a single pipeline (`DriftLexer` -> `DriftParser` -> `findIslandElements` -> `DriftTransformer` -> `DriftGenerator`) to generate AST, compiled module, script imports, CSS imports, and island descriptors in one pass.
+  - Added an in-memory analysis cache (`sourceAnalysisCache` with `clearSourceAnalysisCache()`) ensuring that multiple references to identical `.drift` files (pages, layouts, document templates) execute in $O(1)$ time without re-lexing, re-parsing, or re-compiling.
+  - Integrated `clearSourceAnalysisCache()` into the start of `build()` in `packages/ssg/src/build/builder.ts` and reused `analyzeDriftSource()` in `extractStaticPaths()` and `scanFile()`.
+  - Added automated unit tests in `packages/ssg/tests/islands.test.ts` verifying single-pass analysis, cache hits, and cache resets.
 
 ---
 
@@ -79,14 +69,20 @@ This document tracks identified bugs, architectural defects, and security vulner
 
 - **Category:** #3 Correct-but-Poor / #5 Missed Optimizations
 - **Severity:** 🟡 P2
-- **Status:** **Open**
+- **Status:** **Fixed**
 - **Affected Files:**
   - `packages/compiler/src/generator.ts`
+  - `packages/compiler/tests/generator.test.ts`
 - **Description:**
-  When adding values to the constant pool, `addConstant()` scans the existing constants array using `findIndex()` and performs deep comparison with `JSON.stringify(a) === JSON.stringify(b)`.
-  Because the constant pool stores complex structures (expression AST thunks, sub-module objects, reactive dependency lists, props specifications, and switch tables), doing linear scans with JSON serialization on every constant addition leads to quadratic $O(n^2)$ compile-time scaling and high GC pressure.
-- **Action Plan:**
-  Introduce keyed lookup using `Map<string, number>` with fast deterministic keys for primitive constants, and avoid repeated deep JSON stringification scans for compound constants.
+  When adding values to the constant pool, `addConstant()` scanned the existing constants array using `findIndex()` and performed deep comparison with `JSON.stringify(a) === JSON.stringify(b)`.
+  Because the constant pool stores complex structures (expression AST thunks, sub-module objects, reactive dependency lists, props specifications, and switch tables), doing linear scans with JSON serialization on every constant addition led to quadratic $O(n^2)$ compile-time scaling and high GC pressure.
+- **Resolution:**
+  - Replaced linear array scanning with a frame-scoped `constantMap: Map<string, number>`.
+  - Implemented `getConstantKey(value)` with fast deterministic prefixes (`s:`, `n:`, `b:`, `null`, `undefined`) to bypass JSON serialization entirely for primitives.
+  - Single-stringified compound objects only once upon insertion into the map (`o:${JSON.stringify(value)}`), reducing pool deduplication from $O(n^2)$ comparisons to $O(1)$ lookups.
+  - Handled sub-module recursion isolation in `compileNodesToSubModule()`: saved and restored `savedConstantMap` alongside `constants`, preventing sub-module constant indices from colliding with or contaminating the parent compilation frame.
+  - Preserved `isConstantEqual(a, b)` for backward compatibility.
+  - Added unit test coverage in `packages/compiler/tests/generator.test.ts`.
 
 ---
 
@@ -94,15 +90,22 @@ This document tracks identified bugs, architectural defects, and security vulner
 
 - **Category:** #5 Compiler Optimization / Architectural Inefficiency
 - **Severity:** 🟡 P2
-- **Status:** **Open**
+- **Status:** **Fixed**
 - **Affected Files:**
   - `packages/compiler/src/generator.ts`
+  - `packages/compiler/src/index.ts`
+  - `packages/compiler/tests/generator.test.ts`
 - **Description:**
-  The bytecode generator traverses the same Acorn AST multiple times:
-  - `addExpressionConstant()` runs `this.extractIdentifiers(ast)` to determine reactive dependencies.
-  - Reactive binding generation calls `recordBindingPositions(expr, pc)`, which traverses the exact same AST again with `this.extractIdentifiers(expr)`.
-- **Action Plan:**
-  Consolidate expression inspection into a single analysis step (`analyzeExpression(ast)`) returning code string, referenced identifiers, and filtered reactive dependencies in one traversal.
+  The bytecode generator traversed the same Acorn AST multiple times:
+  - `addExpressionConstant()` ran `this.extractIdentifiers(ast)` to determine reactive dependencies.
+  - Reactive binding generation independently called `recordBindingPositions(expr, pc)`, which traversed the exact same AST again with `this.extractIdentifiers(expr)`.
+  - Additional control flow generators (`compileIfNode`, `compileSwitchNode`, `compileForNode`, `processDerivedBindings`, `processEffectBindings`) performed independent traversals for extra dependencies.
+- **Resolution:**
+  - Implemented single-pass `analyzeExpression(ast, declaredVars)` and `extractIdentifiersFromAST(ast)`, returning `{ code, identifiers, deps, rootIdentifier }` in one traversal.
+  - Added `exprAnalysisCache: WeakMap<object, ExpressionAnalysis>` to `DriftGenerator`, caching analysis results on the AST node reference during constant registration.
+  - Updated `addExpressionConstant`, `recordBindingPositions`, `compileIfNode`, `compileSwitchNode`, `compileForNode`, `processDerivedBindings`, and `processEffectBindings` to consume the cached analysis in $O(1)$ time without repeated AST traversals.
+  - Exported `analyzeExpression`, `extractIdentifiersFromAST`, and `type ExpressionAnalysis` from `packages/compiler/src/index.ts`.
+  - Added unit test coverage in `packages/compiler/tests/generator.test.ts`.
 
 ---
 

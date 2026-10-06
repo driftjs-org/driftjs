@@ -1,20 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { normalizePath } from 'driftjs-shared';
 import type { RouteRecord, RouteType, RouteScanResult } from '../../types/index.js';
 
 export type ScanResult = RouteScanResult;
-
-/**
- * Normalizes a URL path string: removes redundant slashes, ensures leading slash, trims trailing slash.
- */
-export function normalizePath(p: string): string {
-  if (!p || p === '/') return '/';
-  let clean = p.replace(/\/+/g, '/');
-  if (clean.length > 1 && clean.endsWith('/')) {
-    clean = clean.slice(0, -1);
-  }
-  return clean.startsWith('/') ? clean : `/${clean}`;
-}
+export { normalizePath };
 
 /**
  * Converts a filesystem relative path into a normalized route pattern and metadata.

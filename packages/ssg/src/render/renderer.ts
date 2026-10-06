@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createServer as createViteServer } from 'vite';
 import { vite as drift } from 'driftjs-unplugin';
-import { compile, type CompiledModule } from 'driftjs-compiler';
+import type { CompiledModule } from 'driftjs-compiler';
 import { DriftServerVM, serializeNode, type ServerNode } from 'driftjs-ssr';
 import type { RouteRecord, RouteParams, RenderPageOptions, RenderResult } from '../../types/index.js';
 import { renderMarkdown } from '../content/index.js';

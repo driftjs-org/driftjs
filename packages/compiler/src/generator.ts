@@ -32,6 +32,8 @@ export class DriftGenerator {
   private readonly ast: ProgramNode;
   private bytecode: number[] = [];
   private constants: any[] = [];
+  private constantMap: Map<string, number> = new Map();
+  private exprAnalysisCache: WeakMap<object, ExpressionAnalysis> = new WeakMap();
   private nextRegisterId = 0;
   private declaredVars: Set<string> = new Set();
   private imports: ImportSpec[] = [];
@@ -52,6 +54,8 @@ export class DriftGenerator {
   public generate(): CompiledModule {
     this.bytecode = [];
     this.constants = [];
+    this.constantMap = new Map();
+    this.exprAnalysisCache = new WeakMap();
     this.nextRegisterId = 0;
     this.declaredVars = new Set();
     this.imports = [];
@@ -212,9 +216,9 @@ export class DriftGenerator {
           } else if (attr.value.type === ASTNodeType.Interpolation) {
             const expr = attr.value.expression;
             if (expr && typeof expr === 'object' && expr.type) {
-              const codeStr = astToJS(expr);
+              const analysis = this.analyzeExpression(expr);
               propsSpec[attr.name] = {
-                __drift_fn__: `(scope, declaredVars, setScopeValue, inScopeChain, resolveIterable, getScopeValue) => (${codeStr})`,
+                __drift_fn__: `(scope, declaredVars, setScopeValue, inScopeChain, resolveIterable, getScopeValue) => (${analysis.code})`,
                 loc: attr.value.loc,
               };
             } else {
@@ -332,12 +336,14 @@ export class DriftGenerator {
     // save parent state
     const savedBytecode = this.bytecode;
     const savedConstants = this.constants;
+    const savedConstantMap = this.constantMap;
     const savedNextReg = this.nextRegisterId;
     const savedBindPos = this.bindingPositions;
 
     // fresh slate for the sub-module
     this.bytecode = [];
     this.constants = [];
+    this.constantMap = new Map();
     this.nextRegisterId = 0;
     this.bindingPositions = new Map();
 
@@ -356,6 +362,7 @@ export class DriftGenerator {
     // restore parent state
     this.bytecode = savedBytecode;
     this.constants = savedConstants;
+    this.constantMap = savedConstantMap;
     this.nextRegisterId = savedNextReg;
     this.bindingPositions = savedBindPos;
 
@@ -376,8 +383,8 @@ export class DriftGenerator {
       deps.add(subMod.reactiveBindings[i]!.variable);
     }
     if (extraExpr) {
-      for (const name of this.extractIdentifiers(extraExpr)) {
-        if (this.declaredVars.has(name)) deps.add(name);
+      for (const name of this.analyzeExpression(extraExpr).deps) {
+        deps.add(name);
       }
     }
     return [...deps];
@@ -406,8 +413,8 @@ export class DriftGenerator {
     // Deps = union of both branches' reactive vars + condition identifiers + optional extraDeps
     const depsSet = new Set<string>(this.collectDepsFromSubModule(consMod, node.test));
     if ((node as any).extraDeps) {
-      for (const name of this.extractIdentifiers((node as any).extraDeps)) {
-        if (this.declaredVars.has(name)) depsSet.add(name);
+      for (const name of this.analyzeExpression((node as any).extraDeps).deps) {
+        depsSet.add(name);
       }
       const depsArr = Array.from(depsSet);
       if (consMod.constants && !consMod.constants.some((c: any) => Array.isArray(c))) {
@@ -454,13 +461,13 @@ export class DriftGenerator {
 
     // Deps = union of discriminant deps + all case expression deps + all case sub-module reactive bindings
     const depsSet = new Set<string>();
-    for (const name of this.extractIdentifiers(node.discriminant)) {
-      if (this.declaredVars.has(name)) depsSet.add(name);
+    for (const name of this.analyzeExpression(node.discriminant).deps) {
+      depsSet.add(name);
     }
     for (const c of node.cases) {
       if (c.expression !== null) {
-        for (const name of this.extractIdentifiers(c.expression)) {
-          if (this.declaredVars.has(name)) depsSet.add(name);
+        for (const name of this.analyzeExpression(c.expression).deps) {
+          depsSet.add(name);
         }
       }
     }
@@ -527,13 +534,13 @@ export class DriftGenerator {
     // iterDeps: only the outer declared variables that determine which iterable is evaluated.
     // A change here requires full reconciliation (list structure may change).
     const iterDepsSet = new Set<string>();
-    for (const name of this.extractIdentifiers(node.iterable)) {
-      if (this.declaredVars.has(name)) iterDepsSet.add(name);
+    for (const name of this.analyzeExpression(node.iterable).deps) {
+      iterDepsSet.add(name);
     }
     if (node.key) {
       // Key expression deps also drive reconciliation (key identity may change).
-      for (const name of this.extractIdentifiers(node.key)) {
-        if (this.declaredVars.has(name)) iterDepsSet.add(name);
+      for (const name of this.analyzeExpression(node.key).deps) {
+        iterDepsSet.add(name);
       }
     }
     const iterDepsIdx = this.addConstant([...iterDepsSet]);
@@ -739,10 +746,9 @@ export class DriftGenerator {
         }
       }
 
-      const ids = this.extractIdentifiers(exprAST);
-      const deps = [...ids].filter((id) => id !== name && this.declaredVars.has(id));
-
-      const codeStr = astToJS(exprAST);
+      const analysis = this.analyzeExpression(exprAST);
+      const deps = analysis.deps.filter((id) => id !== name);
+      const codeStr = analysis.code;
       let fnVal: any;
       if (isFunctionBlock) {
         fnVal = {
@@ -778,10 +784,9 @@ export class DriftGenerator {
         }
       }
 
-      const ids = this.extractIdentifiers(exprAST);
-      const deps = [...ids].filter((id) => this.declaredVars.has(id));
-
-      const codeStr = astToJS(exprAST);
+      const analysis = this.analyzeExpression(exprAST);
+      const deps = analysis.deps;
+      const codeStr = analysis.code;
       const asyncPrefix = isAsync ? 'async ' : '';
       let fnVal: any;
       if (isFunctionBlock) {
@@ -802,48 +807,37 @@ export class DriftGenerator {
     }
   }
 
-  private extractIdentifiers(node: any): Set<string> {
-    const ids = new Set<string>();
-    if (!node || typeof node !== 'object') return ids;
-
-    try {
-      walk.ancestor(node, {
-        Identifier(idNode: any, ancestors: any[]) {
-          const parent = ancestors[ancestors.length - 2];
-          if (parent) {
-            if (parent.type === 'MemberExpression' && parent.property === idNode && !parent.computed) {
-              return;
-            }
-            if (
-              (parent.type === 'Property' ||
-                parent.type === 'MethodDefinition' ||
-                parent.type === 'PropertyDefinition') &&
-              parent.key === idNode &&
-              !parent.computed
-            ) {
-              return;
-            }
-          }
-          ids.add(idNode.name);
-        },
-      });
-    } catch {
-      // Ignored for partial/incomplete AST nodes
+  /**
+   * Analyzes an Acorn expression AST in a single pass, computing code string,
+   * referenced identifiers, reactive dependencies, and root identifier.
+   * Results are cached by AST node reference in a WeakMap to eliminate redundant traversals.
+   */
+  public analyzeExpression(ast: any): ExpressionAnalysis {
+    if (ast && typeof ast === 'object') {
+      const cached = this.exprAnalysisCache.get(ast);
+      if (cached) return cached;
     }
 
-    return ids;
+    const analysis = analyzeExpression(ast, this.declaredVars);
+
+    if (ast && typeof ast === 'object') {
+      this.exprAnalysisCache.set(ast, analysis);
+    }
+    return analysis;
+  }
+
+  private extractIdentifiers(node: any): Set<string> {
+    return extractIdentifiersFromAST(node);
   }
 
   private recordBindingPositions(expr: any, pc: number): void {
     if (this.declaredVars.size === 0) return;
-    const ids = this.extractIdentifiers(expr);
-    for (const name of ids) {
-      if (this.declaredVars.has(name)) {
-        if (!this.bindingPositions.has(name)) {
-          this.bindingPositions.set(name, []);
-        }
-        this.bindingPositions.get(name)!.push(pc);
+    const analysis = this.analyzeExpression(expr);
+    for (const name of analysis.deps) {
+      if (!this.bindingPositions.has(name)) {
+        this.bindingPositions.set(name, []);
       }
+      this.bindingPositions.get(name)!.push(pc);
     }
   }
 
@@ -860,14 +854,10 @@ export class DriftGenerator {
   }
 
   private addExpressionConstant(ast: any, loc?: SourceRange): number {
-    const codeStr = astToJS(ast);
-    const deps: string[] = [];
-    for (const name of this.extractIdentifiers(ast)) {
-      if (this.declaredVars.has(name)) deps.push(name);
-    }
+    const analysis = this.analyzeExpression(ast);
     const fnVal: any = {
-      __drift_fn__: `(scope, declaredVars, setScopeValue, inScopeChain, resolveIterable, getScopeValue) => (${codeStr})`,
-      deps,
+      __drift_fn__: `(scope, declaredVars, setScopeValue, inScopeChain, resolveIterable, getScopeValue) => (${analysis.code})`,
+      deps: analysis.deps,
     };
     if (loc) {
       fnVal.loc = loc;
@@ -886,17 +876,41 @@ export class DriftGenerator {
     return this.addConstant(fnVal);
   }
 
-  private addConstant(value: any): number {
-    const existingIndex = this.constants.findIndex((c) => this.isConstantEqual(c, value));
-    if (existingIndex !== -1) {
-      return existingIndex;
+  private getConstantKey(value: any): string | null {
+    if (value === null) return 'null';
+    if (value === undefined) return 'undefined';
+    const t = typeof value;
+    if (t === 'string') return `s:${value}`;
+    if (t === 'number') return Number.isNaN(value) ? 'n:NaN' : (Object.is(value, -0) ? 'n:-0' : `n:${value}`);
+    if (t === 'boolean') return `b:${value}`;
+    if (t === 'object') {
+      try {
+        return `o:${JSON.stringify(value)}`;
+      } catch {
+        return null;
+      }
     }
-
-    this.constants.push(value);
-    return this.constants.length - 1;
+    return null;
   }
 
-  private isConstantEqual(a: any, b: any): boolean {
+  private addConstant(value: any): number {
+    const key = this.getConstantKey(value);
+    if (key !== null) {
+      const existing = this.constantMap.get(key);
+      if (existing !== undefined) {
+        return existing;
+      }
+    }
+
+    const index = this.constants.length;
+    this.constants.push(value);
+    if (key !== null) {
+      this.constantMap.set(key, index);
+    }
+    return index;
+  }
+
+  public isConstantEqual(a: any, b: any): boolean {
     if (a === b) return true;
     if (typeof a === 'object' && typeof b === 'object' && a !== null && b !== null) {
       return JSON.stringify(a) === JSON.stringify(b);
@@ -907,6 +921,64 @@ export class DriftGenerator {
   private emit(opcode: Opcode, ...operands: number[]): void {
     this.bytecode.push(opcode, ...operands);
   }
+}
+
+export interface ExpressionAnalysis {
+  code: string;
+  identifiers: Set<string>;
+  deps: string[];
+  rootIdentifier: string | null;
+}
+
+export function extractIdentifiersFromAST(node: any): Set<string> {
+  const ids = new Set<string>();
+  if (!node || typeof node !== 'object') return ids;
+
+  try {
+    walk.ancestor(node, {
+      Identifier(idNode: any, ancestors: any[]) {
+        const parent = ancestors[ancestors.length - 2];
+        if (parent) {
+          if (parent.type === 'MemberExpression' && parent.property === idNode && !parent.computed) {
+            return;
+          }
+          if (
+            (parent.type === 'Property' ||
+              parent.type === 'MethodDefinition' ||
+              parent.type === 'PropertyDefinition') &&
+            parent.key === idNode &&
+            !parent.computed
+          ) {
+            return;
+          }
+        }
+        ids.add(idNode.name);
+      },
+    });
+  } catch {
+    // Ignored for partial/incomplete AST nodes
+  }
+
+  return ids;
+}
+
+export function analyzeExpression(ast: any, declaredVars?: Set<string>): ExpressionAnalysis {
+  const code = astToJS(ast);
+  const identifiers = extractIdentifiersFromAST(ast);
+  const deps: string[] = [];
+  if (declaredVars && declaredVars.size > 0) {
+    for (const name of identifiers) {
+      if (declaredVars.has(name)) {
+        deps.push(name);
+      }
+    }
+  }
+  return {
+    code,
+    identifiers,
+    deps,
+    rootIdentifier: getRootIdentifier(ast),
+  };
 }
 
 function getRootIdentifier(node: any): string | null {

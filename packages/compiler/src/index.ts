@@ -3,7 +3,14 @@ export { Opcode } from '../types/opcodes.js';
 export { DriftLexer } from './lexer.js';
 export { DriftParser } from './parser.js';
 export { DriftTransformer, traverseTemplateAST } from './transformer.js';
-export { DriftGenerator, astToJS, extractBindingNames } from './generator.js';
+export {
+  DriftGenerator,
+  astToJS,
+  extractBindingNames,
+  analyzeExpression,
+  extractIdentifiersFromAST,
+  type ExpressionAnalysis,
+} from './generator.js';
 export {
   serializeValueToJS,
   serializeConstants,

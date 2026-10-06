@@ -66,4 +66,7 @@ declare module 'driftjs-shared' {
   export function escapeHtml(str: string): string;
   export function unescapeHtml(str: string): string;
   export function isValidHtmlTagName(tag: string): boolean;
+
+  /** Path utilities */
+  export function normalizePath(path: string): string;
 }

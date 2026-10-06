@@ -1,4 +1,5 @@
 import type { IslandTriggerStrategy } from './config.js';
+import type { CompiledModule, ProgramNode, ElementNode, ImportSpec } from 'driftjs-compiler';
 
 export type IslandClientDirective =
   | 'client:load'
@@ -43,5 +44,22 @@ export interface IslandBundleResult {
   cssTag?: string | undefined;
   cssAssetPath?: string | undefined;
   cssSize?: number | undefined;
+}
+
+export interface DriftSourceAnalysis {
+  /** Compiled Drift bytecode module */
+  compiled: CompiledModule;
+  /** Parsed raw template AST */
+  ast: ProgramNode;
+  /** Import specifiers declared in <script> */
+  imports: readonly ImportSpec[];
+  /** Script import mapping by local variable name */
+  scriptImports: Record<string, { source: string; importedName: string }>;
+  /** CSS / stylesheet import specifiers */
+  cssImports: string[];
+  /** Raw AST element nodes containing client:* directives */
+  islandElements: ElementNode[];
+  /** Resolved island component descriptors */
+  islands: IslandDescriptor[];
 }
 

@@ -4,6 +4,7 @@ import { compile, type CompiledModule } from 'driftjs-compiler';
 import { evaluateExpression } from 'driftjs-shared';
 import type { RouteRecord, RouteParams, StaticPathResult, ResolvedRoutePath } from '../../types/index.js';
 import { normalizePath } from './scanner.js';
+import { analyzeDriftSource } from '../islands/index.js';
 
 export type { StaticPathResult, ResolvedRoutePath };
 
@@ -63,7 +64,7 @@ export async function extractStaticPaths(
   if (!mod && fs.existsSync(route.filePath)) {
     const content = fs.readFileSync(route.filePath, 'utf8');
     if (route.filePath.endsWith('.drift')) {
-      mod = compile(content);
+      mod = analyzeDriftSource(content, route.filePath).compiled;
     }
   }
 

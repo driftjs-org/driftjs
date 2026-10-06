@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { compile, astToJS } from '../src/index.js';
+import { compile, astToJS, analyzeExpression, extractIdentifiersFromAST, DriftGenerator } from '../src/index.js';
 import { Opcode } from '../types/index.js';
 
 describe('DriftGenerator', () => {
@@ -820,6 +820,91 @@ describe('DriftGenerator', () => {
       expect(scope.a).toBe('initial');
       // c ??= 'fallback' should set fallback because c was null
       expect(scope.c).toBe('fallback');
+    });
+  });
+
+  describe('BUG-03: Constant pool O(1) deduplication & submodule isolation', () => {
+    it('deduplicates identical primitive and compound constants into single pool entries', () => {
+      const src = `
+        <div>
+          <span>Hello</span>
+          <span>Hello</span>
+          <button class="btn" data-active="true">Click</button>
+          <a class="btn" data-active="true">Link</a>
+        </div>
+      `;
+      const mod = compile(src);
+      const spanCount = mod.constants.filter((c) => c === 'span').length;
+      expect(spanCount).toBe(1);
+
+      const helloCount = mod.constants.filter((c) => c === 'Hello').length;
+      expect(helloCount).toBe(1);
+
+      const btnCount = mod.constants.filter((c) => c === 'btn').length;
+      expect(btnCount).toBe(1);
+    });
+
+    it('isolates sub-module constant pools and preserves parent constant indices without collision', () => {
+      const src = `
+        <div>
+          <span>Parent Text</span>
+          @if show {
+            <p>Parent Text</p>
+          }
+          <span>Parent Text</span>
+        </div>
+      `;
+      const mod = compile(src);
+      // 'Parent Text' in the main module constant pool should only appear once
+      const parentOccurrences = mod.constants.filter((c) => c === 'Parent Text').length;
+      expect(parentOccurrences).toBe(1);
+
+      // Sub-module in @if branch has its own constant pool
+      const ifSubMod = mod.constants.find((c) => c && typeof c === 'object' && 'bytecode' in c);
+      expect(ifSubMod).toBeDefined();
+      expect(ifSubMod.constants).toContain('Parent Text');
+      expect(ifSubMod.constants).toContain('p');
+    });
+  });
+
+  describe('BUG-04: Single-pass analyzeExpression and WeakMap caching', () => {
+    it('extracts identifiers, dependencies, and rootIdentifier in a single pass', () => {
+      const ast = {
+        type: 'BinaryExpression',
+        operator: '+',
+        left: { type: 'Identifier', name: 'count' },
+        right: {
+          type: 'MemberExpression',
+          object: { type: 'Identifier', name: 'user' },
+          property: { type: 'Identifier', name: 'age' },
+          computed: false,
+        },
+      };
+
+      const declaredVars = new Set(['count', 'user', 'other']);
+      const analysis = analyzeExpression(ast, declaredVars);
+
+      expect(analysis.code).toBe('(getScopeValue(scope, "count") + (getScopeValue(scope, "user").age))');
+      expect(analysis.identifiers).toEqual(new Set(['count', 'user']));
+      expect(analysis.deps).toEqual(['count', 'user']);
+      expect(analysis.rootIdentifier).toBe(null); // BinaryExpression root
+    });
+
+    it('caches analysis in DriftGenerator to prevent repeated AST walks for reactive bindings', () => {
+      const sfc = `
+        <script>
+          let count = 0;
+          let title = 'Test';
+        </script>
+        <div class={title} data-count={count}>
+          {count}
+        </div>
+      `;
+      const mod = compile(sfc);
+      expect(mod.reactiveBindings).toBeDefined();
+      const countBinding = mod.reactiveBindings!.find((b) => b.variable === 'count');
+      expect(countBinding).toBeDefined();
+      expect(countBinding!.positions.length).toBe(2); // attribute + text interpolation
     });
   });
 });

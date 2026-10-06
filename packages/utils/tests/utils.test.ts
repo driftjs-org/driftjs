@@ -14,6 +14,7 @@ import {
   VOID_ELEMENTS,
   escapeHtml,
   isValidHtmlTagName,
+  normalizePath,
 } from '../src/index.js';
 
 describe('driftjs-shared Module', () => {
@@ -260,6 +261,26 @@ describe('driftjs-shared Module', () => {
       expect(isValidHtmlTagName('<script>')).toBe(false);
       expect(isValidHtmlTagName('')).toBe(false);
       expect(isValidHtmlTagName(null as any)).toBe(false);
+    });
+  });
+
+  describe('normalizePath utility', () => {
+    it('normalizes empty or root paths to "/"', () => {
+      expect(normalizePath('')).toBe('/');
+      expect(normalizePath('/')).toBe('/');
+      expect(normalizePath('///')).toBe('/');
+    });
+
+    it('ensures leading slash and strips trailing slashes', () => {
+      expect(normalizePath('about')).toBe('/about');
+      expect(normalizePath('/about/')).toBe('/about');
+      expect(normalizePath('about/')).toBe('/about');
+      expect(normalizePath('/blog/posts/')).toBe('/blog/posts');
+      expect(normalizePath('blog/posts')).toBe('/blog/posts');
+    });
+
+    it('collapses redundant consecutive slashes', () => {
+      expect(normalizePath('//blog///post//1/')).toBe('/blog/post/1');
     });
   });
 });

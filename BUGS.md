@@ -1,18 +1,16 @@
 # Known Issues & Bug Tracking
 
-This document tracks identified bugs, architectural defects, and security vulnerabilities across the DriftJS codebase, classified into audit categories and prioritized by severity.
+This document tracks identified bugs, architectural defects, and security vulnerabilities across the DriftJS codebase, classified into audit categories and prioritized by severity. Summary Table
 
-## Summary Table
-
-| ID | Category | Severity | Summary | Status |
-| :--- | :--- | :---: | :--- | :---: |
-| **BUG-01** | #1 Duplicated Localized Implementations / #3 Correct-but-Poor | 🟡 P2 | `normalizePath()` duplicated between Router and SSG | **Fixed** |
-| **BUG-02** | #3 Correct-but-Poor Implementation | 🟡 P2 | SSG recompiles the same `.drift` source multiple times during one build | **Fixed** |
-| **BUG-03** | #3 Correct-but-Poor / #5 Missed Optimizations | 🟡 P2 | Compiler constant-pool deduplication is potentially $O(n^2)$ + repeated `JSON.stringify()` | **Fixed** |
-| **BUG-04** | #5 Compiler Optimization / Architectural Inefficiency | 🟡 P2 | Compiler walks expression ASTs repeatedly for dependency extraction | **Fixed** |
-| **BUG-05** | #4 Security | 🔴 P1 | `wrapIslandHtml()` allows raw HTML attribute injection | **Fixed** |
-| **BUG-06** | #4 Security | 🔴 P1 | `generateIslandBootstrapSource()` generates import statements without escaping module specifiers | **Fixed** |
-| **BUG-07** | #3 Correct-but-Poor Implementation | 🔴 P1 | Version bump scripts fail to update CLI template package versions | **Open** |
+| ID               | Category                                                      | Severity | Summary                                                                                            |     Status     |
+| :--------------- | :------------------------------------------------------------ | :------: | :------------------------------------------------------------------------------------------------- | :-------------: |
+| **BUG-01** | #1 Duplicated Localized Implementations / #3 Correct-but-Poor |  🟡 P2  | `normalizePath()` duplicated between Router and SSG                                              | **Fixed** |
+| **BUG-02** | #3 Correct-but-Poor Implementation                            |  🟡 P2  | SSG recompiles the same`.drift` source multiple times during one build                           | **Fixed** |
+| **BUG-03** | #3 Correct-but-Poor / #5 Missed Optimizations                 |  🟡 P2  | Compiler constant-pool deduplication is potentially$O(n^2)$ + repeated `JSON.stringify()`      | **Fixed** |
+| **BUG-04** | #5 Compiler Optimization / Architectural Inefficiency         |  🟡 P2  | Compiler walks expression ASTs repeatedly for dependency extraction                                | **Fixed** |
+| **BUG-05** | #4 Security                                                   |  🔴 P1  | `wrapIslandHtml()` allows raw HTML attribute injection                                           | **Fixed** |
+| **BUG-06** | #4 Security                                                   |  🔴 P1  | `generateIslandBootstrapSource()` generates import statements without escaping module specifiers | **Fixed** |
+| **BUG-07** | #3 Correct-but-Poor Implementation                            |  🔴 P1  | Version bump scripts fail to update CLI template package versions                                  | **Fixed** |
 
 ---
 
@@ -140,6 +138,7 @@ This document tracks identified bugs, architectural defects, and security vulner
   ```ts
   `import ${importName} from '${resolvedImport}';`
   ```
+
   If a module path or export name contained single quotes or escaped characters, it would break out of the string literal in the generated JavaScript source file, causing syntax errors or arbitrary code execution during bundling.
 - **Resolution:**
   - Replaced manual single-quote interpolation with `JSON.stringify(resolvedImport)`, matching the standard behavior in `packages/compiler/src/esm.ts`.
@@ -151,14 +150,21 @@ This document tracks identified bugs, architectural defects, and security vulner
 
 - **Category:** #3 Correct-but-Poor Implementation
 - **Severity:** 🔴 P1
-- **Status:** **Open**
+- **Status:** **Fixed**
 - **Affected Files:**
+  - `scripts/version/bump.js`
+  - `scripts/version/bump.d.ts`
   - `scripts/version/patch.js`
   - `scripts/version/minor.js`
   - `scripts/version/major.js`
   - `packages/cli/template/package.json`
+  - `packages/cli/tests/bump.test.ts`
 - **Description:**
-  The version management scripts (`scripts/version/patch.js`, `minor.js`, `major.js`) increment package versions in workspace packages (`packages/*/package.json`), but do not synchronize the versions inside the scaffolding templates (e.g. `packages/cli/template/package.json`).
-  As a result, running `create-drift` to scaffold a new project creates a `package.json` pointing to stale or nonexistent dependency versions.
-- **Action Plan:**
-  Update the version bump scripts to include `packages/cli/template/package.json` (and any other starter template package configs) in the list of files updated during patch, minor, and major version increments.
+  The version management scripts (`scripts/version/patch.js`, `minor.js`, `major.js` via `bump.js`) incremented package versions in workspace packages (`packages/*/package.json`), but failed to synchronize the versions inside the scaffolding templates (`packages/cli/template/package.json`).
+  The previous implementation used a regex `/"driftjs-([^"]+)":\s*"\^[0-9.]+"/g` that strictly expected a leading `^`. Because `template/package.json` had bare versions (`0.0.16`), the regex never matched, causing `template/package.json` to remain permanently stale. Consequently, running `create-drift` generated projects with outdated dependency versions.
+- **Resolution:**
+  - Refactored `scripts/version/bump.js` to parse `package.json` as structured JSON and update all `driftjs-*`, `@driftjs/*`, and `create-drift` entries across `dependencies`, `devDependencies`, and `peerDependencies` to `^${newVersion}` via `updateTemplateDependencies()`.
+  - Added `findCliTemplatePackageJsons()` and `updateTemplateFile()` with fallback regex handling to automatically detect and update any templates under `packages/cli`.
+  - Added full TypeScript definitions in `scripts/version/bump.d.ts`.
+  - Updated `packages/cli/template/package.json` to the current `^0.0.17` version.
+  - Added unit test suite in `packages/cli/tests/bump.test.ts` verifying semver increment calculations, non-caret and caret template updates, workspace bump isolation, and canonical CLI template version synchronization.

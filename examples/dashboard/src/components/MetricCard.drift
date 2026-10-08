@@ -1,0 +1,18 @@
+<script>
+  let label = props.label || '';
+  let value = props.value !== undefined ? props.value : '0';
+  let unit = props.unit || '';
+  let trend = props.trend || '+0.0%';
+  let status = props.status || 'good';
+</script>
+
+<div class={'metric-card status-' + status}>
+  <div class="metric-head">
+    <span class="metric-label">{label}</span>
+    <span class="metric-trend">{trend}</span>
+  </div>
+  <div class="metric-body">
+    <span class="metric-value">{value}</span>
+    <span class="metric-unit">{unit}</span>
+  </div>
+</div>

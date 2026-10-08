@@ -1,0 +1,298 @@
+<script>
+  import MetricCard from './components/MetricCard.drift';
+  import { onMount, onUnmount } from 'driftjs-dom';
+
+  // Live Metrics
+  let cpuLoad = 48;
+  let memoryUsed = 4.2;
+  let requestsPerSec = 1450;
+  let avgLatency = 14;
+  let systemHealth = 98;
+
+  let isRunning = true;
+  let tickIntervalMs = 1000;
+  let intervalTimer = null;
+  let nextLogId = 5;
+
+  let cpuHistory = [35, 42, 38, 45, 52, 48, 44, 49, 55, 51, 46, 48];
+
+  let eventLogs = [
+    { id: 1, time: '10:45:01', message: 'Register VM cluster re-indexed 256 execution slots', tag: 'ok' },
+    { id: 2, time: '10:45:03', message: 'LIS list reconciler executed sub-millisecond patch', tag: 'info' },
+    { id: 3, time: '10:45:06', message: 'Hydration cursor claimed 142 DOM element nodes', tag: 'info' },
+    { id: 4, time: '10:45:09', message: 'Microtask batch flushed 8 reactive regions in-place', tag: 'ok' }
+  ];
+
+  // Derived SVG Chart Coordinates
+  let cpuPoints = derive(() => {
+    const width = 500;
+    const height = 150;
+    const step = width / (cpuHistory.length - 1);
+    return cpuHistory.map((val, idx) => {
+      const x = Math.round(idx * step);
+      const y = Math.round(height - (val / 100) * (height - 20) - 10);
+      return x + ',' + y;
+    }).join(' ');
+  });
+
+  let gaugeDashoffset = derive(() => {
+    const circumference = 408.4; // 2 * PI * 65
+    const progress = Math.min(100, Math.max(0, systemHealth));
+    return Math.round(circumference * (1 - progress / 100));
+  });
+
+  function tick() {
+    if (!isRunning) return;
+
+    // Simulate natural telemetry jitter
+    const cpuDelta = (Math.random() * 14 - 7);
+    const newCpu = Math.max(15, Math.min(95, Math.round(cpuLoad + cpuDelta)));
+    cpuLoad = newCpu;
+
+    const memDelta = (Math.random() * 0.4 - 0.2);
+    memoryUsed = Math.max(2.1, Math.min(14.8, Math.round((memoryUsed + memDelta) * 10) / 10));
+
+    const reqDelta = Math.round(Math.random() * 120 - 55);
+    requestsPerSec = Math.max(400, requestsPerSec + reqDelta);
+
+    const latDelta = Math.round(Math.random() * 4 - 2);
+    avgLatency = Math.max(4, Math.min(45, avgLatency + latDelta));
+
+    // Update health
+    if (newCpu > 80 || avgLatency > 30) {
+      systemHealth = Math.max(70, systemHealth - 3);
+    } else {
+      systemHealth = Math.min(100, systemHealth + 1);
+    }
+
+    // Append to CPU trendline
+    cpuHistory = [...cpuHistory.slice(1), newCpu];
+
+    // Periodic log events
+    if (Math.random() > 0.6) {
+      const now = new Date();
+      const timeStr = now.toTimeString().split(' ')[0];
+      const sampleMessages = [
+        { msg: 'AOT constant pool instantiations verified', tag: 'ok' },
+        { msg: 'Garbage collection sweep completed in 1.4ms', tag: 'info' },
+        { msg: 'Keyed list move avoided via LIS cache', tag: 'info' },
+        { msg: 'Memory heap steady across 1,000 VM frames', tag: 'ok' },
+        { msg: 'High incoming request burst absorbed', tag: 'warn' }
+      ];
+      const pick = sampleMessages[Math.floor(Math.random() * sampleMessages.length)];
+      eventLogs = [
+        { id: nextLogId++, time: timeStr, message: pick.msg, tag: pick.tag },
+        ...eventLogs.slice(0, 19)
+      ];
+    }
+  }
+
+  function startTimer() {
+    if (intervalTimer) clearInterval(intervalTimer);
+    intervalTimer = setInterval(tick, tickIntervalMs);
+  }
+
+  function toggleStreaming() {
+    isRunning = !isRunning;
+  }
+
+  function setSpeed(ms) {
+    tickIntervalMs = ms;
+    startTimer();
+  }
+
+  function addManualEvent() {
+    const timeStr = new Date().toTimeString().split(' ')[0];
+    eventLogs = [
+      { id: nextLogId++, time: timeStr, message: 'Manual telemetry snapshot triggered by user', tag: 'info' },
+      ...eventLogs.slice(0, 19)
+    ];
+  }
+
+  function clearLogs() {
+    eventLogs = [];
+  }
+
+  onMount(() => {
+    startTimer();
+  });
+
+  onUnmount(() => {
+    if (intervalTimer) clearInterval(intervalTimer);
+  });
+</script>
+
+<div class="dashboard-wrapper">
+  <!-- Top Bar -->
+  <header class="dash-header">
+    <div class="dash-title-group">
+      <div class="pulse-dot"></div>
+      <div>
+        <h1 class="dash-title">DriftJS Live Telemetry</h1>
+        <p class="dash-subtitle">High-frequency register VM state updates (Zero Virtual DOM overhead)</p>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="dash-controls">
+      <button
+        class={isRunning ? 'btn-ctrl btn-active' : 'btn-ctrl'}
+        onclick={toggleStreaming}
+      >
+        <span>{isRunning ? '⏸ Pause' : '▶ Resume'}</span>
+      </button>
+
+      <span style="font-size: 0.8rem; color: #94a3b8; margin: 0 0.25rem;">Rate:</span>
+      <button
+        class={tickIntervalMs === 250 ? 'btn-ctrl btn-active' : 'btn-ctrl'}
+        onclick={() => setSpeed(250)}
+      >
+        250ms
+      </button>
+      <button
+        class={tickIntervalMs === 1000 ? 'btn-ctrl btn-active' : 'btn-ctrl'}
+        onclick={() => setSpeed(1000)}
+      >
+        1s
+      </button>
+      <button
+        class={tickIntervalMs === 2500 ? 'btn-ctrl btn-active' : 'btn-ctrl'}
+        onclick={() => setSpeed(2500)}
+      >
+        2.5s
+      </button>
+    </div>
+  </header>
+
+  <!-- Metric Cards Grid using Sub-components -->
+  <section class="metrics-grid">
+    <MetricCard
+      label="CPU Utilization"
+      value={cpuLoad + '%'}
+      unit="Compute Core"
+      trend={cpuLoad > 75 ? '▲ High Load' : '▼ Nominal'}
+      status={cpuLoad > 80 ? 'critical' : (cpuLoad > 60 ? 'warning' : 'good')}
+    />
+
+    <MetricCard
+      label="Retained Memory"
+      value={memoryUsed}
+      unit="GB Heap"
+      trend="Steady Allocation"
+      status={memoryUsed > 10 ? 'warning' : 'good'}
+    />
+
+    <MetricCard
+      label="Throughput"
+      value={requestsPerSec}
+      unit="ops / sec"
+      trend="+4.8% vs last min"
+      status="good"
+    />
+
+    <MetricCard
+      label="Average Latency"
+      value={avgLatency}
+      unit="ms (p99)"
+      trend={avgLatency > 25 ? '▲ Jitter' : '▼ Sub-20ms'}
+      status={avgLatency > 30 ? 'critical' : (avgLatency > 20 ? 'warning' : 'good')}
+    />
+  </section>
+
+  <!-- Charts & Gauges -->
+  <div class="vis-grid">
+    <!-- SVG Trendline Chart -->
+    <div class="chart-card">
+      <div class="card-title">
+        <span>⚡ Realtime CPU Trend (Last 12 Ticks)</span>
+        <span style="font-family: monospace; font-size: 0.85rem; color: #06b6d4;">
+          Current: {cpuLoad}%
+        </span>
+      </div>
+
+      <div class="svg-chart-container">
+        <svg viewBox="0 0 500 150" style="width: 100%; height: 100%; overflow: visible;">
+          <!-- Grid Lines -->
+          <line x1="0" y1="20" x2="500" y2="20" stroke="#1f293d" stroke-dasharray="4 4" />
+          <line x1="0" y1="75" x2="500" y2="75" stroke="#1f293d" stroke-dasharray="4 4" />
+          <line x1="0" y1="130" x2="500" y2="130" stroke="#1f293d" stroke-dasharray="4 4" />
+
+          <!-- Dynamic SVG Polyline -->
+          <polyline
+            fill="none"
+            stroke="#06b6d4"
+            stroke-width="3"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            points={cpuPoints}
+          />
+        </svg>
+      </div>
+    </div>
+
+    <!-- Circular Health Gauge -->
+    <div class="chart-card">
+      <div class="card-title">
+        <span>Health Index</span>
+      </div>
+
+      <div class="gauge-box">
+        <div style="position: relative; display: flex; align-items: center; justify-content: center;">
+          <svg class="gauge-svg" viewBox="0 0 160 160">
+            <circle class="gauge-bg" cx="80" cy="80" r="65" />
+            <circle
+              class="gauge-progress"
+              cx="80"
+              cy="80"
+              r="65"
+              stroke-dasharray="408.4"
+              stroke-dashoffset={gaugeDashoffset}
+              stroke={systemHealth > 85 ? '#10b981' : (systemHealth > 70 ? '#f59e0b' : '#f43f5e')}
+            />
+          </svg>
+          <div class="gauge-center-text">
+            <div class="gauge-number" style={'color: ' + (systemHealth > 85 ? '#10b981' : (systemHealth > 70 ? '#f59e0b' : '#f43f5e'))}>
+              {systemHealth}
+            </div>
+            <div class="gauge-sub">Score</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Realtime Activity Log with Keyed LIS Reconciliation -->
+  <section class="logs-card">
+    <div class="card-title">
+      <span>Event Stream (Keyed LIS Reconciliation)</span>
+      <div style="display: flex; gap: 0.5rem;">
+        <button class="btn-ctrl" style="font-size: 0.775rem; padding: 0.3rem 0.6rem;" onclick={addManualEvent}>
+          + Trigger Event
+        </button>
+        <button class="btn-ctrl" style="font-size: 0.775rem; padding: 0.3rem 0.6rem;" onclick={clearLogs}>
+          Clear
+        </button>
+      </div>
+    </div>
+
+    @if eventLogs.length === 0 {
+      <div style="text-align: center; padding: 1.5rem; color: #94a3b8; font-size: 0.9rem;">
+        No events in stream. Click "+ Trigger Event" or wait for next telemetry tick.
+      </div>
+    } @else {
+      <ul class="logs-list">
+        @for (entry in eventLogs key entry.id) {
+          <li class="log-entry">
+            <div style="display: flex; align-items: center;">
+              <span class="log-time">[{entry.time}]</span>
+              <span class="log-msg">{entry.message}</span>
+            </div>
+            <span class={'log-tag tag-' + entry.tag}>
+              {entry.tag.toUpperCase()}
+            </span>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+</div>

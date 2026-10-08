@@ -1,0 +1,268 @@
+<script>
+  // 1. Counter State (@if / @else if / @else)
+  let count = 0;
+  let step = 1;
+
+  function inc() {
+    count = count + step;
+  }
+
+  function dec() {
+    count = count - step;
+  }
+
+  function resetCount() {
+    count = 0;
+  }
+
+  function setStep(newStep) {
+    step = newStep;
+  }
+
+  // 2. Keyed List State (@for)
+  let nextId = 5;
+  let newItemTitle = '';
+  let newItemTag = 'core';
+  let features = [
+    { id: 1, title: 'Register VM Execution (256 Registers)', tag: 'core' },
+    { id: 2, title: 'LIS Keyed Reconciliation', tag: 'fast' },
+    { id: 3, title: 'AOT Bytecode Compiler', tag: 'aot' },
+    { id: 4, title: 'Fine-Grained In-Place Updates', tag: 'core' }
+  ];
+
+  function addItem() {
+    if (!newItemTitle.trim()) return;
+    features = [
+      ...features,
+      { id: nextId++, title: newItemTitle.trim(), tag: newItemTag }
+    ];
+    newItemTitle = '';
+  }
+
+  function removeItem(id) {
+    features = features.filter(item => item.id !== id);
+  }
+
+  function reverseList() {
+    features = [...features].reverse();
+  }
+
+  // 3. Control Flow Switch State (@switch)
+  let activeTab = 'vm';
+
+  function selectTab(tab) {
+    activeTab = tab;
+  }
+
+  // 4. Live Binding State
+  let liveText = 'DriftJS is blazingly fast!';
+  let fontSize = 20;
+  let textColor = '#06b6d4';
+</script>
+
+<div class="container">
+  <header class="hero">
+    <h1>DriftJS Directives Sandbox</h1>
+    <p>Interactive showcase of DriftJS Register VM template syntax and directives</p>
+  </header>
+
+  <div class="grid">
+    <!-- Card 1: @if Directives & Reactive State -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">&#9889; Reactive State &amp; Directives</h2>
+        <span class="badge">&#64;if / &#64;else if / &#64;else</span>
+      </div>
+
+      <div class="counter-box">
+        <div class="counter-value">{count}</div>
+        <div>
+          @if count > 0 {
+            <span class="status-indicator status-positive">&#9650; Positive ({count})</span>
+          } @else if count < 0 {
+            <span class="status-indicator status-negative">&#9660; Negative ({count})</span>
+          } @else {
+            <span class="status-indicator status-zero">&#9679; Zero (Neutral)</span>
+          }
+        </div>
+      </div>
+
+      <div class="btn-group" style="justify-content: center; margin-bottom: 1rem;">
+        <button class="btn-secondary" onclick={dec}>- {step}</button>
+        <button class="btn-danger" onclick={resetCount}>Reset</button>
+        <button class="btn-primary" onclick={inc}>+ {step}</button>
+      </div>
+
+      <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; font-size: 0.85rem; color: #9ca3af;">
+        <span>Step Size:</span>
+        <button class={step === 1 ? 'btn-primary' : 'btn-secondary'} style="padding: 0.25rem 0.5rem;" onclick={() => setStep(1)}>1</button>
+        <button class={step === 5 ? 'btn-primary' : 'btn-secondary'} style="padding: 0.25rem 0.5rem;" onclick={() => setStep(5)}>5</button>
+        <button class={step === 10 ? 'btn-primary' : 'btn-secondary'} style="padding: 0.25rem 0.5rem;" onclick={() => setStep(10)}>10</button>
+      </div>
+    </div>
+
+    <!-- Card 2: @switch Directive -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">&#128257; Multi-branch Control Flow</h2>
+        <span class="badge">&#64;switch / &#64;case / &#64;default</span>
+      </div>
+
+      <div class="tab-bar">
+        <button
+          class={activeTab === 'vm' ? 'tab-btn active' : 'tab-btn'}
+          onclick={() => selectTab('vm')}
+        >
+          Register VM
+        </button>
+        <button
+          class={activeTab === 'lis' ? 'tab-btn active' : 'tab-btn'}
+          onclick={() => selectTab('lis')}
+        >
+          LIS Reconciler
+        </button>
+        <button
+          class={activeTab === 'aot' ? 'tab-btn active' : 'tab-btn'}
+          onclick={() => selectTab('aot')}
+        >
+          AOT Compiler
+        </button>
+      </div>
+
+      <div class="tab-content">
+        @switch activeTab {
+          @case 'vm' {
+            <div>
+              <h3>256-Register Virtual Machine</h3>
+              <p>
+                DriftJS executes bytecode directly in fixed virtual machine registers, bypassing the
+                memory allocation and diffing overhead of traditional Virtual DOM trees.
+              </p>
+            </div>
+          } @case 'lis' {
+            <div>
+              <h3>Optimal LIS Keyed Reconciliation</h3>
+              <p>
+                Keyed list updates utilize the Longest Increasing Subsequence algorithm to identify
+                the minimal DOM node movements, guaranteeing O(n log n) efficiency.
+              </p>
+            </div>
+          } @case 'aot' {
+            <div>
+              <h3>Ahead-Of-Time Bytecode Emission</h3>
+              <p>
+                The DriftJS compiler translates declarative templates into compact, linear bytecode
+                arrays and constant pool objects for maximum runtime execution speed.
+              </p>
+            </div>
+          } @default {
+            <div>
+              <p>Select a tab above to explore architecture topics.</p>
+            </div>
+          }
+        }
+      </div>
+    </div>
+
+    <!-- Card 3: @for Directive & LIS Reconciler -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">&#128203; Keyed List Reconciliation</h2>
+        <span class="badge">&#64;for (item in items key item.id)</span>
+      </div>
+
+      <div class="list-controls">
+        <input
+          type="text"
+          class="input-text"
+          placeholder="New feature title..."
+          value={newItemTitle}
+          oninput={(e) => { newItemTitle = e.target.value; }}
+          onkeydown={(e) => { if (e.key === 'Enter') addItem(); }}
+        />
+        <select
+          class="input-text"
+          style="max-width: 90px;"
+          value={newItemTag}
+          onchange={(e) => { newItemTag = e.target.value; }}
+        >
+          <option value="core">core</option>
+          <option value="fast">fast</option>
+          <option value="aot">aot</option>
+        </select>
+        <button class="btn-primary" onclick={addItem}>Add</button>
+      </div>
+
+      <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem;">
+        <button class="btn-secondary" style="font-size: 0.8rem; padding: 0.35rem 0.65rem;" onclick={reverseList}>
+          &#8644; Reverse Order
+        </button>
+        <span style="font-size: 0.8rem; color: #9ca3af; align-self: center;">
+          Total: {features.length} item(s)
+        </span>
+      </div>
+
+      <ul class="item-list">
+        @for (item in features key item.id) {
+          <li class="list-item">
+            <div style="display: flex; align-items: center;">
+              <span>{item.title}</span>
+              <span class={'item-badge badge-' + item.tag}>{item.tag}</span>
+            </div>
+            <button class="btn-danger" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;" onclick={() => removeItem(item.id)}>
+              &#10005;
+            </button>
+          </li>
+        }
+      </ul>
+    </div>
+
+    <!-- Card 4: Live Scope Bindings -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">&#127912; Live Bindings &amp; Form Controls</h2>
+        <span class="badge">In-place Patching</span>
+      </div>
+
+      <div class="form-field">
+        <label class="form-label">Dynamic Message</label>
+        <input
+          type="text"
+          class="input-text"
+          value={liveText}
+          oninput={(e) => { liveText = e.target.value; }}
+        />
+      </div>
+
+      <div class="form-field">
+        <div style="display: flex; justify-content: space-between;">
+          <label class="form-label">Font Size</label>
+          <span style="font-size: 0.8rem; color: #06b6d4; font-family: monospace;">{fontSize}px</span>
+        </div>
+        <input
+          type="range"
+          min="14"
+          max="36"
+          value={fontSize}
+          oninput={(e) => { fontSize = Number(e.target.value); }}
+        />
+      </div>
+
+      <div class="form-field">
+        <label class="form-label">Accent Color</label>
+        <input
+          type="color"
+          value={textColor}
+          oninput={(e) => { textColor = e.target.value; }}
+          style="width: 100%; height: 38px; border-radius: 8px; border: 1px solid #374151; cursor: pointer; background: #1f2937;"
+        />
+      </div>
+
+      <div class="preview-box">
+        <p style={'font-size: ' + fontSize + 'px; color: ' + textColor + '; font-weight: 700;'}>
+          {liveText}
+        </p>
+      </div>
+    </div>
+  </div>
+</div>

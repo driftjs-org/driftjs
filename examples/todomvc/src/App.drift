@@ -1,0 +1,212 @@
+<script>
+  const STORAGE_KEY = 'driftjs-todos-v1';
+
+  function loadTodos() {
+    try {
+      const data = localStorage.getItem(STORAGE_KEY);
+      if (data) return JSON.parse(data);
+    } catch (e) {}
+    return [
+      { id: 1, title: 'Learn DriftJS Register VM', completed: true },
+      { id: 2, title: 'Build high-performance web apps', completed: false },
+      { id: 3, title: 'Benchmark LIS reconciliation', completed: false }
+    ];
+  }
+
+  let todos = loadTodos();
+  let newTodoText = '';
+  let filter = 'all'; // 'all' | 'active' | 'completed'
+  let editingId = null;
+  let editingText = '';
+  let nextId = todos.reduce((max, t) => Math.max(max, t.id), 0) + 1;
+
+  function saveTodos() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
+    } catch (e) {}
+  }
+
+  // Derived state
+  let activeCount = derive(() => todos.filter(t => !t.completed).length);
+  let completedCount = derive(() => todos.filter(t => t.completed).length);
+  let allCompleted = derive(() => todos.length > 0 && todos.every(t => t.completed));
+  let filteredTodos = derive(() => {
+    if (filter === 'active') return todos.filter(t => !t.completed);
+    if (filter === 'completed') return todos.filter(t => t.completed);
+    return todos;
+  });
+
+  function addTodo() {
+    const title = newTodoText.trim();
+    if (!title) return;
+    todos = [
+      ...todos,
+      { id: nextId++, title, completed: false }
+    ];
+    newTodoText = '';
+    saveTodos();
+  }
+
+  function toggleTodo(id) {
+    todos = todos.map(t => {
+      if (t.id === id) {
+        return { id: t.id, title: t.title, completed: !t.completed };
+      }
+      return t;
+    });
+    saveTodos();
+  }
+
+  function removeTodo(id) {
+    todos = todos.filter(t => t.id !== id);
+    saveTodos();
+  }
+
+  function toggleAll() {
+    const targetState = !allCompleted;
+    todos = todos.map(t => {
+      return { id: t.id, title: t.title, completed: targetState };
+    });
+    saveTodos();
+  }
+
+  function clearCompleted() {
+    todos = todos.filter(t => !t.completed);
+    saveTodos();
+  }
+
+  function startEdit(id, title) {
+    editingId = id;
+    editingText = title;
+  }
+
+  function doneEdit() {
+    if (editingId === null) return;
+    const title = editingText.trim();
+    if (title) {
+      todos = todos.map(t => {
+        if (t.id === editingId) {
+          return { id: t.id, title: title, completed: t.completed };
+        }
+        return t;
+      });
+      saveTodos();
+    } else {
+      removeTodo(editingId);
+    }
+    editingId = null;
+    editingText = '';
+  }
+
+  function cancelEdit() {
+    editingId = null;
+    editingText = '';
+  }
+
+  function setFilter(f) {
+    filter = f;
+  }
+</script>
+
+<div>
+  <section class="todoapp">
+    <header class="header">
+      <h1>todos</h1>
+      <input
+        class="new-todo"
+        placeholder="What needs to be done?"
+        value={newTodoText}
+        oninput={(e) => { newTodoText = e.target.value; }}
+        onkeydown={(e) => { if (e.key === 'Enter') addTodo(); }}
+        autofocus
+      />
+    </header>
+
+    @if todos.length > 0 {
+      <section class="main">
+        <div class="toggle-all-container">
+          <input
+            id="toggle-all"
+            class="toggle-all"
+            type="checkbox"
+            checked={allCompleted}
+            onchange={toggleAll}
+          />
+          <label for="toggle-all" class={allCompleted ? "toggle-all-label checked" : "toggle-all-label"}>
+            &#10095;
+          </label>
+        </div>
+
+        <ul class="todo-list">
+          @for (todo in filteredTodos key todo.id) {
+            <li class={editingId === todo.id ? "editing" : (todo.completed ? "completed" : "")}>
+              @if editingId === todo.id {
+                <input
+                  class="edit"
+                  value={editingText}
+                  oninput={(e) => { editingText = e.target.value; }}
+                  onblur={doneEdit}
+                  onkeydown={(e) => {
+                    if (e.key === 'Enter') doneEdit();
+                    else if (e.key === 'Escape') cancelEdit();
+                  }}
+                  autofocus
+                />
+              } @else {
+                <div class="view">
+                  <div class="custom-toggle" onclick={() => toggleTodo(todo.id)}>
+                    @if todo.completed {
+                      <span>&#10003;</span>
+                    }
+                  </div>
+                  <label ondblclick={() => startEdit(todo.id, todo.title)}>
+                    {todo.title}
+                  </label>
+                  <button class="destroy" onclick={() => removeTodo(todo.id)}>
+                    &#215;
+                  </button>
+                </div>
+              }
+            </li>
+          }
+        </ul>
+      </section>
+
+      <footer class="footer">
+        <span class="todo-count">
+          <strong>{activeCount}</strong> {activeCount === 1 ? 'item' : 'items'} left
+        </span>
+
+        <ul class="filters">
+          <li>
+            <a class={filter === 'all' ? 'selected' : ''} onclick={() => setFilter('all')}>
+              All
+            </a>
+          </li>
+          <li>
+            <a class={filter === 'active' ? 'selected' : ''} onclick={() => setFilter('active')}>
+              Active
+            </a>
+          </li>
+          <li>
+            <a class={filter === 'completed' ? 'selected' : ''} onclick={() => setFilter('completed')}>
+              Completed
+            </a>
+          </li>
+        </ul>
+
+        @if completedCount > 0 {
+          <button class="clear-completed" onclick={clearCompleted}>
+            Clear completed
+          </button>
+        }
+      </footer>
+    }
+  </section>
+
+  <footer class="info">
+    <p>Double-click to edit a todo</p>
+    <p>Written with <a href="https://github.com/hrutav-modha/driftjs">DriftJS</a></p>
+    <p>Part of <a href="https://todomvc.com">TodoMVC</a></p>
+  </footer>
+</div>

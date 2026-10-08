@@ -1,0 +1,21 @@
+{
+  "name": "driftjs-example-cart",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "driftjs-compiler": "workspace:*",
+    "driftjs-dom": "workspace:*",
+    "driftjs-shared": "workspace:*"
+  },
+  "devDependencies": {
+    "driftjs-unplugin": "workspace:*",
+    "typescript": "7.0.2",
+    "vite": "8.3.1"
+  }
+}

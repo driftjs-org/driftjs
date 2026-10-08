@@ -1,0 +1,347 @@
+<script>
+  const PRODUCTS = [
+    {
+      id: 'prod-1',
+      name: 'Drift Mechanical Keyboard',
+      desc: 'Hot-swappable 75% layout with custom gasket mount & PBT keycaps.',
+      price: 149.00,
+      icon: '⌨️'
+    },
+    {
+      id: 'prod-2',
+      name: 'Coiled USB-C Cable',
+      desc: 'Double-sleeved aviator coiled cable with gold-plated connectors.',
+      price: 29.50,
+      icon: '🔌'
+    },
+    {
+      id: 'prod-3',
+      name: 'Drift Deskmat XL',
+      desc: '900x400mm micro-weave cloth with non-slip natural rubber base.',
+      price: 24.00,
+      icon: '🖥️'
+    },
+    {
+      id: 'prod-4',
+      name: 'Artisan Keycap Set',
+      desc: 'Hand-crafted ceramic keycap with custom VM bytecode engraving.',
+      price: 45.00,
+      icon: '💎'
+    }
+  ];
+
+  // Cart State
+  let cart = [
+    {
+      id: 'prod-1',
+      name: 'Drift Mechanical Keyboard',
+      price: 149.00,
+      quantity: 1,
+      icon: '⌨️'
+    },
+    {
+      id: 'prod-2',
+      name: 'Coiled USB-C Cable',
+      price: 29.50,
+      quantity: 2,
+      icon: '🔌'
+    }
+  ];
+
+  // Coupon State
+  let couponInput = '';
+  let appliedCoupon = 'DRIFT10';
+  let couponMessage = 'Coupon DRIFT10 applied (10% off)!';
+  let couponStatus = 'success'; // 'idle' | 'success' | 'error'
+
+  // Derived Calculations
+  let subtotal = derive(() => {
+    return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  });
+
+  let totalItemsCount = derive(() => {
+    return cart.reduce((sum, item) => sum + item.quantity, 0);
+  });
+
+  let discountRate = derive(() => {
+    if (appliedCoupon === 'DRIFT20') return 0.20;
+    if (appliedCoupon === 'DRIFT10') return 0.10;
+    return 0;
+  });
+
+  let discountAmount = derive(() => {
+    return Math.round(subtotal * discountRate * 100) / 100;
+  });
+
+  let shipping = derive(() => {
+    if (cart.length === 0) return 0;
+    if (appliedCoupon === 'FREESHIP' || subtotal >= 150) return 0;
+    return 9.99;
+  });
+
+  let tax = derive(() => {
+    const taxableAmount = Math.max(0, subtotal - discountAmount);
+    return Math.round(taxableAmount * 0.08 * 100) / 100;
+  });
+
+  let grandTotal = derive(() => {
+    const val = subtotal - discountAmount + shipping + tax;
+    return Math.max(0, Math.round(val * 100) / 100);
+  });
+
+  // Actions
+  function addToCart(product) {
+    const existing = cart.find(item => item.id === product.id);
+    if (existing) {
+      cart = cart.map(item => {
+        if (item.id === product.id) {
+          return {
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity + 1,
+            icon: item.icon
+          };
+        }
+        return item;
+      });
+    } else {
+      cart = [
+        ...cart,
+        {
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          quantity: 1,
+          icon: product.icon
+        }
+      ];
+    }
+  }
+
+  function updateQuantity(id, delta) {
+    const item = cart.find(i => i.id === id);
+    if (!item) return;
+
+    const newQty = item.quantity + delta;
+    if (newQty <= 0) {
+      removeFromCart(id);
+    } else {
+      cart = cart.map(i => {
+        if (i.id === id) {
+          return {
+            id: i.id,
+            name: i.name,
+            price: i.price,
+            quantity: newQty,
+            icon: i.icon
+          };
+        }
+        return i;
+      });
+    }
+  }
+
+  function removeFromCart(id) {
+    cart = cart.filter(i => i.id !== id);
+  }
+
+  function clearCart() {
+    cart = [];
+  }
+
+  function applyCoupon() {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+
+    if (code === 'DRIFT20') {
+      appliedCoupon = 'DRIFT20';
+      couponStatus = 'success';
+      couponMessage = 'Coupon DRIFT20 applied (20% off)!';
+    } else if (code === 'DRIFT10') {
+      appliedCoupon = 'DRIFT10';
+      couponStatus = 'success';
+      couponMessage = 'Coupon DRIFT10 applied (10% off)!';
+    } else if (code === 'FREESHIP') {
+      appliedCoupon = 'FREESHIP';
+      couponStatus = 'success';
+      couponMessage = 'Coupon FREESHIP applied (Free standard shipping)!';
+    } else {
+      couponStatus = 'error';
+      couponMessage = 'Invalid promo code "' + code + '"';
+    }
+    couponInput = '';
+  }
+
+  function useCouponPill(code) {
+    couponInput = code;
+    applyCoupon();
+  }
+</script>
+
+<div class="cart-app-container">
+  <header class="brand-bar">
+    <h1>
+      <span>⚡</span> DriftJS E-Commerce
+    </h1>
+    <div class="cart-badge-chip">
+      <span>🛒</span>
+      <span>{totalItemsCount} item{totalItemsCount === 1 ? '' : 's'} in cart</span>
+    </div>
+  </header>
+
+  <!-- Product Catalog -->
+  <section>
+    <div class="section-title">
+      <span>Featured Hardware &amp; Accessories</span>
+      <span style="font-size: 0.85rem; color: #94a3b8; font-weight: normal;">
+        Fast-path catalog dispatch
+      </span>
+    </div>
+
+    <div class="catalog-grid">
+      @for (prod in PRODUCTS key prod.id) {
+        <div class="product-card">
+          <div>
+            <div class="product-icon">{prod.icon}</div>
+            <h3 class="product-name">{prod.name}</h3>
+            <p class="product-desc">{prod.desc}</p>
+          </div>
+          <div class="product-foot">
+            <span class="product-price">${prod.price.toFixed(2)}</span>
+            <button class="btn-add" onclick={() => addToCart(prod)}>
+              + Add to Cart
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  </section>
+
+  <!-- Main Cart & Checkout Layout -->
+  <div class="main-layout">
+    <!-- Cart Items Section -->
+    <div class="cart-items-card">
+      <div class="section-title">
+        <span>Shopping Bag ({cart.length} distinct item{cart.length === 1 ? '' : 's'})</span>
+        @if cart.length > 0 {
+          <button
+            class="btn-remove"
+            style="font-size: 0.8rem; text-decoration: underline;"
+            onclick={clearCart}
+          >
+            Clear Bag
+          </button>
+        }
+      </div>
+
+      @if cart.length === 0 {
+        <div class="empty-state">
+          <p style="font-size: 2.5rem; margin-bottom: 0.5rem;">🛍️</p>
+          <h4 style="color: #f8fafc; margin-bottom: 0.25rem;">Your bag is currently empty</h4>
+          <p>Add some items from the hardware catalog above to get started!</p>
+        </div>
+      } @else {
+        <ul class="cart-items-list">
+          @for (item in cart key item.id) {
+            <li class="cart-item-row">
+              <div class="cart-item-icon">{item.icon}</div>
+              <div class="cart-item-info">
+                <h4>{item.name}</h4>
+                <span class="cart-item-unit-price">${item.price.toFixed(2)} each</span>
+              </div>
+              <div class="qty-control">
+                <button class="btn-qty" onclick={() => updateQuantity(item.id, -1)} title="Decrease quantity">
+                  -
+                </button>
+                <span class="qty-display">{item.quantity}</span>
+                <button class="btn-qty" onclick={() => updateQuantity(item.id, 1)} title="Increase quantity">
+                  +
+                </button>
+              </div>
+              <div class="cart-item-line-total">
+                ${(item.price * item.quantity).toFixed(2)}
+              </div>
+              <button class="btn-remove" onclick={() => removeFromCart(item.id)} title="Remove item">
+                ✕
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+
+    <!-- Order Summary & Coupons -->
+    <div class="summary-card">
+      <h3>Order Summary</h3>
+
+      <!-- Promo Code Section -->
+      <div class="coupon-box">
+        <div class="coupon-input-group">
+          <input
+            type="text"
+            class="coupon-input"
+            placeholder="Promo code..."
+            value={couponInput}
+            oninput={(e) => { couponInput = e.target.value; }}
+            onkeydown={(e) => { if (e.key === 'Enter') applyCoupon(); }}
+          />
+          <button class="btn-coupon" onclick={applyCoupon}>Apply</button>
+        </div>
+
+        @if couponStatus === 'success' {
+          <div class="coupon-alert success">
+            {couponMessage}
+          </div>
+        } @else if couponStatus === 'error' {
+          <div class="coupon-alert error">
+            {couponMessage}
+          </div>
+        }
+
+        <div class="coupon-hint">
+          <span>Try:</span>
+          <span class="coupon-pill" onclick={() => useCouponPill('DRIFT20')}>DRIFT20</span>
+          <span class="coupon-pill" onclick={() => useCouponPill('DRIFT10')}>DRIFT10</span>
+          <span class="coupon-pill" onclick={() => useCouponPill('FREESHIP')}>FREESHIP</span>
+        </div>
+      </div>
+
+      <!-- Cost Breakdown -->
+      <div class="summary-rows">
+        <div class="summary-row">
+          <span>Subtotal</span>
+          <span>${subtotal.toFixed(2)}</span>
+        </div>
+
+        @if discountAmount > 0 {
+          <div class="summary-row discount">
+            <span>Discount ({appliedCoupon})</span>
+            <span>-${discountAmount.toFixed(2)}</span>
+          </div>
+        }
+
+        <div class="summary-row">
+          <span>Shipping</span>
+          <span>{shipping === 0 ? 'FREE' : '$' + shipping.toFixed(2)}</span>
+        </div>
+
+        <div class="summary-row">
+          <span>Estimated Tax (8%)</span>
+          <span>${tax.toFixed(2)}</span>
+        </div>
+
+        <div class="summary-divider"></div>
+
+        <div class="summary-row total">
+          <span>Total</span>
+          <span style="color: #6366f1;">${grandTotal.toFixed(2)}</span>
+        </div>
+      </div>
+
+      <button class="btn-checkout" onclick={() => alert('Checkout demo complete! Total: $' + grandTotal.toFixed(2))}>
+        Proceed to Checkout
+      </button>
+    </div>
+  </div>
+</div>

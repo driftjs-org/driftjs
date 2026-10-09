@@ -6,7 +6,6 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "serve": "node server.js",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",

@@ -74,10 +74,6 @@ export function scaffoldProject(options: ScaffoldOptions): void {
       if (pkgData.scripts) {
         delete pkgData.scripts['serve'];
       }
-      const serverJsPath = path.join(targetDir, 'server.js');
-      if (fs.existsSync(serverJsPath)) {
-        fs.rmSync(serverJsPath, { force: true });
-      }
     }
 
     const version = getPackageVersion();

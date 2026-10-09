@@ -285,4 +285,139 @@ describe('DriftJS CLI Scaffolder', () => {
       expect(version).not.toContain('workspace:');
     }
   });
+
+  describe('Unplugin Build Tool Support', () => {
+    it('should configure Vite as default build tool when buildTool is omitted', () => {
+      scaffoldProject({
+        projectName: 'vite-app',
+        targetDir,
+        templateDir,
+      });
+
+      expect(fs.existsSync(path.join(targetDir, 'vite.config.ts'))).toBe(true);
+      const pkgData = JSON.parse(fs.readFileSync(path.join(targetDir, 'package.json'), 'utf8'));
+      expect(pkgData.devDependencies['vite']).toBeDefined();
+      expect(pkgData.devDependencies['driftjs-unplugin']).toBeDefined();
+      expect(pkgData.scripts['dev']).toBe('vite');
+      expect(pkgData.scripts['build']).toBe('vite build');
+      expect(pkgData.scripts['preview']).toBe('vite preview');
+
+      const configContent = fs.readFileSync(path.join(targetDir, 'vite.config.ts'), 'utf8');
+      expect(configContent).toContain("import { vite } from 'driftjs-unplugin';");
+    });
+
+    it('should configure Rollup correctly when buildTool is rollup', () => {
+      // Simulate vite.config.ts being copied from template
+      fs.writeFileSync(path.join(templateDir, 'vite.config.ts'), '// vite config');
+
+      scaffoldProject({
+        projectName: 'rollup-app',
+        targetDir,
+        templateDir,
+        buildTool: 'rollup',
+      });
+
+      expect(fs.existsSync(path.join(targetDir, 'rollup.config.js'))).toBe(true);
+      expect(fs.existsSync(path.join(targetDir, 'vite.config.ts'))).toBe(false);
+
+      const pkgData = JSON.parse(fs.readFileSync(path.join(targetDir, 'package.json'), 'utf8'));
+      expect(pkgData.devDependencies['rollup']).toBeDefined();
+      expect(pkgData.devDependencies['@rollup/plugin-node-resolve']).toBeDefined();
+      expect(pkgData.devDependencies['vite']).toBeUndefined();
+      expect(pkgData.devDependencies['driftjs-unplugin']).toBeDefined();
+      expect(pkgData.scripts['dev']).toBe('rollup -c -w');
+      expect(pkgData.scripts['build']).toBe('rollup -c');
+      expect(pkgData.scripts['preview']).toBeUndefined();
+
+      const configContent = fs.readFileSync(path.join(targetDir, 'rollup.config.js'), 'utf8');
+      expect(configContent).toContain("import { rollup } from 'driftjs-unplugin';");
+    });
+
+    it('should configure Webpack correctly when buildTool is webpack', () => {
+      fs.writeFileSync(path.join(templateDir, 'vite.config.ts'), '// vite config');
+
+      scaffoldProject({
+        projectName: 'webpack-app',
+        targetDir,
+        templateDir,
+        buildTool: 'webpack',
+      });
+
+      expect(fs.existsSync(path.join(targetDir, 'webpack.config.js'))).toBe(true);
+      expect(fs.existsSync(path.join(targetDir, 'vite.config.ts'))).toBe(false);
+
+      const pkgData = JSON.parse(fs.readFileSync(path.join(targetDir, 'package.json'), 'utf8'));
+      expect(pkgData.devDependencies['webpack']).toBeDefined();
+      expect(pkgData.devDependencies['webpack-cli']).toBeDefined();
+      expect(pkgData.devDependencies['webpack-dev-server']).toBeDefined();
+      expect(pkgData.devDependencies['html-webpack-plugin']).toBeDefined();
+      expect(pkgData.devDependencies['vite']).toBeUndefined();
+      expect(pkgData.devDependencies['driftjs-unplugin']).toBeDefined();
+      expect(pkgData.scripts['dev']).toBe('webpack serve');
+      expect(pkgData.scripts['build']).toBe('webpack --mode production');
+
+      const configContent = fs.readFileSync(path.join(targetDir, 'webpack.config.js'), 'utf8');
+      expect(configContent).toContain("import { webpack } from 'driftjs-unplugin';");
+    });
+
+    it('should configure esbuild correctly when buildTool is esbuild', () => {
+      fs.writeFileSync(path.join(templateDir, 'vite.config.ts'), '// vite config');
+
+      scaffoldProject({
+        projectName: 'esbuild-app',
+        targetDir,
+        templateDir,
+        buildTool: 'esbuild',
+      });
+
+      expect(fs.existsSync(path.join(targetDir, 'esbuild.config.js'))).toBe(true);
+      expect(fs.existsSync(path.join(targetDir, 'vite.config.ts'))).toBe(false);
+
+      const pkgData = JSON.parse(fs.readFileSync(path.join(targetDir, 'package.json'), 'utf8'));
+      expect(pkgData.devDependencies['esbuild']).toBeDefined();
+      expect(pkgData.devDependencies['vite']).toBeUndefined();
+      expect(pkgData.devDependencies['driftjs-unplugin']).toBeDefined();
+      expect(pkgData.scripts['dev']).toBe('node esbuild.config.js --watch');
+      expect(pkgData.scripts['build']).toBe('node esbuild.config.js');
+
+      const configContent = fs.readFileSync(path.join(targetDir, 'esbuild.config.js'), 'utf8');
+      expect(configContent).toContain("import { esbuild as driftPlugin } from 'driftjs-unplugin';");
+    });
+
+    it('should configure Rspack correctly when buildTool is rspack', () => {
+      fs.writeFileSync(path.join(templateDir, 'vite.config.ts'), '// vite config');
+
+      scaffoldProject({
+        projectName: 'rspack-app',
+        targetDir,
+        templateDir,
+        buildTool: 'rspack',
+      });
+
+      expect(fs.existsSync(path.join(targetDir, 'rspack.config.js'))).toBe(true);
+      expect(fs.existsSync(path.join(targetDir, 'vite.config.ts'))).toBe(false);
+
+      const pkgData = JSON.parse(fs.readFileSync(path.join(targetDir, 'package.json'), 'utf8'));
+      expect(pkgData.devDependencies['@rspack/core']).toBeDefined();
+      expect(pkgData.devDependencies['@rspack/cli']).toBeDefined();
+      expect(pkgData.devDependencies['vite']).toBeUndefined();
+      expect(pkgData.devDependencies['driftjs-unplugin']).toBeDefined();
+      expect(pkgData.scripts['dev']).toBe('rspack serve');
+      expect(pkgData.scripts['build']).toBe('rspack build');
+
+      const configContent = fs.readFileSync(path.join(targetDir, 'rspack.config.js'), 'utf8');
+      expect(configContent).toContain("import { rspack } from 'driftjs-unplugin';");
+    });
+
+    it('should throw an error when an unsupported build tool is provided', () => {
+      expect(() => {
+        scaffoldProject({
+          projectName: 'invalid-app',
+          targetDir,
+          templateDir,
+          buildTool: 'parcel' as any,
+        });
+      }).toThrow(/Unsupported or invalid build tool: "parcel"/);
+    });
+  });
 });

@@ -19,7 +19,34 @@ const __dirname = path.dirname(__filename);
 async function main() {
   const args = process.argv.slice(2);
   const isYes = args.includes('-y') || args.includes('--yes') || args.includes('--auto');
-  const nonFlagArgs = args.filter((a) => !a.startsWith('-'));
+
+  // Detect build tool from command line flag (--build-tool <tool>)
+  let buildTool = 'vite';
+  let hasBuildToolFlag = false;
+
+  const buildToolIdx = args.findIndex((a) => a === '--build-tool');
+  if (buildToolIdx !== -1 && args[buildToolIdx + 1] && !args[buildToolIdx + 1].startsWith('-')) {
+    buildTool = args[buildToolIdx + 1].toLowerCase();
+    hasBuildToolFlag = true;
+  } else {
+    const inlineFlag = args.find((a) => a.startsWith('--build-tool='));
+    if (inlineFlag) {
+      buildTool = inlineFlag.split('=')[1].toLowerCase();
+      hasBuildToolFlag = true;
+    }
+  }
+
+  const nonFlagArgs = [];
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg.startsWith('-')) {
+      if (arg === '--build-tool' && i + 1 < args.length && !args[i + 1].startsWith('-')) {
+        i++; // skip value argument of --build-tool
+      }
+      continue;
+    }
+    nonFlagArgs.push(arg);
+  }
 
   if (args.includes('--help') || args.includes('-h')) {
     console.log(`
@@ -27,16 +54,20 @@ DriftJS Project Scaffolder CLI
 
 Usage:
   npx create-drift <project-directory> [options]
-  npx @driftjs/cli <project-directory> [options]
 
 Options:
-  -y, --yes    Automatically use defaults (CSR mode, auto-install, auto-start server, ESLint & Prettier)
-  --lint       Install ESLint & Prettier plugins (default)
-  --no-lint    Skip installing ESLint & Prettier plugins
-  -h, --help   Display this help message
+  -y, --yes               Automatically use defaults (Vite, CSR mode, auto-install, auto-start server, ESLint & Prettier)
+  --build-tool <tool>     Build tool to use: vite, rollup, webpack, esbuild, rspack (default: vite)
+  --csr                   Client-Side Rendering mode (default)
+  --ssr                   Server-Side Rendering mode
+  --lint                  Install ESLint & Prettier plugins (default)
+  --no-lint               Skip installing ESLint & Prettier plugins
+  -h, --help              Display this help message
 
 Examples:
   npx create-drift my-app
+  npx create-drift my-app --build-tool rollup
+  npx create-drift my-app --build-tool webpack
   npx create-drift my-app -y
   npx create-drift ./
 `);
@@ -101,7 +132,11 @@ Examples:
 
   // Prompt rendering mode (CSR vs SSR)
   let renderMode = 'csr';
-  if (!isYes) {
+  if (args.includes('--ssr')) {
+    renderMode = 'ssr';
+  } else if (args.includes('--csr')) {
+    renderMode = 'csr';
+  } else if (!isYes) {
     const modeSelect = await p.select({
       message: 'Select rendering target:',
       initialValue: 'csr',
@@ -122,6 +157,47 @@ Examples:
       process.exit(0);
     }
     renderMode = modeSelect;
+  }
+
+  // Prompt build tool if not specified via flags and not running with -y
+  if (!hasBuildToolFlag && !isYes) {
+    const toolSelect = await p.select({
+      message: 'Select build tool / bundler (powered by unplugin):',
+      initialValue: 'vite',
+      options: [
+        {
+          value: 'vite',
+          label: 'Vite',
+          hint: 'Recommended — ultra-fast HMR & native ESM dev server',
+        },
+        {
+          value: 'rollup',
+          label: 'Rollup',
+          hint: 'Lightweight next-gen ES module bundler',
+        },
+        {
+          value: 'webpack',
+          label: 'Webpack',
+          hint: 'Battle-tested enterprise module bundler',
+        },
+        {
+          value: 'esbuild',
+          label: 'esbuild',
+          hint: 'Extremely fast Go-based bundler',
+        },
+        {
+          value: 'rspack',
+          label: 'Rspack',
+          hint: 'High-performance Rust-based Webpack-compatible bundler',
+        },
+      ],
+    });
+
+    if (p.isCancel(toolSelect)) {
+      p.cancel('Scaffolding cancelled.');
+      process.exit(0);
+    }
+    buildTool = toolSelect;
   }
 
   // Prompt ESLint & Prettier plugins
@@ -169,15 +245,16 @@ Examples:
       projectName,
       targetDir,
       templateDir,
-      renderMode: renderMode,
-      overwriteMode: overwriteMode,
+      renderMode,
+      buildTool,
+      overwriteMode,
       installLintTools,
     });
 
     s.stop(`Scaffolded project files in ${pc.yellow(targetDir)}`);
 
     if (autoRun) {
-      p.note(`Running ${pc.cyan(`${pm} install`)} and starting Vite dev server...`);
+      p.note(`Running ${pc.cyan(`${pm} install`)} and starting dev server...`);
       installDependencies(targetDir, pm);
       startDevServer(targetDir, pm);
     } else {

@@ -173,7 +173,7 @@ This document outlines the strategic technical roadmap for DriftJS, covering upc
 ### 6.1 `examples/` Directory (Official Runnable Demonstrations)
 
 - [x] **TodoMVC (`examples/todomvc`)**: Canonical TodoMVC implementation demonstrating keyed list reconciliation (`@for`), conditional editing (`@if`), and reactive item counts.
-- [ ] **HackerNews App (`examples/hackernews`)**: SSR + client hydration demo with routing, async data fetching, story listings, and comments tree.
+- [x] **HackerNews App (`examples/hackernews`)**: SSR + client hydration demo with routing, async data fetching, story listings, and comments tree.
 - [x] **Interactive Realtime Dashboard (`examples/dashboard`)**: High-frequency state mutation demo with SVG charts, timer intervals, and multi-component state sharing.
 - [x] **Basic Directives Sandbox (`examples/basic`)**: Clean, minimal playground showcasing directives (`@if`, `@else if`, `@else`, `@for`, `@switch`), event delegation, and scope bindings.
 - [x] **E-Commerce Cart (`examples/cart`)**: Demonstrates derived sub-totals, coupon code recalculation, and fast-path row patching.

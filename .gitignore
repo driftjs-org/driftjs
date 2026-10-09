@@ -4,7 +4,6 @@ dist
 .vitest-attachments/
 *.log
 .trae/
-server.js
 .agents/
 js-framework-benchmark/
 temp

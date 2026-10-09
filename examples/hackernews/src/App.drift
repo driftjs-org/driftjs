@@ -1,0 +1,330 @@
+<script>
+  // Initial state passed from SSR scope or default fallbacks
+  let currentTab = typeof scope !== 'undefined' && scope.currentTab ? scope.currentTab : 'top';
+  let activeStoryId = typeof scope !== 'undefined' && scope.activeStoryId ? scope.activeStoryId : null;
+  let newCommentText = '';
+
+  let stories = typeof scope !== 'undefined' && scope.stories ? scope.stories : [
+    {
+      id: 101,
+      title: 'DriftJS: Register-VM Reactivity and AOT Compilation',
+      url: 'https://github.com/hrutav-modha/driftjs',
+      domain: 'github.com/hrutav-modha',
+      by: 'hrutav',
+      score: 342,
+      descendants: 68,
+      timeAgo: '2 hours ago',
+      upvoted: false,
+      comments: [
+        {
+          id: 1001,
+          by: 'dang',
+          timeAgo: '1 hour ago',
+          text: 'Fascinating approach using 256 virtual registers and LIS reconciliation instead of full virtual DOM trees.'
+        },
+        {
+          id: 1002,
+          by: 'tptacek',
+          timeAgo: '45 minutes ago',
+          text: 'The sub-millisecond benchmark results on 1,000 keyed items are legitimately impressive.'
+        }
+      ]
+    },
+    {
+      id: 102,
+      title: 'Show HN: Building an SSR + Hydration Engine with Zero VDOM Churn',
+      url: 'https://news.ycombinator.com',
+      domain: 'ycombinator.com',
+      by: 'antigravity',
+      score: 189,
+      descendants: 34,
+      timeAgo: '3 hours ago',
+      upvoted: false,
+      comments: [
+        {
+          id: 1003,
+          by: 'swyx',
+          timeAgo: '2 hours ago',
+          text: 'TreeWalker-based hydration cursor avoids tearing down server HTML. Very clean.'
+        }
+      ]
+    },
+    {
+      id: 103,
+      title: 'Reflections on High-Performance Bytecode Interpreters in the Browser',
+      url: 'https://v8.dev/blog',
+      domain: 'v8.dev',
+      by: 'mraleph',
+      score: 412,
+      descendants: 89,
+      timeAgo: '5 hours ago',
+      upvoted: false,
+      comments: []
+    },
+    {
+      id: 104,
+      title: 'Ask HN: What is your favorite modern frontend compiler innovation?',
+      url: 'https://news.ycombinator.com/item?id=104',
+      domain: 'news.ycombinator.com',
+      by: 'compiler_fan',
+      score: 95,
+      descendants: 41,
+      timeAgo: '6 hours ago',
+      upvoted: false,
+      comments: []
+    },
+    {
+      id: 105,
+      title: 'SQLite in the Browser: Running Full SQL Engines on WebAssembly',
+      url: 'https://sqlite.org/wasm',
+      domain: 'sqlite.org',
+      by: 'drh',
+      score: 528,
+      descendants: 112,
+      timeAgo: '8 hours ago',
+      upvoted: false,
+      comments: []
+    }
+  ];
+
+  let nextCommentId = 2000;
+
+  function upvote(id) {
+    stories = stories.map(s => {
+      if (s.id === id) {
+        if (!s.upvoted) {
+          return {
+            id: s.id,
+            title: s.title,
+            url: s.url,
+            domain: s.domain,
+            by: s.by,
+            score: s.score + 1,
+            descendants: s.descendants,
+            timeAgo: s.timeAgo,
+            upvoted: true,
+            comments: s.comments
+          };
+        }
+      }
+      return s;
+    });
+  }
+
+  function toggleComments(id) {
+    if (activeStoryId === id) {
+      activeStoryId = null;
+    } else {
+      activeStoryId = id;
+    }
+  }
+
+  function submitComment(storyId) {
+    const text = newCommentText.trim();
+    if (!text) return;
+
+    stories = stories.map(s => {
+      if (s.id === storyId) {
+        const newComment = {
+          id: nextCommentId++,
+          by: 'you',
+          timeAgo: 'just now',
+          text: text
+        };
+        return {
+          id: s.id,
+          title: s.title,
+          url: s.url,
+          domain: s.domain,
+          by: s.by,
+          score: s.score,
+          descendants: s.descendants + 1,
+          timeAgo: s.timeAgo,
+          upvoted: s.upvoted,
+          comments: [...s.comments, newComment]
+        };
+      }
+      return s;
+    });
+
+    newCommentText = '';
+  }
+
+  function setTab(tab) {
+    currentTab = tab;
+  }
+
+  function loadMore() {
+    const newItems = [
+      {
+        id: stories.length + 101,
+        title: 'Deep Dive into Longest Increasing Subsequence Reconciliation',
+        url: 'https://driftjs.dev/docs',
+        domain: 'driftjs.dev',
+        by: 'algorithmist',
+        score: 77,
+        descendants: 12,
+        timeAgo: '9 hours ago',
+        upvoted: false,
+        comments: []
+      },
+      {
+        id: stories.length + 102,
+        title: 'Vite 8 Released with Instant HMR and Faster Bundle Transforms',
+        url: 'https://vite.dev',
+        domain: 'vite.dev',
+        by: 'patak',
+        score: 290,
+        descendants: 47,
+        timeAgo: '11 hours ago',
+        upvoted: false,
+        comments: []
+      }
+    ];
+    stories = [...stories, ...newItems];
+  }
+</script>
+
+<div class="hn-container">
+  <!-- Hacker News Orange Top Bar -->
+  <header class="hn-header">
+    <div class="hn-brand">
+      <div class="hn-logo">Y</div>
+      <a class="hn-title" href="/">Hacker News</a>
+      <nav class="hn-nav">
+        <a class={currentTab === 'top' ? 'hn-nav-link active' : 'hn-nav-link'} onclick={() => setTab('top')}>
+          top
+        </a>
+        <span class="hn-nav-sep">|</span>
+        <a class={currentTab === 'new' ? 'hn-nav-link active' : 'hn-nav-link'} onclick={() => setTab('new')}>
+          new
+        </a>
+        <span class="hn-nav-sep">|</span>
+        <a class={currentTab === 'ask' ? 'hn-nav-link active' : 'hn-nav-link'} onclick={() => setTab('ask')}>
+          ask
+        </a>
+        <span class="hn-nav-sep">|</span>
+        <a class={currentTab === 'show' ? 'hn-nav-link active' : 'hn-nav-link'} onclick={() => setTab('show')}>
+          show
+        </a>
+        <span class="hn-nav-sep">|</span>
+        <a class={currentTab === 'jobs' ? 'hn-nav-link active' : 'hn-nav-link'} onclick={() => setTab('jobs')}>
+          jobs
+        </a>
+      </nav>
+    </div>
+
+    <div class="hn-header-right">
+      <span class="ssr-badge">DriftJS SSR</span>
+      <span>login</span>
+    </div>
+  </header>
+
+  <!-- Stories Feed -->
+  <main class="hn-main">
+    <ul class="stories-list">
+      @for (story, index in stories key story.id) {
+        <li class="story-item">
+          <!-- Title Row -->
+          <div class="story-title-row">
+            <span class="story-rank">{index + 1}.</span>
+            <button
+              class={story.upvoted ? 'btn-vote voted' : 'btn-vote'}
+              onclick={() => upvote(story.id)}
+              title="Upvote"
+            >
+              ▲
+            </button>
+            <a class="story-title" href={story.url} target="_blank" rel="noopener noreferrer">
+              {story.title}
+            </a>
+            <a class="story-domain" href={story.url} target="_blank" rel="noopener noreferrer">
+              ({story.domain})
+            </a>
+          </div>
+
+          <!-- Subtext Metadata -->
+          <div class="story-subtext">
+            <span>{story.score} point{story.score === 1 ? '' : 's'} by </span>
+            <a href="#">{story.by}</a>
+            <span> {story.timeAgo} | </span>
+            <a href="#" onclick={() => toggleComments(story.id)}>
+              @if activeStoryId === story.id {
+                <span>hide comments</span>
+              } @else {
+                <span>{story.descendants} comment{story.descendants === 1 ? '' : 's'}</span>
+              }
+            </a>
+          </div>
+
+          <!-- Expandable Comments Thread -->
+          @if activeStoryId === story.id {
+            <div class="comments-container">
+              <div class="comments-header">
+                <span>Discussion ({story.comments.length} comments)</span>
+                <button class="btn-close-comments" onclick={() => toggleComments(story.id)}>
+                  ✕ close
+                </button>
+              </div>
+
+              <!-- Add Comment Input -->
+              <div class="comment-form">
+                <textarea
+                  class="comment-textarea"
+                  placeholder="What are your thoughts?"
+                  rows="3"
+                  value={newCommentText}
+                  oninput={(e) => { newCommentText = e.target.value; }}
+                ></textarea>
+                <button class="btn-submit-comment" onclick={() => submitComment(story.id)}>
+                  Add Comment
+                </button>
+              </div>
+
+              <!-- Comments List -->
+              @if story.comments.length === 0 {
+                <p style="color: #828282; font-size: 8.5pt;">No comments yet on this story.</p>
+              } @else {
+                <ul class="comments-list">
+                  @for (c in story.comments key c.id) {
+                    <li class="comment-item">
+                      <div class="comment-meta">
+                        <span class="comment-author">{c.by}</span>
+                        <span> {c.timeAgo}</span>
+                      </div>
+                      <div class="comment-text">
+                        {c.text}
+                      </div>
+                    </li>
+                  }
+                </ul>
+              }
+            </div>
+          }
+        </li>
+      }
+    </ul>
+
+    <!-- Pagination -->
+    <div class="pagination-row">
+      <button class="btn-more" onclick={loadMore}>
+        More...
+      </button>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="hn-footer">
+    <div class="footer-nav">
+      <a href="#">Guidelines</a> |
+      <a href="#">FAQ</a> |
+      <a href="#">Lists</a> |
+      <a href="#">API</a> |
+      <a href="#">Security</a> |
+      <a href="#">Legal</a> |
+      <a href="#">Apply to YC</a> |
+      <a href="#">Contact</a>
+    </div>
+    <div>DriftJS Register VM • SSR + Client Hydration Showcase</div>
+  </footer>
+</div>

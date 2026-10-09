@@ -365,6 +365,31 @@ importers:
         specifier: 8.3.1
         version: 8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(sass-embedded@1.104.1)(sass@1.104.1)(terser@5.51.2)(tsx@4.23.15)
 
+  examples/hackernews:
+    dependencies:
+      driftjs-compiler:
+        specifier: workspace:*
+        version: link:../../packages/compiler
+      driftjs-dom:
+        specifier: workspace:*
+        version: link:../../packages/dom
+      driftjs-shared:
+        specifier: workspace:*
+        version: link:../../packages/utils
+      driftjs-ssr:
+        specifier: workspace:*
+        version: link:../../packages/ssr
+    devDependencies:
+      driftjs-unplugin:
+        specifier: workspace:*
+        version: link:../../packages/unplugin
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vite:
+        specifier: 8.3.1
+        version: 8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(sass-embedded@1.104.1)(sass@1.104.1)(terser@5.51.2)(tsx@4.23.15)
+
   examples/todomvc:
     dependencies:
       driftjs-compiler:

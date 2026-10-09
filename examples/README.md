@@ -12,6 +12,7 @@ This directory contains official, runnable demonstration applications showcasing
 | **[`todomvc`](./todomvc)** | Canonical TodoMVC | Keyed LIS list reconciliation, `derive()` computed filters, inline editing, `localStorage` |
 | **[`cart`](./cart)** | E-Commerce Shopping Cart | Multiple `derive()` derivations (subtotal, coupons, tax, grand total), fast-path row patching |
 | **[`dashboard`](./dashboard)** | Realtime Telemetry | High-frequency timer updates (250ms), sub-components (`MetricCard.drift`), dynamic SVG trendlines & gauges |
+| **[`hackernews`](./hackernews)** | Hacker News (SSR) | Full server-side rendering (`driftjs-ssr`), client hydration (`driftjs-dom`), discussion threads, upvoting |
 
 ---
 
@@ -33,6 +34,9 @@ pnpm --filter driftjs-example-cart dev
 
 # Realtime Telemetry Dashboard (Port 3003)
 pnpm --filter driftjs-example-dashboard dev
+
+# Hacker News Clone with SSR + Client Hydration (Port 3004)
+pnpm --filter driftjs-example-hackernews serve
 ```
 
 ### Production Builds
@@ -42,6 +46,7 @@ pnpm --filter driftjs-example-basic build
 pnpm --filter driftjs-example-todomvc build
 pnpm --filter driftjs-example-cart build
 pnpm --filter driftjs-example-dashboard build
+pnpm --filter driftjs-example-hackernews build
 ```
 
 ---

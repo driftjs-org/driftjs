@@ -13,7 +13,7 @@ This document outlines the strategic technical roadmap for DriftJS, covering upc
 | **Milestone 3** | Compiler & Register VM Architecture Refactoring | 📋 Planned |
 | **Milestone 4** | Two-Way Form Data Binding, Component Content Projection (Slots) & Metadata Management | 📋 Planned |
 | **Milestone 5** | Tooling & TypeScript SFC Integration (`<script lang="ts">`, VSCode, ESLint) | 📋 Planned |
-| **Milestone 6** | Examples Showcase & Consumer Fixtures Infrastructure | 🚧 In Progress |
+| **Milestone 6** | Examples Showcase & Consumer Fixtures Infrastructure | ✅ Done |
 | **Milestone 7** | Cross-Browser Matrix Testing (Gecko, WebKit, Blink) & Benchmarks | ✅ Done |
 
 ---
@@ -168,7 +168,7 @@ This document outlines the strategic technical roadmap for DriftJS, covering upc
 
 ---
 
-## Milestone 6: Examples Showcase & Consumer Fixtures Infrastructure (🚧 In Progress)
+## Milestone 6: Examples Showcase & Consumer Fixtures Infrastructure (✅ Done)
 
 ### 6.1 `examples/` Directory (Official Runnable Demonstrations)
 
@@ -178,21 +178,24 @@ This document outlines the strategic technical roadmap for DriftJS, covering upc
 - [x] **Basic Directives Sandbox (`examples/basic`)**: Clean, minimal playground showcasing directives (`@if`, `@else if`, `@else`, `@for`, `@switch`), event delegation, and scope bindings.
 - [x] **E-Commerce Cart (`examples/cart`)**: Demonstrates derived sub-totals, coupon code recalculation, and fast-path row patching.
 
-### 6.2 `fixtures/` Directory (Consumer & Packaging Integration Fixtures)
+### 6.2 `fixtures/` Directory (Reproduction & Regression Fixture Suites)
 
-Maintainer-facing minimal consumer projects to verify package distribution, bundling, and TypeScript declaration resolution in CI (distinct from module unit tests and human-facing examples):
+Centralized repository-wide fixture suites to prevent regressions and verify engine correctness across Node and Browser environments without per-package fixture fragmentation:
 
-- [ ] **Basic Vite Consumer (`fixtures/basic`)**:
-  - Minimal consumer project (`package.json`, `vite.config.ts`, `App.drift`) consuming built packages as external dependencies.
-  - Verifies `driftjs-unplugin` transform pipeline, template compilation, DOM mounting, and event delegation from a consumer perspective.
-- [ ] **SSR & Hydration Consumer (`fixtures/ssr`)**:
-  - Minimal Node.js application performing server-side HTML generation with `driftjs-ssr` and client-side hydration via `driftjs-dom`.
-  - Verifies server-side HTML rendering, comment anchor preservation, and hydration parity without workspace source links.
-- [ ] **Published Package / NPM Consumer (`fixtures/npm-consumer`)**:
-  - Independent project consuming local package tarballs (`pnpm pack`) or published npm releases.
-  - Verifies `package.json` `"exports"` field mappings, ESM/CJS compatibility, and TypeScript declaration (`index.d.ts`) resolution.
-- [ ] **Automated CI Build & Verification Suite**:
-  - Automated CI task running `pnpm build` across all fixture projects to catch packaging, export, or bundler plugin regressions before releases.
+- [x] **Compiler Fixture Suite (`fixtures/compiler.test.ts`)**:
+  - Complex nested directives, entity decoding, expression parsing, loop iterables with reserved identifiers, and generator bytecode verification.
+- [x] **Shared & Utils Fixture Suite (`fixtures/utils.test.ts`)**:
+  - Prototypal scope isolation, prototype pollution guards (`__proto__`, `constructor`), global scope resolution, and destructuring evaluation.
+- [x] **SSR Engine Fixture Suite (`fixtures/ssr.test.ts`)**:
+  - Server-side rendering verification, comment delimiters (`<!--if-->`, `<!--for-->`), HTML tag/attribute breakout sanitization, raw script/style escaping, and scope isolation.
+- [x] **DOM Engine Fixture Suite (`fixtures/dom.test.ts`)**:
+  - Real browser multi-engine testing (Chromium, Firefox, WebKit via Playwright) for in-place reactive updates, hydration cursor lookahead, event bubbling, and LIS reconciliation.
+- [x] **Router Fixture Suite (`fixtures/router.test.ts`)**:
+  - Multi-engine browser verification of dynamic route addition, navigation guards, route regex constraints, query string parsing, and active link state.
+- [x] **CLI Scaffolding Fixture Suite (`fixtures/cli.test.ts`)**:
+  - Verifies package manager argument sanitization, root directory safety guards (`emptyDirectory`), and safe dependency resolution.
+- [x] **Vitest Multi-Environment Fixture Runner (`vitest.config.ts`)**:
+  - Configured `fixtures` (Node) and `fixtures-browser` (Chromium, Firefox, WebKit) projects, seamlessly running all fixtures via `pnpm test`.
 
 ---
 

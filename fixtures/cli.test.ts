@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
-import { installDependencies } from '../src/index.js';
+import { installDependencies } from '../packages/cli/src/index.js';
 
 describe('create-drift (CLI) - Reproduction Test Cases', () => {
   const tmpDir = path.join(process.cwd(), 'packages/cli/scratch-repro-test');
@@ -29,7 +29,7 @@ describe('create-drift (CLI) - Reproduction Test Cases', () => {
   });
 
   it('emptyDirectory rejects root or home directory to prevent accidental destruction (BUG-015)', async () => {
-    const { emptyDirectory } = await import('../src/index.js');
+    const { emptyDirectory } = await import('../packages/cli/src/index.js');
     expect(() => emptyDirectory('/')).toThrow();
   });
 });

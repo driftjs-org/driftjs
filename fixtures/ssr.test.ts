@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { DriftServerVM, renderToString, serializeNode } from '../src/index.js';
-import { Opcode, type CompiledModule, compile } from 'driftjs-compiler';
+import { DriftServerVM, renderToString, serializeNode } from '../packages/ssr/src/index.js';
+import { Opcode, type CompiledModule, compile } from '../packages/compiler/src/index.js';
 
 describe('DriftServerVM (SSR Engine) - Reproduction Test Cases', () => {
   it('child component props take precedence over parent scope variables of the same name', () => {
@@ -213,4 +213,3 @@ describe('DriftServerVM (SSR Engine) - Reproduction Test Cases', () => {
     expect(callerScope.globalUser).toBe('Alice');
   });
 });
-

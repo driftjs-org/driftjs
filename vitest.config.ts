@@ -127,6 +127,40 @@ export default defineConfig({
           environment: 'node',
         },
       },
+      {
+        test: {
+          name: 'fixtures',
+          include: [
+            'fixtures/compiler.test.ts',
+            'fixtures/utils.test.ts',
+            'fixtures/cli.test.ts',
+            'fixtures/ssr.test.ts',
+          ],
+          environment: 'node',
+          setupFiles: ['./packages/ssr/tests/setup.ts'],
+        },
+      },
+      {
+        plugins: [vite()],
+        test: {
+          name: 'fixtures-browser',
+          include: [
+            'fixtures/dom.test.ts',
+            'fixtures/router.test.ts',
+          ],
+          setupFiles: ['./packages/dom/tests/setup.ts'],
+          browser: {
+            enabled: true,
+            provider: playwright(),
+            instances: [
+              { browser: 'chromium' },
+              { browser: 'firefox' },
+              { browser: 'webkit' },
+            ],
+            headless: true,
+          },
+        },
+      },
     ],
   },
 });

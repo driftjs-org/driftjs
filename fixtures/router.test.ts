@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { createRouter, createMemoryHistory, createMatcher, parseQuery, Link, RouterContext } from '../src/index.js';
-import type { RouteRecordRaw } from '../types/index.js';
-import { DriftClientVM } from 'driftjs-dom';
+import { createRouter, createMemoryHistory, createMatcher, parseQuery, Link, RouterContext } from '../packages/router/src/index.js';
+import type { RouteRecordRaw } from '../packages/router/types/index.js';
+import { DriftClientVM } from '../packages/dom/src/index.js';
 
 describe('DriftJS Router - Reproduction Test Cases', () => {
   it('addRoute(parent, route) does not erase previously added dynamic top-level routes', () => {

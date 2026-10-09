@@ -6,7 +6,7 @@ import { createServer as createViteServer } from 'vite';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const PORT = 3004;
+const PORT = process.env.PORT || 3004;
 
 // Curated server dataset with rich discussions (fallback/fast boot)
 const SERVER_STORIES = [

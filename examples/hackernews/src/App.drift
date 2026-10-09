@@ -223,7 +223,7 @@
   <!-- Stories Feed -->
   <main class="hn-main">
     <ul class="stories-list">
-      @for (story, index in stories key story.id) {
+      @for (story, index) in stories key story.id {
         <li class="story-item">
           <!-- Title Row -->
           <div class="story-title-row">

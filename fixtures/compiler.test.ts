@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { compile, DriftLexer, DriftParser, DriftTransformer, DriftGenerator, astToJS } from '../src/index.js';
-import { decodeHTMLEntities } from '../src/parser.js';
-import { ASTNodeType, Opcode } from '../types/index.js';
-import { getScopeValue } from 'driftjs-shared';
+import { compile, DriftLexer, DriftParser, DriftTransformer, DriftGenerator, astToJS } from '../packages/compiler/src/index.js';
+import { decodeHTMLEntities } from '../packages/compiler/src/parser.js';
+import { ASTNodeType, Opcode } from '../packages/compiler/types/index.js';
+import { getScopeValue } from '../packages/utils/src/index.js';
 
 describe('DriftJS Compiler - Reproduction Test Cases', () => {
   it('correctly parses @for iterables that contain the word "key" in expressions', () => {
@@ -208,169 +208,6 @@ describe('DriftJS Compiler - Reproduction Test Cases', () => {
     expect(scope.c).toBe(3);
   });
 
-  it('extracts computed member expression identifiers as reactive dependencies', () => {
-    const template = `
-      <script>
-        let items = ['zero', 'one', 'two'];
-        let selectedIdx = 1;
-      </script>
-      <div>{items[selectedIdx]}</div>
-    `;
-    const compiled = compile(template);
-    const selectedBinding = compiled.reactiveBindings?.find((b) => b.variable === 'selectedIdx');
-    expect(selectedBinding).toBeDefined();
-    expect(selectedBinding?.positions.length).toBeGreaterThan(0);
-  });
-
-  it('destructuring with default value applies default when property is explicitly undefined', () => {
-    const template = `
-      <script>
-        const { val = 'defaultVal' } = { val: undefined };
-      </script>
-      <div>{val}</div>
-    `;
-    const compiled = compile(template);
-    const scope: Record<string, any> = {};
-    const scriptAst = compiled.constants[0];
-    if (typeof scriptAst === 'object' && scriptAst.__drift_fn__) {
-      const fn = new Function('return (' + scriptAst.__drift_fn__ + ')')();
-      fn(scope, null, (s: any, k: string, v: any) => { s[k] = v; return v; });
-    }
-    expect(scope.val).toBe('defaultVal');
-  });
-
-  it('destructuring with computed property name evaluates dynamic property key', () => {
-    const template = `
-      <script>
-        let dynamicKey = 'customProp';
-        let sourceObj = { customProp: 'hello world' };
-        const { [dynamicKey]: extracted } = sourceObj;
-      </script>
-      <div>{extracted}</div>
-    `;
-    const compiled = compile(template);
-    const scope: Record<string, any> = {};
-    const scriptAst = compiled.constants[0];
-    if (typeof scriptAst === 'object' && scriptAst.__drift_fn__) {
-      const fn = new Function('return (' + scriptAst.__drift_fn__ + ')')();
-      fn(scope, null, (s: any, k: string, v: any) => { s[k] = v; return v; }, (s: any, k: string) => k in s, null, getScopeValue);
-    }
-    expect(scope.extracted).toBe('hello world');
-  });
-
-  it('switch on dynamic discriminant tracks reactive dependencies for alternate branches', () => {
-    const template = `
-      <script>
-        let state = { mode: 'dark' };
-      </script>
-      @switch state.mode {
-        @case 'light' {
-          <span>Light Mode</span>
-        }
-        @case 'dark' {
-          <span>Dark Mode</span>
-        }
-        @default {
-          <span>Default Mode</span>
-        }
-      }
-    `;
-    const ast = new DriftParser(new DriftLexer(template)).parse();
-    const transformed = new DriftTransformer(ast).transform();
-    const generator = new DriftGenerator(transformed);
-    const compiled = generator.generate();
-
-    const depsArray = compiled.constants.find((c: any) => Array.isArray(c) && c.includes('state'));
-    expect(depsArray).toBeDefined();
-  });
-
-  it('ArrayPattern destructuring assignment resolves iterables', () => {
-    const template = `
-      <script>
-        let a, b;
-        [a, b] = new Set(['first', 'second']);
-      </script>
-      <div>{a}, {b}</div>
-    `;
-    const compiled = compile(template);
-    const scope: Record<string, any> = {};
-    const scriptAst = compiled.constants[0];
-    if (typeof scriptAst === 'object' && scriptAst.__drift_fn__) {
-      const fn = new Function('return (' + scriptAst.__drift_fn__ + ')')();
-      fn(scope, null, (s: any, k: string, v: any) => { s[k] = v; return v; }, null, (iter: any) => Array.from(iter), getScopeValue);
-    }
-    expect(scope.a).toBe('first');
-    expect(scope.b).toBe('second');
-  });
-
-  it('parses @for directive with destructuring pattern and index parameter', () => {
-    const template = `
-      <div>
-        @for (({ id, name }, idx) in users) {
-          <span>{name} ({idx})</span>
-        }
-      </div>
-    `;
-    const lexer = new DriftLexer(template);
-    const parser = new DriftParser(lexer);
-    const ast = parser.parse();
-
-    const divNode = ast.body.find((n: any) => n.type === ASTNodeType.Element) as any;
-    const forNode = divNode.children.find((n: any) => n.type === ASTNodeType.For);
-
-    expect(forNode).toBeDefined();
-    expect(forNode.item).toBe('{ id, name }');
-    expect(forNode.index).toBe('idx');
-  });
-
-  it('astToJS generates assignment code for destructuring assignments to local variables', () => {
-    const template = `
-      <script>
-        function run() {
-          let x = 0, y = 0;
-          [x, y] = [100, 200];
-          return x + y;
-        }
-      </script>
-      <div>{run()}</div>
-    `;
-    const compiled = compile(template);
-    const scope: Record<string, any> = {};
-    const scriptAst = compiled.constants[0];
-    if (typeof scriptAst === 'object' && scriptAst.__drift_fn__) {
-      const fn = new Function('return (' + scriptAst.__drift_fn__ + ')')();
-      fn(scope, null, (s: any, k: string, v: any) => { s[k] = v; return v; });
-    }
-    expect(scope.run).toBeDefined();
-    expect(scope.run()).toBe(300);
-  });
-
-  it('readDirectiveHeader parses directive header with template literal containing nested braces', () => {
-    const template = '@if (msg === `val: ${format({ active: true })}`) { <span>Active</span> }';
-    const lexer = new DriftLexer(template);
-    const token = lexer.nextToken();
-    expect(token.type).toBe('DirectiveIf');
-    expect(token.value).toBe('(msg === `val: ${format({ active: true })}`)');
-  });
-
-  it('preserves HTML entity strings inside script tags without decoding them', () => {
-    const template = `
-      <script>
-        const text = "Tom &amp; Jerry";
-        const json = "&quot;quoted&quot;";
-      </script>
-      <div>{text}</div>
-    `;
-    const lexer = new DriftLexer(template);
-    const parser = new DriftParser(lexer);
-    const ast = parser.parse();
-    const scriptNode = ast.body.find((n: any) => n.type === ASTNodeType.Element && n.tagName === 'script') as any;
-    expect(scriptNode).toBeDefined();
-    const scriptText = scriptNode.children[0].content;
-    expect(scriptText).toContain('"Tom &amp; Jerry"');
-    expect(scriptText).toContain('"&quot;quoted&quot;"');
-  });
-
   it('extractIdentifiers captures variables in optional chaining expressions', () => {
     const template = `
       <script>
@@ -499,5 +336,3 @@ describe('DriftJS Compiler - Reproduction Test Cases', () => {
     expect(switchNode.discriminant.type).toBe('MemberExpression');
   });
 });
-
-

@@ -1,6 +1,6 @@
 {
   "name": "driftjs-eslint-plugin",
-  "version": "0.0.17",
+  "version": "0.0.18",
   "description": "ESLint plugin and parser for DriftJS (.drift) Single File Components.",
   "keywords": [
     "driftjs",

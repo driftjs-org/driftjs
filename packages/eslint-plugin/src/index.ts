@@ -18,7 +18,7 @@ const parser = {
 const plugin: DriftEslintPlugin = {
   meta: {
     name: 'driftjs-eslint-plugin',
-    version: '0.0.17',
+    version: '0.0.18',
   },
   rules,
   configs: {

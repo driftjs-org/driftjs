@@ -1,6 +1,6 @@
 {
   "name": "driftjs-unplugin",
-  "version": "0.0.17",
+  "version": "0.0.18",
   "description": "Universal build-tool plugin for DriftJS (.drift) Single File Components supporting Vite, Rollup, Webpack, esbuild, and Rspack.",
   "keywords": [
     "driftjs",
@@ -46,11 +46,21 @@
     "webpack": "*"
   },
   "peerDependenciesMeta": {
-    "@rspack/core": { "optional": true },
-    "esbuild": { "optional": true },
-    "rollup": { "optional": true },
-    "vite": { "optional": true },
-    "webpack": { "optional": true }
+    "@rspack/core": {
+      "optional": true
+    },
+    "esbuild": {
+      "optional": true
+    },
+    "rollup": {
+      "optional": true
+    },
+    "vite": {
+      "optional": true
+    },
+    "webpack": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "typescript": "7.0.2",

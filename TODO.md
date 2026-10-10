@@ -6,15 +6,15 @@ This document outlines the strategic technical roadmap for DriftJS, covering upc
 
 ## 🗺️ Milestone Overview
 
-| Milestone | Focus Area | Status |
-| :--- | :--- | :--- |
-| **Milestone 1** | DevTools Cross-Browser Packaging & Release Automation | ✅ Done |
-| **Milestone 2** | Fine-Grained Reactive State Primitives (Signals, Computed Nodes, Effects, Props) | 📋 Planned |
-| **Milestone 3** | Compiler & Register VM Architecture Refactoring | 📋 Planned |
+| Milestone             | Focus Area                                                                            | Status     |
+| :-------------------- | :------------------------------------------------------------------------------------ | :--------- |
+| **Milestone 1** | DevTools Cross-Browser Packaging & Release Automation                                 | ✅ Done    |
+| **Milestone 2** | Fine-Grained Reactive State Primitives (Signals, Computed Nodes, Effects, Props)      | 📋 Planned |
+| **Milestone 3** | Compiler & Register VM Architecture Refactoring                                       | 📋 Planned |
 | **Milestone 4** | Two-Way Form Data Binding, Component Content Projection (Slots) & Metadata Management | 📋 Planned |
-| **Milestone 5** | Tooling & TypeScript SFC Integration (`<script lang="ts">`, VSCode, ESLint) | 📋 Planned |
-| **Milestone 6** | Examples Showcase & Consumer Fixtures Infrastructure | ✅ Done |
-| **Milestone 7** | Cross-Browser Matrix Testing (Gecko, WebKit, Blink) & Benchmarks | ✅ Done |
+| **Milestone 5** | Tooling & TypeScript SFC Integration (`<script lang="ts">`, VSCode, ESLint)         | 📋 Planned |
+| **Milestone 6** | Examples Showcase & Consumer Fixtures Infrastructure                                  | ✅ Done    |
+| **Milestone 7** | Cross-Browser Matrix Testing (Gecko, WebKit, Blink) & Benchmarks                      | ✅ Done    |
 
 ---
 
@@ -22,11 +22,11 @@ This document outlines the strategic technical roadmap for DriftJS, covering upc
 
 ### 1.1 Dual-Target Build System
 
-- [x] Configure `devtool/vite.config.ts` with target environment flag (`TARGET=firefox | chrome`).
-- [x] Generate browser-specific manifest outputs:
+- [X] Configure `devtool/vite.config.ts` with target environment flag (`TARGET=firefox | chrome`).
+- [X] Generate browser-specific manifest outputs:
   - **Firefox**: WebExtensions Manifest v2/v3 with background script declarations and Gecko ID metadata.
   - **Chrome/Edge**: Manifest v3 with background service worker integration.
-- [x] Add dual packaging scripts in `devtool/package.json`:
+- [X] Add dual packaging scripts in `devtool/package.json`:
   ```bash
   pnpm --filter devtool build:firefox   # Emits dist/firefox & drift-devtools-firefox.zip
   pnpm --filter devtool build:chrome    # Emits dist/chrome & drift-devtools-chrome.zip
@@ -34,20 +34,20 @@ This document outlines the strategic technical roadmap for DriftJS, covering upc
 
 ### 1.2 Store Submission & CI/CD Pipeline
 
-- [x] Create GitHub Actions workflow (`.github/workflows/devtools-release.yml`):
+- [X] Create GitHub Actions workflow (`.github/workflows/devtools-release.yml`):
   - On version tag release: automatically build both browser packages.
   - Sign Firefox `.xpi` via Mozilla Add-ons (AMO) API (`web-ext sign`).
   - Attach signed `.xpi` (Firefox) and `.zip` (Chrome) to GitHub Releases.
-- [x] Submit public listing to **Mozilla Add-ons (AMO)** store (`devtool/STORE_LISTING.md`).
-- [x] Submit public listing to **Chrome Web Store** (`devtool/STORE_LISTING.md`).
-- [x] Host self-installable `.xpi` link on the official documentation site (`docs/src/pages/ecosystem/devtools.md`).
+- [X] Submit public listing to **Mozilla Add-ons (AMO)** store (`devtool/STORE_LISTING.md`).
+- [X] Submit public listing to **Chrome Web Store** (`devtool/STORE_LISTING.md`).
+- [X] Host self-installable `.xpi` link on the official documentation site (`docs/src/pages/ecosystem/devtools.md`).
 
 ### 1.3 DevTools Feature Enhancements
 
-- [x] **Component Filter/Search**: Real-time search in sidebar to filter VM instances by name or instance ID.
-- [x] **State Time-Travel / History**: Record scope mutations with an undo/redo slider in the Timeline panel.
-- [x] **Interactive VM Stepper**: Step-by-step bytecode instruction execution for debugging reactive updates.
-- [x] **Performance Profiling**: Microtask flush timings, reconciliation duration, and DOM patch counters.
+- [X] **Component Filter/Search**: Real-time search in sidebar to filter VM instances by name or instance ID.
+- [X] **State Time-Travel / History**: Record scope mutations with an undo/redo slider in the Timeline panel.
+- [X] **Interactive VM Stepper**: Step-by-step bytecode instruction execution for debugging reactive updates.
+- [X] **Performance Profiling**: Microtask flush timings, reconciliation duration, and DOM patch counters.
 
 ---
 
@@ -172,29 +172,29 @@ This document outlines the strategic technical roadmap for DriftJS, covering upc
 
 ### 6.1 `examples/` Directory (Official Runnable Demonstrations)
 
-- [x] **TodoMVC (`examples/todomvc`)**: Canonical TodoMVC implementation demonstrating keyed list reconciliation (`@for`), conditional editing (`@if`), and reactive item counts.
-- [x] **HackerNews App (`examples/hackernews`)**: SSR + client hydration demo with routing, async data fetching, story listings, and comments tree.
-- [x] **Interactive Realtime Dashboard (`examples/dashboard`)**: High-frequency state mutation demo with SVG charts, timer intervals, and multi-component state sharing.
-- [x] **Basic Directives Sandbox (`examples/basic`)**: Clean, minimal playground showcasing directives (`@if`, `@else if`, `@else`, `@for`, `@switch`), event delegation, and scope bindings.
-- [x] **E-Commerce Cart (`examples/cart`)**: Demonstrates derived sub-totals, coupon code recalculation, and fast-path row patching.
+- [X] **TodoMVC (`examples/todomvc`)**: Canonical TodoMVC implementation demonstrating keyed list reconciliation (`@for`), conditional editing (`@if`), and reactive item counts.
+- [X] **HackerNews App (`examples/hackernews`)**: SSR + client hydration demo with routing, async data fetching, story listings, and comments tree.
+- [X] **Interactive Realtime Dashboard (`examples/dashboard`)**: High-frequency state mutation demo with SVG charts, timer intervals, and multi-component state sharing.
+- [X] **Basic Directives Sandbox (`examples/basic`)**: Clean, minimal playground showcasing directives (`@if`, `@else if`, `@else`, `@for`, `@switch`), event delegation, and scope bindings.
+- [X] **E-Commerce Cart (`examples/cart`)**: Demonstrates derived sub-totals, coupon code recalculation, and fast-path row patching.
 
 ### 6.2 `fixtures/` Directory (Reproduction & Regression Fixture Suites)
 
 Centralized repository-wide fixture suites to prevent regressions and verify engine correctness across Node and Browser environments without per-package fixture fragmentation:
 
-- [x] **Compiler Fixture Suite (`fixtures/compiler.test.ts`)**:
+- [X] **Compiler Fixture Suite (`fixtures/compiler.test.ts`)**:
   - Complex nested directives, entity decoding, expression parsing, loop iterables with reserved identifiers, and generator bytecode verification.
-- [x] **Shared & Utils Fixture Suite (`fixtures/utils.test.ts`)**:
+- [X] **Shared & Utils Fixture Suite (`fixtures/utils.test.ts`)**:
   - Prototypal scope isolation, prototype pollution guards (`__proto__`, `constructor`), global scope resolution, and destructuring evaluation.
-- [x] **SSR Engine Fixture Suite (`fixtures/ssr.test.ts`)**:
+- [X] **SSR Engine Fixture Suite (`fixtures/ssr.test.ts`)**:
   - Server-side rendering verification, comment delimiters (`<!--if-->`, `<!--for-->`), HTML tag/attribute breakout sanitization, raw script/style escaping, and scope isolation.
-- [x] **DOM Engine Fixture Suite (`fixtures/dom.test.ts`)**:
+- [X] **DOM Engine Fixture Suite (`fixtures/dom.test.ts`)**:
   - Real browser multi-engine testing (Chromium, Firefox, WebKit via Playwright) for in-place reactive updates, hydration cursor lookahead, event bubbling, and LIS reconciliation.
-- [x] **Router Fixture Suite (`fixtures/router.test.ts`)**:
+- [X] **Router Fixture Suite (`fixtures/router.test.ts`)**:
   - Multi-engine browser verification of dynamic route addition, navigation guards, route regex constraints, query string parsing, and active link state.
-- [x] **CLI Scaffolding Fixture Suite (`fixtures/cli.test.ts`)**:
+- [X] **CLI Scaffolding Fixture Suite (`fixtures/cli.test.ts`)**:
   - Verifies package manager argument sanitization, root directory safety guards (`emptyDirectory`), and safe dependency resolution.
-- [x] **Vitest Multi-Environment Fixture Runner (`vitest.config.ts`)**:
+- [X] **Vitest Multi-Environment Fixture Runner (`vitest.config.ts`)**:
   - Configured `fixtures` (Node) and `fixtures-browser` (Chromium, Firefox, WebKit) projects, seamlessly running all fixtures via `pnpm test`.
 
 ---
@@ -203,27 +203,27 @@ Centralized repository-wide fixture suites to prevent regressions and verify eng
 
 ### 7.1 Cross-Browser Testing Matrix (Gecko, WebKit, Chromium)
 
-- [x] **Multi-Browser Runner Integration**:
+- [X] **Multi-Browser Runner Integration**:
   - Configure `@vitest/browser` and Playwright across all three major browser engines:
     - **Chromium** (Google Chrome, Microsoft Edge, Brave)
     - **Firefox (Gecko)**
     - **WebKit** (Apple Safari engine)
-- [x] **Engine-Specific Edge Case Verification**:
+- [X] **Engine-Specific Edge Case Verification**:
   - Keyed list LIS moves and DOM layout recalculation quirks in Gecko vs WebKit vs Chromium.
   - Event delegation handling across synthetic and native browser events.
   - SSR hydration cursor traversal across different browser DOM parser implementations.
-- [x] **CI Matrix Automated Testing**:
+- [X] **CI Matrix Automated Testing**:
   - GitHub Actions matrix running automated test suites on Linux, macOS, and Windows across Chromium, Firefox, and WebKit.
 
 ### 7.2 Performance Benchmarking & VM Memory Optimizations
 
-- [x] **Official JS Framework Benchmark Integration**:
+- [X] **Official JS Framework Benchmark Integration**:
   - Integrate official **JS Framework Benchmark** (krausest/js-framework-benchmark) runner.
   - Measure and publish metrics:
     - 1,000 / 10,000 rows creation time.
     - Row swap (1k rows swap indices 1 and 998).
     - Clear rows and partial updates.
     - Memory consumption (retained heap size after 100 iterations).
-- [x] **VM Register Pooling**:
+- [X] **VM Register Pooling**:
   - Implement register allocation reuse in the compiler generator to minimize VM register array sizes from fixed 256 to active high-water mark.
   - Constant pool deduplication across compiled sub-modules.

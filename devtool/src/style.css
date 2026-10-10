@@ -468,3 +468,151 @@ html, body, #app {
   color: var(--dt-text);
   margin-bottom: 6px;
 }
+
+/* Sidebar Component Search */
+.dt-sidebar-search {
+  position: relative;
+  padding: 6px 8px;
+  background-color: var(--dt-bg-header);
+  border-bottom: 1px solid var(--dt-border);
+}
+
+.dt-search-input {
+  width: 100%;
+  background-color: var(--dt-bg-subtle);
+  border: 1px solid var(--dt-border);
+  border-radius: 4px;
+  color: var(--dt-text);
+  font-family: inherit;
+  font-size: 11px;
+  padding: 4px 22px 4px 8px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.dt-search-input:focus {
+  border-color: var(--dt-accent);
+}
+
+.dt-search-clear {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--dt-text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.dt-search-clear:hover {
+  color: var(--dt-text);
+}
+
+/* Stepper Controls in Registers & ISA */
+.dt-stepper-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background-color: var(--dt-bg-subtle);
+  border-bottom: 1px solid var(--dt-border);
+}
+
+.dt-stepper-info {
+  font-size: 11px;
+}
+
+.dt-stepper-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.dt-instruction-row.active-pc {
+  background-color: rgba(56, 189, 248, 0.15);
+  border-left: 3px solid var(--dt-accent);
+}
+
+.dt-pc-arrow {
+  color: var(--dt-accent);
+  font-weight: 700;
+  margin-right: 2px;
+}
+
+/* Performance Profiling Metrics Grid */
+.dt-perf-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.dt-perf-card {
+  background-color: var(--dt-bg-subtle);
+  border: 1px solid var(--dt-border);
+  border-radius: 6px;
+  padding: 10px 8px;
+  text-align: center;
+}
+
+.dt-perf-num {
+  font-size: 15px;
+  font-weight: 700;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.dt-perf-label {
+  font-size: 10px;
+  color: var(--dt-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.dt-badge-flush {
+  background-color: rgba(56, 189, 248, 0.15);
+  color: var(--dt-accent);
+}
+
+/* State Time-Travel Controls */
+.dt-timetravel-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dt-timetravel-info {
+  display: flex;
+  align-items: center;
+  font-size: 11px;
+  color: var(--dt-text-dim);
+}
+
+.dt-timetravel-slider-row {
+  width: 100%;
+}
+
+.dt-slider {
+  width: 100%;
+  accent-color: var(--dt-accent);
+  cursor: pointer;
+}
+
+.dt-timetravel-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.dt-btn-accent {
+  background-color: var(--dt-accent-bg) !important;
+  color: var(--dt-accent) !important;
+  border: 1px solid var(--dt-accent) !important;
+}
+
+.dt-btn-accent:hover {
+  background-color: var(--dt-accent) !important;
+  color: #000 !important;
+}
+

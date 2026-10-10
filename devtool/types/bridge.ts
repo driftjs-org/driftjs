@@ -47,6 +47,26 @@ export interface ReactivityEvent {
   type: 'dirty' | 'flush' | 'lis-reconcile' | 'mount' | 'unmount' | 'region-change';
   varName?: string;
   details?: string;
+  scopeSnapshot?: Record<string, any>;
+  duration?: number;
+  patchCount?: number;
+  itemCount?: number;
+}
+
+export interface ScopeSnapshot {
+  step: number;
+  timestamp: number;
+  vmId: string;
+  scope: Record<string, any>;
+  dirtyVar?: string;
+}
+
+export interface PerformanceStats {
+  totalFlushes: number;
+  avgFlushDuration: number;
+  totalPatches: number;
+  totalReconciles: number;
+  avgReconcileDuration: number;
 }
 
 export type BridgeMessage =
@@ -60,5 +80,6 @@ export type BridgeMessage =
   | { source: 'drift-devtools-panel'; type: 'REFRESH_REQUEST'; tabId?: number }
   | { source: 'drift-devtools-panel'; type: 'SELECT_VM'; payload: { vmId: string }; tabId?: number }
   | { source: 'drift-devtools-panel'; type: 'UPDATE_SCOPE_VAR'; payload: { vmId: string; varName: string; value: any }; tabId?: number }
+  | { source: 'drift-devtools-panel'; type: 'RESTORE_SCOPE'; payload: { vmId: string; scope: Record<string, any> }; tabId?: number }
   | { source: 'drift-devtools-panel'; type: 'HIGHLIGHT_VM'; payload: { vmId: string }; tabId?: number }
   | { source: 'drift-devtools-panel'; type: 'UNHIGHLIGHT_VM'; tabId?: number };

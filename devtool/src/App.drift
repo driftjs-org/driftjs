@@ -3,10 +3,25 @@
   let connected = false;
   let driftVersion = '';
   let vms = [];
+  let filteredVms = [];
   let selectedVmId = '';
   let selectedVm = null;
   let events = [];
   let searchQuery = '';
+
+  // State Time-Travel / History
+  let snapshots = [];
+  let selectedSnapshotIndex = -1;
+
+  // Interactive VM Stepper
+  let stepperPc = -1;
+  let stepperIndex = 0;
+
+  // Performance Profiling
+  let totalFlushes = 0;
+  let avgFlushDuration = '0.00';
+  let totalPatches = 0;
+  let totalReconciles = 0;
 
   export function setBridge(bridge) {
     window.__drift_bridge__ = bridge;
@@ -21,9 +36,23 @@
     driftVersion = ver;
   }
 
+  function updateFilteredVms() {
+    const q = (searchQuery || '').toLowerCase().trim();
+    if (!q) {
+      filteredVms = vms;
+    } else {
+      filteredVms = vms.filter(v =>
+        (v.name && v.name.toLowerCase().includes(q)) ||
+        (v.id && v.id.toLowerCase().includes(q))
+      );
+    }
+  }
+
   export function handleTree(newVms) {
     connected = true;
     vms = newVms || [];
+    updateFilteredVms();
+
     if (vms.length > 0) {
       if (!selectedVmId || !vms.find(v => v.id === selectedVmId)) {
         selectedVmId = vms[0].id;
@@ -45,6 +74,7 @@
     if (idx !== -1) {
       vms[idx].scope = newScope;
       vms = [...vms];
+      updateFilteredVms();
     }
   }
 
@@ -53,6 +83,7 @@
     const exists = vms.findIndex(v => v.id === vm.id);
     if (exists === -1) {
       vms = [...vms, vm];
+      updateFilteredVms();
       if (!selectedVm) {
         selectedVmId = vm.id;
         selectedVm = vm;
@@ -62,19 +93,58 @@
 
   export function handleVMUnmounted(vmId) {
     vms = vms.filter(v => v.id !== vmId);
+    updateFilteredVms();
     if (selectedVmId === vmId) {
       selectedVmId = vms.length > 0 ? vms[0].id : '';
       selectedVm = vms.length > 0 ? vms[0] : null;
     }
   }
 
+  function recalculateStats() {
+    let fCount = 0;
+    let fDur = 0;
+    let pCount = 0;
+    let rCount = 0;
+    for (let i = 0; i < events.length; i++) {
+      const ev = events[i];
+      if (ev.type === 'flush') {
+        fCount++;
+        if (ev.duration) fDur += ev.duration;
+        if (ev.patchCount) pCount += ev.patchCount;
+      } else if (ev.type === 'lis-reconcile') {
+        rCount++;
+      }
+    }
+    totalFlushes = fCount;
+    avgFlushDuration = fCount > 0 ? (fDur / fCount).toFixed(2) : '0.00';
+    totalPatches = pCount;
+    totalReconciles = rCount;
+  }
+
   export function handleEvent(event) {
     events = [event, ...events.slice(0, 49)];
+
+    // Record time-travel snapshot on dirty event
+    if (event.type === 'dirty' && event.scopeSnapshot) {
+      const snap = {
+        index: snapshots.length,
+        timestamp: event.timestamp,
+        vmId: event.vmId,
+        scope: event.scopeSnapshot,
+        dirtyVar: event.varName || 'state',
+      };
+      snapshots = [...snapshots, snap];
+      selectedSnapshotIndex = snapshots.length - 1;
+    }
+
+    recalculateStats();
   }
 
   function selectVM(vm) {
     selectedVmId = vm.id;
     selectedVm = vm;
+    stepperPc = -1;
+    stepperIndex = 0;
     const b = getBridge();
     if (b) {
       b.highlightVM(vm.id);
@@ -108,6 +178,19 @@
 
   function clearEvents() {
     events = [];
+    snapshots = [];
+    selectedSnapshotIndex = -1;
+    recalculateStats();
+  }
+
+  function handleSearchInput(e) {
+    searchQuery = e.target.value;
+    updateFilteredVms();
+  }
+
+  function clearSearch() {
+    searchQuery = '';
+    updateFilteredVms();
   }
 
   function handleScopeEdit(varName, e) {
@@ -122,6 +205,64 @@
     if (b && selectedVmId) {
       b.updateScopeVar(selectedVmId, varName, parsedVal);
     }
+  }
+
+  // Time-Travel Handlers
+  function seekSnapshot(idx) {
+    if (idx >= 0 && idx < snapshots.length) {
+      selectedSnapshotIndex = idx;
+      const snap = snapshots[idx];
+      const b = getBridge();
+      if (b && selectedVmId && snap && snap.scope) {
+        b.restoreScope(selectedVmId, snap.scope);
+      }
+    }
+  }
+
+  function stepTimeTravelPrev() {
+    if (selectedSnapshotIndex > 0) {
+      seekSnapshot(selectedSnapshotIndex - 1);
+    }
+  }
+
+  function stepTimeTravelNext() {
+    if (selectedSnapshotIndex < snapshots.length - 1) {
+      seekSnapshot(selectedSnapshotIndex + 1);
+    }
+  }
+
+  function restoreLive() {
+    if (snapshots.length > 0) {
+      seekSnapshot(snapshots.length - 1);
+    }
+  }
+
+  // VM Stepper Handlers
+  function stepInstructionNext() {
+    if (!selectedVm || !selectedVm.bytecode || selectedVm.bytecode.length === 0) return;
+    if (stepperPc === -1) {
+      stepperIndex = 0;
+      stepperPc = selectedVm.bytecode[0].pc;
+    } else if (stepperIndex < selectedVm.bytecode.length - 1) {
+      stepperIndex++;
+      stepperPc = selectedVm.bytecode[stepperIndex].pc;
+    }
+  }
+
+  function stepInstructionPrev() {
+    if (!selectedVm || !selectedVm.bytecode || selectedVm.bytecode.length === 0) return;
+    if (stepperIndex > 0) {
+      stepperIndex--;
+      stepperPc = selectedVm.bytecode[stepperIndex].pc;
+    } else {
+      stepperIndex = 0;
+      stepperPc = -1;
+    }
+  }
+
+  function resetStepper() {
+    stepperIndex = 0;
+    stepperPc = -1;
   }
 </script>
 
@@ -171,10 +312,27 @@
 
   <!-- Main Split Layout -->
   <div class="dt-main">
-    <!-- Left Sidebar: Component Tree -->
+    <!-- Left Sidebar: Component Tree & Real-Time Filter -->
     <aside class="dt-sidebar">
       <div class="dt-sidebar-header">
         <span class="dt-sidebar-title">VM Instances</span>
+        @if (vms.length > 0) {
+          <span class="dt-tag-badge">{filteredVms.length} / {vms.length}</span>
+        }
+      </div>
+
+      <!-- Real-Time Component Filter Input -->
+      <div class="dt-sidebar-search">
+        <input
+          class="dt-search-input"
+          type="text"
+          placeholder="Filter by name or ID..."
+          value={searchQuery}
+          oninput={handleSearchInput}
+        />
+        @if (searchQuery) {
+          <button class="dt-search-clear" onclick={clearSearch} title="Clear filter">&times;</button>
+        }
       </div>
 
       <div class="dt-tree-list">
@@ -183,8 +341,13 @@
             <div class="dt-empty-title">No Drift VMs</div>
             <div style="font-size: 11px; color: var(--dt-text-dim);">Navigate to a page running DriftJS</div>
           </div>
+        } @else if (filteredVms.length === 0) {
+          <div class="dt-empty-state" style="padding: 24px 12px;">
+            <div class="dt-empty-title">No matching VMs</div>
+            <div style="font-size: 11px; color: var(--dt-text-dim);">No components match "{searchQuery}"</div>
+          </div>
         } @else {
-          @for (vm, idx) in vms {
+          @for (vm, idx) in filteredVms {
             <div
               class={selectedVmId === vm.id ? 'dt-tree-item selected' : 'dt-tree-item'}
               onclick={() => selectVM(vm)}
@@ -306,19 +469,49 @@
             </div>
           </div>
         } @else if (activeTab === 'isa') {
-          <!-- Bytecode Disassembly Stream -->
+          <!-- Bytecode Disassembly Stream with Interactive VM Stepper -->
           <div class="dt-card">
             <div class="dt-card-header">
-              <span class="dt-card-title">Bytecode Instruction Stream</span>
+              <span class="dt-card-title">Bytecode Instruction Stream &amp; Stepper</span>
               <span class="dt-tag-badge">{selectedVm.bytecode.length} instructions</span>
             </div>
+
+            <!-- Interactive VM Stepper Controls -->
+            <div class="dt-stepper-bar">
+              <div class="dt-stepper-info">
+                @if (stepperPc === -1) {
+                  <span style="color: var(--dt-text-dim);">Live Execution (Click Step Next to start stepper)</span>
+                } @else {
+                  <span style="color: var(--dt-accent); font-weight: 600;">
+                    Instruction {stepperIndex + 1}/{selectedVm.bytecode.length} (PC: 0x{stepperPc.toString(16).padStart(2, '0').toUpperCase()})
+                  </span>
+                }
+              </div>
+              <div class="dt-stepper-actions">
+                <button class="dt-btn-icon" onclick={stepInstructionPrev} title="Step to previous instruction">
+                  <span>⏮ Prev</span>
+                </button>
+                <button class="dt-btn-icon" onclick={stepInstructionNext} title="Step to next instruction">
+                  <span>⏭ Next</span>
+                </button>
+                <button class="dt-btn-icon" onclick={resetStepper} title="Reset stepper to live">
+                  <span>🔄 Reset</span>
+                </button>
+              </div>
+            </div>
+
             <div class="dt-card-body">
               @if (selectedVm.bytecode.length === 0) {
                 <div style="color: var(--dt-text-muted); font-size: 11px;">No instructions</div>
               } @else {
                 @for (instr, iIdx) in selectedVm.bytecode {
-                  <div class="dt-instruction-row">
-                    <span class="dt-pc">0x{instr.pc.toString(16).padStart(2, '0').toUpperCase()}</span>
+                  <div class={stepperPc === instr.pc ? 'dt-instruction-row active-pc' : 'dt-instruction-row'}>
+                    <span class="dt-pc">
+                      @if (stepperPc === instr.pc) {
+                        <span class="dt-pc-arrow">➔ </span>
+                      }
+                      0x{instr.pc.toString(16).padStart(2, '0').toUpperCase()}
+                    </span>
                     <span class="dt-mnemonic">{instr.mnemonic}</span>
                     <span class="dt-operands">{instr.operands.join(' ')}</span>
                     <span class="dt-annotation">{instr.annotation}</span>
@@ -373,7 +566,74 @@
             </div>
           </div>
         } @else if (activeTab === 'timeline') {
-          <!-- Timeline View -->
+          <!-- Performance Profiler Metrics Grid -->
+          <div class="dt-perf-grid">
+            <div class="dt-perf-card">
+              <span class="dt-perf-num" style="color: var(--dt-accent);">{avgFlushDuration} ms</span>
+              <span class="dt-perf-label">Avg Flush Latency</span>
+            </div>
+            <div class="dt-perf-card">
+              <span class="dt-perf-num" style="color: var(--dt-green);">{totalFlushes}</span>
+              <span class="dt-perf-label">Microtask Flushes</span>
+            </div>
+            <div class="dt-perf-card">
+              <span class="dt-perf-num" style="color: var(--dt-yellow);">{totalPatches}</span>
+              <span class="dt-perf-label">DOM Patches</span>
+            </div>
+            <div class="dt-perf-card">
+              <span class="dt-perf-num" style="color: var(--dt-purple);">{totalReconciles}</span>
+              <span class="dt-perf-label">LIS Reconciles</span>
+            </div>
+          </div>
+
+          <!-- State Time-Travel / History Scrubber Card -->
+          <div class="dt-card">
+            <div class="dt-card-header">
+              <span class="dt-card-title">State Time-Travel &amp; History</span>
+              <span class="dt-tag-badge">{snapshots.length} historical states</span>
+            </div>
+            <div class="dt-card-body">
+              @if (snapshots.length === 0) {
+                <div style="color: var(--dt-text-muted); font-size: 11px;">
+                  No scope mutations recorded yet for &lt;{selectedVm.name}&gt;. Interact with the application to record state history.
+                </div>
+              } @else {
+                <div class="dt-timetravel-controls">
+                  <div class="dt-timetravel-info">
+                    <span>State {selectedSnapshotIndex + 1} of {snapshots.length}</span>
+                    @if (snapshots[selectedSnapshotIndex]) {
+                      <span class="dt-tag-badge" style="color: var(--dt-yellow); margin-left: 8px;">
+                        variable: {snapshots[selectedSnapshotIndex].dirtyVar}
+                      </span>
+                    }
+                  </div>
+                  <div class="dt-timetravel-slider-row">
+                    <input
+                      class="dt-slider"
+                      type="range"
+                      min="0"
+                      max={snapshots.length - 1}
+                      value={selectedSnapshotIndex}
+                      oninput={(e) => seekSnapshot(Number(e.target.value))}
+                    />
+                  </div>
+                  <div class="dt-timetravel-actions">
+                    <button class="dt-btn-icon" onclick={stepTimeTravelPrev} title="Step back 1 state">
+                      <span>⏮ Step Prev</span>
+                    </button>
+                    <button class="dt-btn-icon" onclick={stepTimeTravelNext} title="Step forward 1 state">
+                      <span>⏭ Step Next</span>
+                    </button>
+                    <button class="dt-btn-icon dt-btn-accent" onclick={restoreLive} title="Restore present state">
+                      <span>🔴 Restore Present</span>
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Timeline Event Log -->
           <div class="dt-card">
             <div class="dt-card-header">
               <span class="dt-card-title">Reactivity Event Log</span>
@@ -387,11 +647,14 @@
                   @for (evt, eIdx) in events {
                     <div class="dt-timeline-item">
                       <span class="dt-timeline-time">{new Date(evt.timestamp).toLocaleTimeString()}</span>
-                      <span class={evt.type === 'dirty' ? 'dt-timeline-badge dt-badge-dirty' : evt.type === 'mount' ? 'dt-timeline-badge dt-badge-mount' : 'dt-timeline-badge dt-badge-region'}>
+                      <span class={evt.type === 'dirty' ? 'dt-timeline-badge dt-badge-dirty' : evt.type === 'mount' ? 'dt-timeline-badge dt-badge-mount' : evt.type === 'flush' ? 'dt-timeline-badge dt-badge-flush' : 'dt-timeline-badge dt-badge-region'}>
                         {evt.type}
                       </span>
                       <span style="color: var(--dt-accent); font-weight: 600;">&lt;{evt.vmName}&gt;</span>
                       <span style="color: var(--dt-text); flex: 1;">{evt.details}</span>
+                      @if (evt.duration) {
+                        <span class="dt-tag-badge" style="color: var(--dt-green);">{evt.duration.toFixed(2)}ms</span>
+                      }
                     </div>
                   }
                 </div>

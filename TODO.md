@@ -8,7 +8,7 @@ This document outlines the strategic technical roadmap for DriftJS, covering upc
 
 | Milestone | Focus Area | Status |
 | :--- | :--- | :--- |
-| **Milestone 1** | DevTools Cross-Browser Packaging & Release Automation | 📋 Planned |
+| **Milestone 1** | DevTools Cross-Browser Packaging & Release Automation | ✅ Done |
 | **Milestone 2** | Fine-Grained Reactive State Primitives (Signals, Computed Nodes, Effects, Props) | 📋 Planned |
 | **Milestone 3** | Compiler & Register VM Architecture Refactoring | 📋 Planned |
 | **Milestone 4** | Two-Way Form Data Binding, Component Content Projection (Slots) & Metadata Management | 📋 Planned |
@@ -18,15 +18,15 @@ This document outlines the strategic technical roadmap for DriftJS, covering upc
 
 ---
 
-## Milestone 1: DevTools Cross-Browser Packaging & Release
+## Milestone 1: DevTools Cross-Browser Packaging & Release (✅ Done)
 
 ### 1.1 Dual-Target Build System
 
-- [ ] Configure `devtool/vite.config.ts` with target environment flag (`TARGET=firefox | chrome`).
-- [ ] Generate browser-specific manifest outputs:
+- [x] Configure `devtool/vite.config.ts` with target environment flag (`TARGET=firefox | chrome`).
+- [x] Generate browser-specific manifest outputs:
   - **Firefox**: WebExtensions Manifest v2/v3 with background script declarations and Gecko ID metadata.
   - **Chrome/Edge**: Manifest v3 with background service worker integration.
-- [ ] Add dual packaging scripts in `devtool/package.json`:
+- [x] Add dual packaging scripts in `devtool/package.json`:
   ```bash
   pnpm --filter devtool build:firefox   # Emits dist/firefox & drift-devtools-firefox.zip
   pnpm --filter devtool build:chrome    # Emits dist/chrome & drift-devtools-chrome.zip
@@ -34,20 +34,20 @@ This document outlines the strategic technical roadmap for DriftJS, covering upc
 
 ### 1.2 Store Submission & CI/CD Pipeline
 
-- [ ] Create GitHub Actions workflow (`.github/workflows/devtools-release.yml`):
+- [x] Create GitHub Actions workflow (`.github/workflows/devtools-release.yml`):
   - On version tag release: automatically build both browser packages.
   - Sign Firefox `.xpi` via Mozilla Add-ons (AMO) API (`web-ext sign`).
   - Attach signed `.xpi` (Firefox) and `.zip` (Chrome) to GitHub Releases.
-- [ ] Submit public listing to **Mozilla Add-ons (AMO)** store.
-- [ ] Submit public listing to **Chrome Web Store**.
-- [ ] Host self-installable `.xpi` link on the official documentation site.
+- [x] Submit public listing to **Mozilla Add-ons (AMO)** store (`devtool/STORE_LISTING.md`).
+- [x] Submit public listing to **Chrome Web Store** (`devtool/STORE_LISTING.md`).
+- [x] Host self-installable `.xpi` link on the official documentation site (`docs/src/pages/ecosystem/devtools.md`).
 
 ### 1.3 DevTools Feature Enhancements
 
-- [ ] **Component Filter/Search**: Real-time search in sidebar to filter VM instances by name or instance ID.
-- [ ] **State Time-Travel / History**: Record scope mutations with an undo/redo slider in the Timeline panel.
-- [ ] **Interactive VM Stepper**: Step-by-step bytecode instruction execution for debugging reactive updates.
-- [ ] **Performance Profiling**: Microtask flush timings, reconciliation duration, and DOM patch counters.
+- [x] **Component Filter/Search**: Real-time search in sidebar to filter VM instances by name or instance ID.
+- [x] **State Time-Travel / History**: Record scope mutations with an undo/redo slider in the Timeline panel.
+- [x] **Interactive VM Stepper**: Step-by-step bytecode instruction execution for debugging reactive updates.
+- [x] **Performance Profiling**: Microtask flush timings, reconciliation duration, and DOM patch counters.
 
 ---
 

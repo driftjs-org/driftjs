@@ -1,5 +1,5 @@
 import { ext } from './utils/ext.js';
-import type { VMSnapshot, ReactivityEvent, BridgeMessage } from './types/bridge.js';
+import type { VMSnapshot, ReactivityEvent, BridgeMessage } from '../types/bridge.js';
 
 export interface BridgeCallbacks {
   onDetected?: (version: string, vmCount: number) => void;
@@ -112,6 +112,14 @@ export class DevToolsBridge {
       source: 'drift-devtools-panel',
       type: 'UPDATE_SCOPE_VAR',
       payload: { vmId, varName, value },
+    });
+  }
+
+  public restoreScope(vmId: string, scope: Record<string, any>) {
+    this.post({
+      source: 'drift-devtools-panel',
+      type: 'RESTORE_SCOPE',
+      payload: { vmId, scope },
     });
   }
 }

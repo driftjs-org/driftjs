@@ -1,4 +1,4 @@
-/// <reference path="../types/env.d.ts" />
+/// <reference path="../../types/env.d.ts" />
 
 export const ext: any =
   typeof browser !== 'undefined'

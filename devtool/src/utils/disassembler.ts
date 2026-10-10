@@ -1,5 +1,5 @@
 import { Opcode } from 'driftjs-compiler';
-import type { DisassembledInstruction } from '../types/bridge.js';
+import type { DisassembledInstruction } from '../../types/bridge.js';
 
 export const OPCODE_NAMES: Record<number, string> = {
   [Opcode.RETURN]: 'RETURN',

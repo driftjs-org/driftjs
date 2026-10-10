@@ -76,6 +76,7 @@
       <li><a href="/ecosystem/eslint-plugin/" class="sidebar-link">ESLint Plugin</a></li>
       <li><a href="/ecosystem/prettier-plugin/" class="sidebar-link">Prettier Plugin</a></li>
       <li><a href="/ecosystem/vscode-plugin/" class="sidebar-link">VSCode Extension</a></li>
+      <li><a href="/ecosystem/devtools/" class="sidebar-link">DevTools Extension</a></li>
     </ul>
   </div>
 

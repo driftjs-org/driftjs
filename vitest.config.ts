@@ -122,8 +122,8 @@ export default defineConfig({
       {
         test: {
           name: 'devtools',
-          include: ['devtools/tests/**/*.test.ts'],
-          exclude: ['devtools/dist'],
+          include: ['devtool/tests/**/*.test.ts'],
+          exclude: ['devtool/dist'],
           environment: 'node',
         },
       },

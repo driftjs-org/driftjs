@@ -1,5 +1,5 @@
 import { disassembleBytecode } from './utils/disassembler.js';
-import type { VMSnapshot, VMRegisterSnapshot, ReactivityEvent } from './types/bridge.js';
+import type { VMSnapshot, VMRegisterSnapshot, ReactivityEvent } from '../types/bridge.js';
 
 (function () {
   if ((window as any).__DRIFT_DEVTOOLS_INJECTED__) return;
@@ -365,11 +365,12 @@ import type { VMSnapshot, VMRegisterSnapshot, ReactivityEvent } from './types/br
       try {
         const id = reverseVmMap.get(vm);
         if (!id) return;
+        const scopeSnap = safeCloneScope(vm.scope);
         postToDevTools({
           type: 'VM_UPDATED',
           payload: {
             vmId: id,
-            scope: safeCloneScope(vm.scope),
+            scope: scopeSnap,
             dirtyVars: [varName],
           },
         });
@@ -382,8 +383,29 @@ import type { VMSnapshot, VMRegisterSnapshot, ReactivityEvent } from './types/br
             vmName: vmMap.get(id)?.registers?.[0]?.tagName?.toLowerCase() || 'Component',
             type: 'dirty',
             varName,
+            scopeSnapshot: scopeSnap,
             details: `markDirty("${varName}") -> microtask flush scheduled`,
           } as ReactivityEvent,
+        });
+
+        // Measure microtask flush performance
+        const flushStart = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        queueMicrotask(() => {
+          const duration = Math.max(0.01, (typeof performance !== 'undefined' ? performance.now() : Date.now()) - flushStart);
+          const patchCount = vm.reactiveBindingsMap ? vm.reactiveBindingsMap.size : 1;
+          postToDevTools({
+            type: 'EVENT_LOG',
+            payload: {
+              id: `evt-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+              timestamp: Date.now(),
+              vmId: id,
+              vmName: vmMap.get(id)?.registers?.[0]?.tagName?.toLowerCase() || 'Component',
+              type: 'flush',
+              duration,
+              patchCount,
+              details: `Microtask flush completed in ${duration.toFixed(2)}ms (${patchCount} patch targets)`,
+            } as ReactivityEvent,
+          });
         });
       } catch (err) {
         console.warn('[DriftDevTools] Error in emitDirty:', err);
@@ -394,6 +416,7 @@ import type { VMSnapshot, VMRegisterSnapshot, ReactivityEvent } from './types/br
       try {
         const id = reverseVmMap.get(vm);
         if (!id) return;
+        const isFor = type === 'for';
         postToDevTools({
           type: 'EVENT_LOG',
           payload: {
@@ -401,8 +424,9 @@ import type { VMSnapshot, VMRegisterSnapshot, ReactivityEvent } from './types/br
             timestamp: Date.now(),
             vmId: id,
             vmName: id,
-            type: 'region-change',
-            details: `Reactive region updated (${type})`,
+            type: isFor ? 'lis-reconcile' : 'region-change',
+            duration: 0.1,
+            details: isFor ? `LIS Reconcile executed for @for list` : `Reactive region updated (@${type})`,
           } as ReactivityEvent,
         });
       } catch (err) {
@@ -442,6 +466,21 @@ import type { VMSnapshot, VMRegisterSnapshot, ReactivityEvent } from './types/br
           if (typeof vm.markDirty === 'function') {
             vm.markDirty(varName);
           }
+        }
+        break;
+      }
+
+      case 'RESTORE_SCOPE': {
+        const { vmId, scope } = msg.payload || {};
+        const vm = vmMap.get(vmId);
+        if (vm && scope && typeof scope === 'object') {
+          for (const [k, v] of Object.entries(scope)) {
+            vm.scope[k] = v;
+            if (typeof vm.markDirty === 'function') {
+              vm.markDirty(k);
+            }
+          }
+          sendAllVMs();
         }
         break;
       }

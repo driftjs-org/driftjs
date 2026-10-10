@@ -19,6 +19,7 @@ if (container) {
       if (typeof vm.scope.handleTree === 'function') {
         vm.scope.handleTree(vms);
         vm.markDirty('vms');
+        vm.markDirty('filteredVms');
         vm.markDirty('selectedVm');
         vm.markDirty('selectedVmId');
       }
@@ -28,12 +29,14 @@ if (container) {
         vm.scope.handleVMUpdated(vmId, scope, dirtyVars);
         vm.markDirty('selectedVm');
         vm.markDirty('vms');
+        vm.markDirty('filteredVms');
       }
     },
     onVMMounted(newVm) {
       if (typeof vm.scope.handleVMMounted === 'function') {
         vm.scope.handleVMMounted(newVm);
         vm.markDirty('vms');
+        vm.markDirty('filteredVms');
         vm.markDirty('selectedVm');
       }
     },
@@ -41,6 +44,7 @@ if (container) {
       if (typeof vm.scope.handleVMUnmounted === 'function') {
         vm.scope.handleVMUnmounted(vmId);
         vm.markDirty('vms');
+        vm.markDirty('filteredVms');
         vm.markDirty('selectedVm');
       }
     },
@@ -48,6 +52,12 @@ if (container) {
       if (typeof vm.scope.handleEvent === 'function') {
         vm.scope.handleEvent(event);
         vm.markDirty('events');
+        vm.markDirty('snapshots');
+        vm.markDirty('selectedSnapshotIndex');
+        vm.markDirty('totalFlushes');
+        vm.markDirty('avgFlushDuration');
+        vm.markDirty('totalPatches');
+        vm.markDirty('totalReconciles');
       }
     },
     onReload() {

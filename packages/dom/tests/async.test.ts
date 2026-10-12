@@ -20,7 +20,7 @@ describe('DriftClientVM – Zero-Proxy Async Reactivity & Microtask Batching', (
         { __drift_fn__: '(scope) => scope.status' },
       ],
       reactiveBindings: [
-        { variable: 'status', positions: [5] },
+        { name: 'status', type: 'variable', positions: [5] },
       ],
       declaredVars: ['status'],
       scope: {},
@@ -67,7 +67,7 @@ describe('DriftClientVM – Zero-Proxy Async Reactivity & Microtask Batching', (
         { __drift_fn__: '(scope) => scope.count' },
       ],
       reactiveBindings: [
-        { variable: 'count', positions: [5] },
+        { name: 'count', type: 'variable', positions: [5] },
       ],
       declaredVars: ['count'],
       scope: {},
@@ -100,7 +100,7 @@ describe('DriftClientVM – Zero-Proxy Async Reactivity & Microtask Batching', (
       ]),
       constants: ['div', { __drift_fn__: '(scope) => scope.val' }],
       reactiveBindings: [
-        { variable: 'val', positions: [3] },
+        { name: 'val', type: 'variable', positions: [3] },
       ],
       declaredVars: ['val'],
       scope: {},
@@ -144,7 +144,7 @@ describe('DriftClientVM – Zero-Proxy Async Reactivity & Microtask Batching', (
         { __drift_fn__: '(scope) => scope.items.length' },
       ],
       reactiveBindings: [
-        { variable: 'items', positions: [3] },
+        { name: 'items', type: 'property', positions: [3] },
       ],
       declaredVars: ['items'],
       scope: { items: [1, 2] },

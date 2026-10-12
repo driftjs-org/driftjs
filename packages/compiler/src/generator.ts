@@ -12,6 +12,7 @@ import type {
   AsyncNode,
   CompiledModule,
   ReactiveBinding,
+  ReactiveBindingKind,
   DerivedBinding,
   EffectBinding,
   ImportSpec,
@@ -37,7 +38,7 @@ export class DriftGenerator {
   private nextRegisterId = 0;
   private declaredVars: Set<string> = new Set();
   private imports: ImportSpec[] = [];
-  private bindingPositions: Map<string, number[]> = new Map();
+  private bindingPositions: Map<string, { name: string; type: ReactiveBindingKind; positions: number[] }> = new Map();
   private derivedBindings: DerivedBinding[] = [];
   private pendingDerived: { name: string; arg: any }[] = [];
   private effectBindings: EffectBinding[] = [];
@@ -256,11 +257,14 @@ export class DriftGenerator {
       }
       if (childrenSubMod) {
         for (const binding of childrenSubMod.reactiveBindings) {
-          if (this.declaredVars.has(binding.variable)) {
-            if (!this.bindingPositions.has(binding.variable)) {
-              this.bindingPositions.set(binding.variable, []);
+          const varName = binding.name;
+          if (this.declaredVars.has(varName)) {
+            const kind = binding.type;
+            const key = `${varName}:${kind}`;
+            if (!this.bindingPositions.has(key)) {
+              this.bindingPositions.set(key, { name: varName, type: kind, positions: [] });
             }
-            this.bindingPositions.get(binding.variable)!.push(pc);
+            this.bindingPositions.get(key)!.positions.push(pc);
           }
         }
       }
@@ -380,7 +384,7 @@ export class DriftGenerator {
   ): string[] {
     const deps = new Set<string>();
     for (let i = 0; i < subMod.reactiveBindings.length; i++) {
-      deps.add(subMod.reactiveBindings[i]!.variable);
+      deps.add(subMod.reactiveBindings[i]!.name);
     }
     if (extraExpr) {
       for (const name of this.analyzeExpression(extraExpr).deps) {
@@ -549,8 +553,9 @@ export class DriftGenerator {
     // in iterDeps and NOT loop-local variables. A change here only needs per-row in-place patching — no reconciliation.
     const rowDepsSet = new Set<string>();
     for (const binding of bodyMod.reactiveBindings) {
-      if (!iterDepsSet.has(binding.variable) && !loopAliases.has(binding.variable)) {
-        rowDepsSet.add(binding.variable);
+      const varName = binding.name;
+      if (!iterDepsSet.has(varName) && !loopAliases.has(varName)) {
+        rowDepsSet.add(varName);
       }
     }
     const rowDepsIdx = this.addConstant([...rowDepsSet]);
@@ -834,17 +839,43 @@ export class DriftGenerator {
     if (this.declaredVars.size === 0) return;
     const analysis = this.analyzeExpression(expr);
     for (const name of analysis.deps) {
-      if (!this.bindingPositions.has(name)) {
-        this.bindingPositions.set(name, []);
+      const type = this.classifyDependencyKind(expr, name);
+      const key = `${name}:${type}`;
+      if (!this.bindingPositions.has(key)) {
+        this.bindingPositions.set(key, { name, type, positions: [] });
       }
-      this.bindingPositions.get(name)!.push(pc);
+      this.bindingPositions.get(key)!.positions.push(pc);
     }
+  }
+
+  private isDerivedVar(name: string): boolean {
+    return (
+      this.derivedBindings.some((d) => d.name === name) ||
+      this.pendingDerived.some((p) => p.name === name)
+    );
+  }
+
+  private classifyDependencyKind(expr: any, depName: string): ReactiveBindingKind {
+    if (this.isDerivedVar(depName)) {
+      return 'derived';
+    }
+    if (isPropertyAccess(expr, depName)) {
+      return 'property';
+    }
+    if (expr && typeof expr === 'object') {
+      return 'variable';
+    }
+    return 'custom';
   }
 
   private buildReactiveBindings(): ReactiveBinding[] {
     const bindings: ReactiveBinding[] = [];
-    for (const [variable, positions] of this.bindingPositions) {
-      bindings.push({ variable, positions });
+    for (const entry of this.bindingPositions.values()) {
+      bindings.push({
+        name: entry.name,
+        type: entry.type,
+        positions: entry.positions,
+      });
     }
     return bindings;
   }
@@ -960,6 +991,34 @@ export function extractIdentifiersFromAST(node: any): Set<string> {
   }
 
   return ids;
+}
+
+/**
+ * Checks whether an identifier is accessed as an object property (e.g. `user.name`, `user?.profile`)
+ * within an AST node hierarchy.
+ */
+export function isPropertyAccess(node: any, depName: string): boolean {
+  if (!node || typeof node !== 'object') return false;
+  let found = false;
+
+  try {
+    walk.ancestor(node, {
+      Identifier(idNode: any, ancestors: any[]) {
+        if (found || idNode.name !== depName) return;
+        const parent = ancestors[ancestors.length - 2];
+        if (!parent) return;
+
+        // Check if idNode is the object of a MemberExpression
+        if (parent.type === 'MemberExpression' && parent.object === idNode) {
+          found = true;
+        }
+      },
+    });
+  } catch {
+    // Ignored for partial / non-standard AST nodes
+  }
+
+  return found;
 }
 
 export function analyzeExpression(ast: any, declaredVars?: Set<string>): ExpressionAnalysis {

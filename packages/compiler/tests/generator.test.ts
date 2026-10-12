@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { compile, astToJS, analyzeExpression, extractIdentifiersFromAST, DriftGenerator } from '../src/index.js';
+import { compile, astToJS, analyzeExpression, extractIdentifiersFromAST, isPropertyAccess, DriftGenerator } from '../src/index.js';
 import { Opcode } from '../types/index.js';
 
 describe('DriftGenerator', () => {
@@ -363,7 +363,7 @@ describe('DriftGenerator', () => {
     const module = compile(src);
 
     expect(module.reactiveBindings).toBeDefined();
-    const boundVars = module.reactiveBindings!.map((b) => b.variable);
+    const boundVars = module.reactiveBindings!.map((b) => b.name);
     expect(boundVars).toContain('customTag');
     expect(boundVars).toContain('a');
     expect(boundVars).toContain('b');
@@ -517,7 +517,7 @@ describe('DriftGenerator', () => {
       expect(childrenSubMod).toBeDefined();
       expect(childrenSubMod.bytecode).toBeDefined();
       expect(childrenSubMod.reactiveBindings).toEqual([
-        { variable: 'count', positions: [11] },
+        { name: 'count', type: 'variable', positions: [11] },
       ]);
     });
   });
@@ -689,9 +689,9 @@ describe('DriftGenerator', () => {
       const bodyMod = module.constants[bodyIdx];
       expect(bodyMod).toBeDefined();
 
-      const itemBinding = bodyMod.reactiveBindings.find((b: any) => b.variable === 'item');
-      const indexBinding = bodyMod.reactiveBindings.find((b: any) => b.variable === 'index');
-      const prefixBinding = bodyMod.reactiveBindings.find((b: any) => b.variable === 'prefix');
+      const itemBinding = bodyMod.reactiveBindings.find((b: any) => b.name === 'item');
+      const indexBinding = bodyMod.reactiveBindings.find((b: any) => b.name === 'index');
+      const prefixBinding = bodyMod.reactiveBindings.find((b: any) => b.name === 'prefix');
 
       expect(itemBinding).toBeDefined();
       expect(itemBinding.positions.length).toBeGreaterThan(0);
@@ -721,9 +721,9 @@ describe('DriftGenerator', () => {
       const bodyIdx = module.bytecode[reactiveForIdx + 6]!;
       const bodyMod = module.constants[bodyIdx];
 
-      const idBinding = bodyMod.reactiveBindings.find((b: any) => b.variable === 'id');
-      const nameBinding = bodyMod.reactiveBindings.find((b: any) => b.variable === 'name');
-      const iBinding = bodyMod.reactiveBindings.find((b: any) => b.variable === 'i');
+      const idBinding = bodyMod.reactiveBindings.find((b: any) => b.name === 'id');
+      const nameBinding = bodyMod.reactiveBindings.find((b: any) => b.name === 'name');
+      const iBinding = bodyMod.reactiveBindings.find((b: any) => b.name === 'i');
 
       expect(idBinding).toBeDefined();
       expect(idBinding.positions.length).toBeGreaterThan(0);
@@ -902,9 +902,116 @@ describe('DriftGenerator', () => {
       `;
       const mod = compile(sfc);
       expect(mod.reactiveBindings).toBeDefined();
-      const countBinding = mod.reactiveBindings!.find((b) => b.variable === 'count');
+      const countBinding = mod.reactiveBindings!.find((b) => b.name === 'count');
       expect(countBinding).toBeDefined();
       expect(countBinding!.positions.length).toBe(2); // attribute + text interpolation
+    });
+  });
+
+  describe('ReactiveBinding Classification (variable, property, derived)', () => {
+    it('classifies direct state variables as type: "variable"', () => {
+      const sfc = `
+        <script>
+          let count = 0;
+        </script>
+        <div>{count}</div>
+      `;
+      const mod = compile(sfc);
+      expect(mod.reactiveBindings).toBeDefined();
+      const binding = mod.reactiveBindings!.find((b) => b.name === 'count');
+      expect(binding).toBeDefined();
+      expect(binding!.type).toBe('variable');
+      expect(binding!.name).toBe('count');
+      expect(binding!.positions.length).toBeGreaterThan(0);
+    });
+
+    it('classifies member access as type: "property"', () => {
+      const sfc = `
+        <script>
+          let user = { name: 'Alice' };
+        </script>
+        <div>{user.name}</div>
+      `;
+      const mod = compile(sfc);
+      expect(mod.reactiveBindings).toBeDefined();
+      const binding = mod.reactiveBindings!.find((b) => b.name === 'user');
+      expect(binding).toBeDefined();
+      expect(binding!.type).toBe('property');
+      expect(binding!.name).toBe('user');
+      expect(binding!.positions.length).toBeGreaterThan(0);
+    });
+
+    it('classifies optional chaining member access as type: "property"', () => {
+      const sfc = `
+        <script>
+          let user = { profile: { name: 'Alice' } };
+        </script>
+        <div>{user?.profile?.name}</div>
+      `;
+      const mod = compile(sfc);
+      expect(mod.reactiveBindings).toBeDefined();
+      const binding = mod.reactiveBindings!.find((b) => b.name === 'user');
+      expect(binding).toBeDefined();
+      expect(binding!.type).toBe('property');
+    });
+
+    it('classifies derive() computed state as type: "derived"', () => {
+      const sfc = `
+        <script>
+          let count = 0;
+          let double = derive(count * 2);
+        </script>
+        <div>{double}</div>
+      `;
+      const mod = compile(sfc);
+      expect(mod.reactiveBindings).toBeDefined();
+      const countBinding = mod.reactiveBindings!.find((b) => b.name === 'count');
+      const doubleBinding = mod.reactiveBindings!.find((b) => b.name === 'double');
+
+      expect(countBinding).toBeUndefined(); // count is in derive(), not in template directly
+      expect(doubleBinding).toBeDefined();
+      expect(doubleBinding!.type).toBe('derived');
+      expect(doubleBinding!.name).toBe('double');
+    });
+
+    it('segregates positions when a variable is used both as a property and as a variable', () => {
+      const sfc = `
+        <script>
+          let user = { name: 'Alice' };
+        </script>
+        <div>
+          <span>{user.name}</span>
+          <span>{user}</span>
+        </div>
+      `;
+      const mod = compile(sfc);
+      expect(mod.reactiveBindings).toBeDefined();
+      const propBinding = mod.reactiveBindings!.find((b) => b.name === 'user' && b.type === 'property');
+      const varBinding = mod.reactiveBindings!.find((b) => b.name === 'user' && b.type === 'variable');
+
+      expect(propBinding).toBeDefined();
+      expect(varBinding).toBeDefined();
+      expect(propBinding!.positions).not.toEqual(varBinding!.positions);
+    });
+
+    it('isPropertyAccess correctly detects object property accesses vs bare reads', () => {
+      expect(isPropertyAccess(null, 'user')).toBe(false);
+
+      const propAST = {
+        type: 'MemberExpression',
+        object: { type: 'Identifier', name: 'user' },
+        property: { type: 'Identifier', name: 'name' },
+      };
+      expect(isPropertyAccess(propAST, 'user')).toBe(true);
+      expect(isPropertyAccess(propAST, 'name')).toBe(false);
+
+      const binaryAST = {
+        type: 'BinaryExpression',
+        left: { type: 'Identifier', name: 'count' },
+        operator: '+',
+        right: { type: 'Literal', value: 1 },
+      };
+      expect(isPropertyAccess(binaryAST, 'count')).toBe(false);
     });
   });
 });

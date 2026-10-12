@@ -187,7 +187,7 @@ describe('derive() Computed / Derived State VM Reactivity', () => {
         { __drift_fn__: '(scope) => scope.multiplier * 2' },
       ],
       reactiveBindings: [
-        { variable: 'doubled', positions: [3] },
+        { name: 'doubled', type: 'derived', positions: [3] },
       ],
       derived: [
         { name: 'doubled', deps: ['multiplier'], exprIdx: 2 },
@@ -206,7 +206,7 @@ describe('derive() Computed / Derived State VM Reactivity', () => {
         { __drift_props__: true, multiplier: { __drift_fn__: '(scope) => scope.factor' } },
       ],
       reactiveBindings: [
-        { variable: 'factor', positions: [0] },
+        { name: 'factor', type: 'variable', positions: [0] },
       ],
       declaredVars: ['ChildComp', 'factor'],
       scope: {

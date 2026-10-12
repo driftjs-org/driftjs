@@ -453,7 +453,7 @@ describe('effect() Reactive Side-Effects & Lifecycle in DriftClientVM', () => {
         { __drift_fn__: '(scope) => { globalThis.__capture_prop_effect__(scope.val); }' },
       ],
       reactiveBindings: [
-        { variable: 'val', positions: [3] },
+        { name: 'val', type: 'variable', positions: [3] },
       ],
       effects: [
         { deps: ['val'], exprIdx: 2 },
@@ -472,7 +472,7 @@ describe('effect() Reactive Side-Effects & Lifecycle in DriftClientVM', () => {
         { __drift_props__: true, val: { __drift_fn__: '(scope) => scope.num' } },
       ],
       reactiveBindings: [
-        { variable: 'num', positions: [0] },
+        { name: 'num', type: 'variable', positions: [0] },
       ],
       declaredVars: ['ChildComp', 'num'],
       scope: {

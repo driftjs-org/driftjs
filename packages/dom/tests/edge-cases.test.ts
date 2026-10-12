@@ -147,8 +147,8 @@ describe('DriftJS Runtime Edge Cases & Scope Fixes', () => {
         { __drift_fn__: '(scope) => (scope.selected === scope.row.id ? "danger" : "")' },
       ],
       reactiveBindings: [
-        { variable: 'row', positions: [3] },
-        { variable: 'selected', positions: [3] },
+        { name: 'row', type: 'property', positions: [3] },
+        { name: 'selected', type: 'variable', positions: [3] },
       ],
     };
 
@@ -214,7 +214,7 @@ describe('DriftJS Runtime Edge Cases & Scope Fixes', () => {
       ],
       declaredVars: ['updatedValue'],
       reactiveBindings: [
-        { variable: 'updatedValue', positions: [4] },
+        { name: 'updatedValue', type: 'variable', positions: [4] },
       ],
     };
 

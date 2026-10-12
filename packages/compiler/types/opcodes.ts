@@ -40,11 +40,19 @@ export interface SwitchCaseSpec {
 }
 
 /**
+ * Classification kind for a reactive binding.
+ */
+export type ReactiveBindingKind = 'variable' | 'property' | 'derived' | 'custom';
+
+/**
  * Describes which bytecode PC positions reference a declared variable,
  * enabling the runtime to re-evaluate bindings when state changes.
  */
 export interface ReactiveBinding {
-  readonly variable: string;
+  /** The reactive identifier name (state cell, property root, or computed node). */
+  readonly name: string;
+  /** The classification kind of this reactive binding. */
+  readonly type: ReactiveBindingKind;
   readonly positions: readonly number[];
 }
 

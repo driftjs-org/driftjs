@@ -294,7 +294,7 @@ describe('DriftClientVM', () => {
         Opcode.APPEND_CHILD, 0, 1,
       ],
       constants: ['p', { __drift_fn__: '(scope) => scope.count' }],
-      reactiveBindings: [{ variable: 'count', positions: [3] }],
+      reactiveBindings: [{ name: 'count', type: 'variable', positions: [3] }],
       declaredVars: ['count'],
     };
 
@@ -331,7 +331,7 @@ describe('DriftClientVM', () => {
         Opcode.APPEND_CHILD, 0, 1,
       ],
       constants: [scriptBody, 'p', countExpr],
-      reactiveBindings: [{ variable: 'count', positions: [7] }],
+      reactiveBindings: [{ name: 'count', type: 'variable', positions: [7] }],
     };
 
     const frag = vmInstance.execute(module, { document: doc }) as DocumentFragment;
@@ -984,7 +984,7 @@ describe('DriftClientVM', () => {
         { __drift_fn__: '(scope) => scope.count' },
       ],
       reactiveBindings: [
-        { variable: 'count', positions: [3] },
+        { name: 'count', type: 'variable', positions: [3] },
       ],
       declaredVars: ['count'],
       scope: {},
@@ -1000,7 +1000,7 @@ describe('DriftClientVM', () => {
         { __drift_props__: true, count: { __drift_fn__: '(scope) => scope.parentCount' } },
       ],
       reactiveBindings: [
-        { variable: 'parentCount', positions: [0] },
+        { name: 'parentCount', type: 'variable', positions: [0] },
       ],
       declaredVars: ['CounterDisplay', 'parentCount'],
       scope: {

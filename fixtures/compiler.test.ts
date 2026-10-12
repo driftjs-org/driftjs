@@ -216,7 +216,7 @@ describe('DriftJS Compiler - Reproduction Test Cases', () => {
       <div>{user?.profile?.name}</div>
     `;
     const compiled = compile(template);
-    const userBinding = compiled.reactiveBindings?.find((b) => b.variable === 'user');
+    const userBinding = compiled.reactiveBindings?.find((b) => b.name === 'user');
     expect(userBinding).toBeDefined();
     expect(userBinding?.positions.length).toBeGreaterThan(0);
   });

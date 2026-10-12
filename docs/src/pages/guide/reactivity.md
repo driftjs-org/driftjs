@@ -24,7 +24,8 @@ When the compiler processes your `.drift` SFC, it executes three static passes:
    ```ts
    // Example ReactiveBinding entry
    {
-     variable: "count",
+     name: "count",
+     type: "variable",
      positions: [8, 24] // Bytecode PCs that reference `count`
    }
    ```

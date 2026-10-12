@@ -9,6 +9,7 @@ export {
   extractBindingNames,
   analyzeExpression,
   extractIdentifiersFromAST,
+  isPropertyAccess,
   type ExpressionAnalysis,
 } from './generator.js';
 export {

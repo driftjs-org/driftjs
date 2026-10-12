@@ -80,6 +80,7 @@ export class DriftClientVM {
   private mode: VMMode = VMMode.MOUNT;
   private declaredVars: Set<string> = new Set();
   private reactiveBindingsMap = new Map<string, readonly number[]>();
+  private typedBindingsMap = new Map<string, ReactiveBinding[]>();
   private updatedPcs = new Set<number>();
   private regionCollectorStack: ReactiveRegion[][] = [];
   private doc: Document | null = null;
@@ -1143,7 +1144,13 @@ export class DriftClientVM {
             if (bodyMod && bodyMod.reactiveBindings) {
               for (let b = 0; b < bodyMod.reactiveBindings.length; b++) {
                 const binding = bodyMod.reactiveBindings[b]!;
-                bodyBindingsMap.set(binding.variable, binding.positions as number[]);
+                const v = binding.name;
+                const existing = bodyBindingsMap.get(v);
+                if (existing) {
+                  existing.push(...(binding.positions as number[]));
+                } else {
+                  bodyBindingsMap.set(v, [...(binding.positions as number[])]);
+                }
               }
             }
 
@@ -1543,9 +1550,20 @@ export class DriftClientVM {
     this.declaredVars = new Set(module.declaredVars ?? []);
 
     this.reactiveBindingsMap.clear();
+    this.typedBindingsMap.clear();
     if (module.reactiveBindings) {
       for (const b of module.reactiveBindings) {
-        this.reactiveBindingsMap.set(b.variable, b.positions);
+        const v = b.name;
+        const existing = this.reactiveBindingsMap.get(v);
+        if (existing) {
+          this.reactiveBindingsMap.set(v, [...existing, ...b.positions]);
+        } else {
+          this.reactiveBindingsMap.set(v, b.positions);
+        }
+        if (!this.typedBindingsMap.has(v)) {
+          this.typedBindingsMap.set(v, []);
+        }
+        this.typedBindingsMap.get(v)!.push(b);
       }
     }
 

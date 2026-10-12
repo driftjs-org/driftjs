@@ -80,7 +80,7 @@ describe('DriftClientVM (DOM Engine) - Reproduction Test Cases', () => {
         { __drift_fn__: '(scope) => scope.item.done' },
       ],
       reactiveBindings: [
-        { variable: 'item', positions: [3, 8] },
+        { name: 'item', type: 'variable', positions: [3, 8] },
       ],
     };
 
@@ -402,7 +402,7 @@ describe('DriftClientVM (DOM Engine) - Reproduction Test Cases', () => {
         { __drift_fn__: '(scope) => scope.item.btnClass' },
       ],
       reactiveBindings: [
-        { variable: 'item', positions: [12] },
+        { name: 'item', type: 'variable', positions: [12] },
       ],
     };
 
@@ -441,7 +441,7 @@ describe('DriftClientVM (DOM Engine) - Reproduction Test Cases', () => {
         { __drift_fn__: '(scope) => scope.item.ddClass' },
       ],
       reactiveBindings: [
-        { variable: 'item', positions: [5, 16] },
+        { name: 'item', type: 'variable', positions: [5, 16] },
       ],
     };
 
@@ -594,7 +594,7 @@ describe('DriftClientVM (DOM Engine) - Reproduction Test Cases', () => {
         { __drift_fn__: '(scope) => scope.handleClick' },
       ],
       reactiveBindings: [
-        { variable: 'handleClick', positions: [3] },
+        { name: 'handleClick', type: 'variable', positions: [3] },
       ],
       declaredVars: ['handleClick'],
     };

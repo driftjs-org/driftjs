@@ -105,8 +105,11 @@ export interface CompiledModule {
 
 ### Reactive Binding Interface
 ```ts
+export type ReactiveBindingKind = 'variable' | 'property' | 'derived' | 'custom';
+
 export interface ReactiveBinding {
-  readonly variable: string;
+  readonly name: string;
+  readonly type: ReactiveBindingKind;
   readonly positions: readonly number[]; // Bytecode PC indices
 }
 ```

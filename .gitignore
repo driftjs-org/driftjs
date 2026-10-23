@@ -11,6 +11,7 @@ temp
 scratch/
 my-app/
 *.tgz
+*.pdf
 *.env
 prompts/
 __screenshots__/

@@ -1,0 +1,227 @@
+@page {
+  size: A4;
+  margin-top: 1.0in;
+  margin-bottom: 1.0in;
+  margin-left: 1.2in;
+  margin-right: 1.0in;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 12pt;
+  line-height: 1.2;
+  color: #000000;
+  background-color: #ffffff;
+  margin: 0;
+  padding: 0;
+  text-align: justify;
+  hyphens: none;
+  -webkit-hyphens: none;
+}
+
+body {
+  text-align: justify;
+}
+
+h1, .chapter-title {
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 16pt;
+  font-weight: bold;
+  text-transform: uppercase;
+  text-align: left;
+  margin-top: 0;
+  margin-bottom: 16pt;
+  page-break-before: always;
+  break-before: page;
+  page-break-after: avoid;
+  break-after: avoid;
+  line-height: 1.2;
+}
+
+.first-chapter {
+  page-break-before: avoid !important;
+  break-before: avoid !important;
+}
+
+h2, .section-title {
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 14pt;
+  font-weight: bold;
+  text-transform: uppercase;
+  text-align: left;
+  margin-top: 14pt;
+  margin-bottom: 8pt;
+  page-break-after: avoid;
+  break-after: avoid;
+  line-height: 1.2;
+}
+
+h3, .subsection-title {
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 12pt;
+  font-weight: bold;
+  text-align: left;
+  margin-top: 12pt;
+  margin-bottom: 6pt;
+  page-break-after: avoid;
+  break-after: avoid;
+  line-height: 1.2;
+}
+
+p {
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 12pt;
+  font-weight: normal;
+  line-height: 1.2;
+  text-align: justify;
+  margin-top: 0;
+  margin-bottom: 10pt;
+  text-indent: 0;
+}
+
+em, i, .special-text, blockquote {
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 12pt;
+  font-style: italic;
+}
+
+blockquote {
+  margin: 10pt 0 12pt 0.35in;
+  padding: 4pt 12pt;
+  border-left: 2pt solid #444444;
+  line-height: 1.2;
+  text-align: justify;
+}
+
+ul, ol {
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 12pt;
+  line-height: 1.0;
+  margin-top: 0;
+  margin-bottom: 10pt;
+  padding-left: 0.35in;
+}
+
+li {
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 12pt;
+  line-height: 1.2;
+  margin-bottom: 3pt;
+  text-align: justify;
+}
+
+.table-container {
+  width: 100%;
+  margin-top: 10pt;
+  margin-bottom: 12pt;
+  text-align: center;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.table-title {
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 11pt;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 6pt;
+  page-break-after: avoid;
+  break-after: avoid;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 auto;
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 10pt;
+  line-height: 1.2;
+}
+
+tr {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+th, td {
+  border: 1px solid #333333;
+  padding: 4.5pt 6.5pt;
+  vertical-align: top;
+  text-align: left;
+}
+
+th {
+  background-color: #f2f2f2;
+  font-weight: bold;
+  text-align: center;
+  font-size: 10pt;
+}
+
+td.center, th.center { text-align: center; }
+td.number, th.number { text-align: right; }
+
+.figure-container {
+  width: 100%;
+  margin-top: 10pt;
+  margin-bottom: 12pt;
+  text-align: center;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.figure-content { display: block; margin: 0 auto; text-align: center; }
+
+.figure-title {
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 11pt;
+  font-weight: bold;
+  text-align: center;
+  margin-top: 6pt;
+  margin-bottom: 0;
+  page-break-before: avoid;
+  break-before: avoid;
+}
+
+pre.code-snippet {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 8.5pt;
+  line-height: 1.12;
+  background-color: #f8f9fa;
+  border: 1px solid #cccccc;
+  border-left: 3px solid #333333;
+  padding: 6pt 8pt;
+  margin-top: 8pt;
+  margin-bottom: 12pt;
+  white-space: pre-wrap;
+  word-break: normal;
+  page-break-inside: avoid;
+  break-inside: avoid;
+  text-align: left;
+}
+
+code {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 9.5pt;
+  background-color: #f1f1f1;
+  padding: 1pt 3pt;
+  border-radius: 2pt;
+}
+
+.page-break-before {
+  page-break-before: always;
+  break-before: page;
+}
+
+.toc-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.toc-table td {
+  border: none;
+  padding: 1.5pt 0;
+}

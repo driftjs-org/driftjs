@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>DriftJS - Front Matter</title>
+  <style>
+    @page {
+      size: A4;
+      margin-top: 1.0in;
+      margin-bottom: 1.0in;
+      margin-left: 1.2in;
+      margin-right: 1.0in;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body {
+      font-family: 'Times New Roman', Times, serif;
+      font-size: 12pt;
+      line-height: 1.2;
+      color: #000000;
+      background-color: #ffffff;
+      margin: 0;
+      padding: 0;
+      text-align: justify;
+      hyphens: none;
+      -webkit-hyphens: none;
+    }
+    .title-page {
+      padding-top: 0;
+      text-align: center;
+      page-break-after: always;
+      break-after: page;
+    }
+    .cert-page {
+      padding-top: 0;
+      page-break-after: always;
+      break-after: page;
+    }
+    .ack-page {
+      padding-top: 0;
+      page-break-after: always;
+      break-after: page;
+    }
+    .toc-page {
+      padding-top: 0;
+      page-break-after: always;
+      break-after: page;
+    }
+    .abs-page {
+      padding-top: 0;
+    }
+    h1 {
+      font-family: 'Times New Roman', Times, serif;
+      font-size: 16pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      text-align: center;
+      margin-top: 0;
+      margin-bottom: 24pt;
+      line-height: 1.2;
+    }
+    h2 {
+      font-family: 'Times New Roman', Times, serif;
+      font-size: 14pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      text-align: center;
+      margin-top: 0;
+      margin-bottom: 12pt;
+      line-height: 1.2;
+    }
+    h3 {
+      font-family: 'Times New Roman', Times, serif;
+      font-size: 12pt;
+      font-weight: bold;
+      text-align: center;
+      margin-top: 0;
+      margin-bottom: 6pt;
+      line-height: 1.2;
+    }
+    p {
+      font-family: 'Times New Roman', Times, serif;
+      font-size: 12pt;
+      line-height: 1.2;
+      text-align: justify;
+      margin-top: 0;
+      margin-bottom: 24pt;
+      text-indent: 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0 auto;
+      font-family: 'Times New Roman', Times, serif;
+      font-size: 11pt;
+      line-height: 1.2;
+    }
+    th, td {
+      border: 1px solid #333333;
+      padding: 6pt 8pt;
+      vertical-align: top;
+      text-align: left;
+    }
+    th {
+      background-color: #f2f2f2;
+      font-weight: bold;
+      text-align: center;
+      font-size: 11pt;
+    }
+    .toc-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .toc-table td {
+      border: none;
+      padding: 1.5pt 0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== 1. TITLE PAGE ==================== -->
+  <div class="title-page">
+    <div style="text-align: center;">
+      <h2 style="font-size: 16pt; margin: 0; text-transform: uppercase; font-weight: bold;">
+        GOVERNMENT POLYTECHNIC, JAMNAGAR
+      </h2>
+      <h3 style="font-size: 13pt; margin: 6pt 0 0 0; text-transform: uppercase; font-weight: bold;">
+        DEPARTMENT OF COMPUTER ENGINEERING
+      </h3>
+      <p style="font-size: 12pt; margin: 4pt 0 0 0; text-align: center; font-style: italic;">
+        Academic Term: 2026 – 2027
+      </p>
+    </div>
+
+    <div style="text-align: center; margin: 30pt 0 20pt 0;">
+      <p style="font-size: 12pt; margin: 0; text-align: center;">A Minor Project Report on</p>
+      <h1 style="font-size: 16pt; margin: 12pt 0; text-transform: uppercase; font-weight: bold; text-align: center;">
+        DRIFTJS: A REGISTER-BASED VIRTUAL MACHINE FOR WEB USER INTERFACES
+      </h1>
+      <p style="font-size: 12pt; margin: 0; text-align: center;">
+        Submitted in partial fulfillment of the requirements for the award of Diploma in<br>
+        <strong>COMPUTER ENGINEERING</strong> (Semester – 5<sup>th</sup>)
+      </p>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; margin-top: 24pt; text-align: left;">
+      <div style="width: 55%;">
+        <p style="margin: 0 0 4pt 0; font-size: 12pt; text-align: left;"><strong>Prepared By:</strong></p>
+        <div style="font-size: 11pt; line-height: 1.4;">
+          <p style="margin: 0; padding: 2pt 0;">Hrutav Modha</p>
+          <p style="margin: 0; padding: 2pt 0;">Veer Joishar</p>
+          <p style="margin: 0; padding: 2pt 0;">Krish Makwana</p>
+          <p style="margin: 0; padding: 2pt 0;">Yash Dhokiya</p>
+        </div>
+      </div>
+      <div style="width: 45%; text-align: right;">
+        <p style="margin: 0 0 4pt 0; font-size: 12pt; text-align: right;"><strong>Under the Guidance of:</strong></p>
+        <p style="margin: 0; font-size: 12pt; text-align: right; line-height: 1.3;">
+          <strong>Prof. Jignesh V. Shaparia</strong><br>
+          Lecturer, Computer Engineering Dept.<br>
+          Government Polytechnic, Jamnagar
+        </p>
+      </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 40pt; border-top: 1px solid #777; padding-top: 10pt;">
+      <p style="font-size: 11pt; margin: 0; text-align: center;">
+        Directorate of Technical Education, Gujarat State<br>
+        Gujarat Technological University (GTU), Ahmedabad
+      </p>
+    </div>
+  </div>
+
+  <!-- ==================== 2. ACKNOWLEDGEMENT ==================== -->
+  <div class="ack-page">
+    <h1 style="font-size: 16pt; text-align: center; text-transform: uppercase; font-weight: bold; margin-bottom: 16pt;">
+      ACKNOWLEDGEMENT
+    </h1>
+
+    <p>
+      We wish to express our sincere appreciation to our project guide, <strong>Prof. Jignesh V. Shaparia</strong>, Lecturer in Computer Engineering, Government Polytechnic, Jamnagar, for his valuable guidance, technical insights, and continuous encouragement throughout the development of DriftJS.
+    </p>
+
+    <p>
+      We extend our heartfelt gratitude to <strong>Prof. Chetan G. Ajudiya</strong>, Head of the Computer Engineering Department, for facilitating access to computer laboratories, software infrastructure, and academic resources necessary to execute this project.
+    </p>
+
+    <p>
+      We also express our sincere thanks to the Principal of Government Polytechnic, Jamnagar, and all faculty and staff members of the Computer Engineering Department for their ongoing support and instruction.
+    </p>
+
+    <p>
+      Lastly, we thank our parents and classmates for their moral support, patience, and motivation throughout the research, implementation, and benchmarking phases of this project.
+    </p>
+
+    <div style="margin-top: 24pt; text-align: right;">
+      <p style="margin: 0;">Hrutav Modha</p>
+      <p style="margin: 2pt 0 0 0;">Veer Joishar</p>
+      <p style="margin: 2pt 0 0 0;">Krish Makwana</p>
+      <p style="margin: 2pt 0 0 0;">Yash Dhokiya</p>
+      <p style="margin: 6pt 0 0 0; font-size: 11pt;">Department of Computer Engineering</p>
+      <p style="margin: 2pt 0 0 0; font-size: 11pt;">Government Polytechnic, Jamnagar</p>
+    </div>
+  </div>
+
+  <!-- ==================== 4. TABLE OF CONTENTS ==================== -->
+  <div class="toc-page">
+    <h1 style="font-size: 15pt; text-align: center; text-transform: uppercase; font-weight: bold; margin-bottom: 8pt;">
+      TABLE OF CONTENTS
+    </h1>
+
+    <table class="toc-table" style="font-size: 8.5pt; line-height: 1.12;">
+      <thead>
+        <tr style="border-bottom: 1.5px solid #000; font-weight: bold;">
+          <th style="border: none; background: none; text-align: left; width: 14%; padding: 1pt 0;">Sr. No.</th>
+          <th style="border: none; background: none; text-align: left; width: 74%; padding: 1pt 0;">Topic</th>
+          <th style="border: none; background: none; text-align: right; width: 12%; padding: 1pt 0;">Page No.</th>
+        </tr>
+      </thead>
+      <tbody id="toc-tbody">
+
+        <tr><td></td><td>Certificate</td><td style="text-align: right;">ii</td></tr>
+        <tr><td></td><td>Acknowledgement</td><td style="text-align: right;">iii</td></tr>
+        <tr><td></td><td>Project Abstract</td><td style="text-align: right;">v</td></tr>
+        <tr><td><strong>1.0</strong></td><td><strong>INTRODUCTION</strong></td><td style="text-align: right;"><strong>1</strong></td></tr>
+        <tr><td>1.1</td><td>Overview of Proposed System</td><td style="text-align: right;">1</td></tr>
+        <tr><td>1.2</td><td>Problem Statement</td><td style="text-align: right;">3</td></tr>
+        <tr><td>1.3</td><td>Objectives</td><td style="text-align: right;">3</td></tr>
+        <tr><td>1.4</td><td>Scope of the Project</td><td style="text-align: right;">3</td></tr>
+        <tr><td>1.5</td><td>Limitations</td><td style="text-align: right;">4</td></tr>
+        <tr><td>1.6</td><td>Technical Requirements and Technologies Used</td><td style="text-align: right;">4</td></tr>
+        <tr><td><strong>2.0</strong></td><td><strong>SYSTEM REQUIREMENTS SPECIFICATION</strong></td><td style="text-align: right;"><strong>5</strong></td></tr>
+        <tr><td>2.1</td><td>User Characteristics</td><td style="text-align: right;">5</td></tr>
+        <tr><td>2.2</td><td>Functional Requirements</td><td style="text-align: right;">5</td></tr>
+        <tr><td>2.3</td><td>Non-Functional Requirements</td><td style="text-align: right;">6</td></tr>
+        <tr><td><strong>3.0</strong></td><td><strong>SYSTEM ANALYSIS AND DESIGN</strong></td><td style="text-align: right;"><strong>7</strong></td></tr>
+        <tr><td>3.1</td><td>User-Based Modeling</td><td style="text-align: right;">7</td></tr>
+        <tr><td>3.2</td><td>System Architecture</td><td style="text-align: right;">8</td></tr>
+        <tr><td>3.3</td><td>Data Modeling</td><td style="text-align: right;">8</td></tr>
+        <tr><td><strong>4.0</strong></td><td><strong>USER INTERFACE DESIGN</strong></td><td style="text-align: right;"><strong>10</strong></td></tr>
+        <tr><td>4.1</td><td>UI/UX Design</td><td style="text-align: right;">10</td></tr>
+        <tr><td>4.2</td><td>Navigation and Screen Flow</td><td style="text-align: right;">10</td></tr>
+        <tr><td><strong>5.0</strong></td><td><strong>IMPLEMENTATION</strong></td><td style="text-align: right;"><strong>11</strong></td></tr>
+        <tr><td>5.1</td><td>Development Environment</td><td style="text-align: right;">11</td></tr>
+        <tr><td>5.2</td><td>Module-Wise Implementation</td><td style="text-align: right;">11</td></tr>
+        <tr><td>5.3</td><td>Important Source Code</td><td style="text-align: right;">12</td></tr>
+        <tr><td>5.4</td><td>AI/ML Model Implementation</td><td style="text-align: right;">12</td></tr>
+        <tr><td><strong>6.0</strong></td><td><strong>TESTING AND RESULTS</strong></td><td style="text-align: right;"><strong>13</strong></td></tr>
+        <tr><td>6.1</td><td>Testing Strategy</td><td style="text-align: right;">13</td></tr>
+        <tr><td>6.2</td><td>Test Cases</td><td style="text-align: right;">13</td></tr>
+        <tr><td>6.3</td><td>Results</td><td style="text-align: right;">14</td></tr>
+        <tr><td>6.4</td><td>Performance Evaluation</td><td style="text-align: right;">14</td></tr>
+        <tr><td><strong>7.0</strong></td><td><strong>CONCLUSION AND FUTURE ENHANCEMENT</strong></td><td style="text-align: right;"><strong>15</strong></td></tr>
+        <tr><td>7.1</td><td>Conclusion</td><td style="text-align: right;">15</td></tr>
+        <tr><td>7.2</td><td>Future Enhancement</td><td style="text-align: right;">15</td></tr>
+        <tr><td><strong>8.0</strong></td><td><strong>REFERENCES</strong></td><td style="text-align: right;"><strong>16</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ==================== 5. PROJECT ABSTRACT ==================== -->
+  <div class="abs-page">
+    <h1 style="font-size: 16pt; text-align: center; text-transform: uppercase; font-weight: bold; margin-bottom: 16pt;">
+      PROJECT ABSTRACT
+    </h1>
+
+    <p>
+      In web application development, declarative user interface frameworks must reconcile changing application data with the browser Document Object Model (DOM). Traditional solutions rely primarily on the Virtual DOM paradigm, popularized by React. While the Virtual DOM simplifies state management, it creates and discards thousands of intermediate JavaScript objects during each render cycle, causing memory churn and frequent garbage collection delays. Optimized Virtual DOM engines such as Inferno demonstrated that minimal abstractions yield notable speedups, yet they remain fundamentally constrained by the requirement to allocate and diff virtual tree structures.
+    </p>
+
+    <p>
+      An alternative paradigm, demonstrated by Ember.js and the Glimmer VM, compiles component templates into a bytecode instruction stream executed by a browser-hosted virtual machine, bypassing virtual node allocations. However, Glimmer was designed around a stack-based virtual machine coupled with Ember's large framework runtime. Stack machines incur continuous push and pop operations on an operand stack, and framework wrapper objects introduce additional execution latency.
+    </p>
+
+    <p>
+      This project presents DriftJS, an ahead-of-time compiler and 256-register virtual machine designed for web user interfaces. The scope is centered on three core modules: the Compiler, the DOM Virtual Machine, and the Universal Build Plugin. Single File Components combining JavaScript state and HTML-like templates are compiled at build time into an instruction stream, a static constant pool, and a direct table of reactive bindings. At runtime, the client virtual machine avoids both virtual DOM diffing and stack manipulation by accessing values directly in indexed registers. When application data changes, the system identifies the exact instruction positions tied to that variable and updates the corresponding DOM text nodes and attributes in place.
+    </p>
+
+    <p>
+      Dynamic lists and conditional branches are bounded by comment nodes within the DOM, and list reordering is handled using a keyed reconciliation algorithm to minimize DOM node movements. The universal build plugin enables integration across Vite, Rollup, and Webpack. Performance benchmarks demonstrate substantial reductions in rendering duration and memory consumption compared to conventional stack-based and Virtual DOM frameworks.
+    </p>
+  </div>
+
+</body>
+</html>

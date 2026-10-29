@@ -12,6 +12,15 @@ import {
   camelToKebab,
   MAX_REGISTERS,
   VOID_ELEMENTS,
+  STATE_TOKEN,
+  DERIVED_TOKEN,
+  EFFECT_TOKEN,
+  PROPS_TOKEN,
+  STATE_FN,
+  DERIVED_FN,
+  DERIVE_FN_LEGACY,
+  EFFECT_FN,
+  PROPS_FN,
   escapeHtml,
   isValidHtmlTagName,
   normalizePath,
@@ -29,6 +38,23 @@ describe('driftjs-shared Module', () => {
     expect(VOID_ELEMENTS.has('br')).toBe(true);
     expect(VOID_ELEMENTS.has('div')).toBe(false);
     expect(VOID_ELEMENTS.size).toBe(14);
+  });
+
+  it('exports reactive primitive tokens and symbol names', () => {
+    expect(typeof STATE_TOKEN).toBe('symbol');
+    expect(typeof DERIVED_TOKEN).toBe('symbol');
+    expect(typeof EFFECT_TOKEN).toBe('symbol');
+    expect(typeof PROPS_TOKEN).toBe('symbol');
+    expect(STATE_TOKEN).toBe(Symbol.for('drift.state'));
+    expect(DERIVED_TOKEN).toBe(Symbol.for('drift.derived'));
+    expect(EFFECT_TOKEN).toBe(Symbol.for('drift.effect'));
+    expect(PROPS_TOKEN).toBe(Symbol.for('drift.props'));
+
+    expect(STATE_FN).toBe('state');
+    expect(DERIVED_FN).toBe('derived');
+    expect(DERIVE_FN_LEGACY).toBe('derive');
+    expect(EFFECT_FN).toBe('effect');
+    expect(PROPS_FN).toBe('props');
   });
 
   it('evaluates precompiled functions and closures', () => {

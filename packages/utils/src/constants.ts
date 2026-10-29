@@ -21,3 +21,21 @@ export const VOID_ELEMENTS: ReadonlySet<string> = new Set([
   'track',
   'wbr',
 ]);
+
+/**
+ * Shared reactive primitive tokens for symbol-keyed identification.
+ */
+export const STATE_TOKEN = Symbol.for('drift.state');
+export const DERIVED_TOKEN = Symbol.for('drift.derived');
+export const EFFECT_TOKEN = Symbol.for('drift.effect');
+export const PROPS_TOKEN = Symbol.for('drift.props');
+
+/**
+ * Canonical function names for reactive primitives.
+ */
+export const STATE_FN = 'state';
+export const DERIVED_FN = 'derived';
+export const DERIVE_FN_LEGACY = 'derive';
+export const EFFECT_FN = 'effect';
+export const PROPS_FN = 'props';
+

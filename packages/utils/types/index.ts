@@ -12,3 +12,14 @@ export interface Context<T> {
   provide(value: T | (() => T)): void;
   inject(fallback?: T): T;
 }
+
+/**
+ * Classification kind for a reactive binding.
+ */
+export type ReactiveBindingKind = 'variable' | 'property' | 'derived' | 'custom';
+
+/**
+ * Classification kind for a reactive primitive.
+ */
+export type ReactivePrimitiveKind = 'state' | 'derived' | 'effect' | 'props';
+

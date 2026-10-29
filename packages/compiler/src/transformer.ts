@@ -17,6 +17,38 @@ import {
   ASTNodeType,
   DriftParserError,
 } from '../types/index.js';
+import { extractBindingNames } from './generator.js';
+
+function getRootIdentifier(node: any): string | null {
+  if (!node || typeof node !== 'object') return null;
+  if (node.type === 'Identifier') return node.name;
+  if (node.type === 'MemberExpression') return getRootIdentifier(node.object);
+  return null;
+}
+
+function createMarkDirtyCall(name: string): any {
+  return {
+    type: 'CallExpression',
+    callee: {
+      type: 'Identifier',
+      name: '__drift_mark_dirty__',
+    },
+    arguments: [
+      {
+        type: 'Literal',
+        value: name,
+        raw: JSON.stringify(name),
+      },
+    ],
+  };
+}
+
+function createMarkDirtyStatement(name: string): any {
+  return {
+    type: 'ExpressionStatement',
+    expression: createMarkDirtyCall(name),
+  };
+}
 
 /**
  * Formal Template AST Visitor that traverses the AST hierarchy and applies visitors.
@@ -163,6 +195,9 @@ export function traverseTemplateAST<T extends ProgramNode | TemplateChildNode>(
  */
 export class DriftTransformer {
   private readonly rawAst: ProgramNode;
+  public readonly reactiveSymbolTable: Set<string> = new Set();
+  public readonly derivedSymbolTable: Set<string> = new Set();
+  public readonly staticSymbolTable: Set<string> = new Set();
 
   constructor(rawAst: ProgramNode) {
     this.rawAst = rawAst;
@@ -173,6 +208,10 @@ export class DriftTransformer {
    * @returns Transformed ProgramNode.
    */
   public transform(): ProgramNode {
+    this.reactiveSymbolTable.clear();
+    this.derivedSymbolTable.clear();
+    this.staticSymbolTable.clear();
+
     // Pass 1: Strip redundant whitespace-only text nodes
     const strippedAst = traverseTemplateAST(this.rawAst, {
       Text: (node) => {
@@ -263,7 +302,12 @@ export class DriftTransformer {
       },
     });
 
-    return enrichedAst;
+    return {
+      ...enrichedAst,
+      reactiveSymbolTable: new Set(this.reactiveSymbolTable),
+      derivedSymbolTable: new Set(this.derivedSymbolTable),
+      staticSymbolTable: new Set(this.staticSymbolTable),
+    };
   }
 
 
@@ -301,7 +345,8 @@ export class DriftTransformer {
   }
 
   /**
-   * Parses raw JS string inside <script> tags into Acorn AST statement(s), stripping top-level Program wrapper.
+   * Parses raw JS string inside <script> tags into Acorn AST statement(s), stripping top-level Program wrapper,
+   * triaging symbols into reactive/derived/static tables, and auto-desugaring reactive state mutations.
    */
   private transformScriptElement(node: ElementNode): ElementNode {
     const processedChildren = node.children.map((child) => {
@@ -317,10 +362,16 @@ export class DriftTransformer {
             ranges: true,
           });
 
-          if (program.body.length === 1 && program.body[0] !== undefined) {
-            scriptAst = program.body[0];
+          // 1. Symbol Table Triage
+          this.triageSymbols(program.body);
+
+          // 2. Ergonomic Mutation Auto-Desugaring
+          const desugaredBody = this.desugarStatements(program.body);
+
+          if (desugaredBody.length === 1 && desugaredBody[0] !== undefined) {
+            scriptAst = desugaredBody[0];
           } else {
-            scriptAst = program.body;
+            scriptAst = desugaredBody;
           }
         } catch (err: unknown) {
           const msg = err instanceof Error ? err.message : String(err);
@@ -344,6 +395,205 @@ export class DriftTransformer {
       ...node,
       children: processedChildren,
     };
+  }
+
+  private triageSymbols(stmts: any[]): void {
+    let hasExplicitState = false;
+
+    for (const stmt of stmts) {
+      if (!stmt || typeof stmt !== 'object') continue;
+
+      if (stmt.type === 'VariableDeclaration' && Array.isArray(stmt.declarations)) {
+        for (const decl of stmt.declarations) {
+          const names = extractBindingNames(decl.id);
+          if (
+            decl.init?.type === 'CallExpression' &&
+            decl.init.callee?.type === 'Identifier' &&
+            decl.init.callee.name === 'state'
+          ) {
+            hasExplicitState = true;
+            for (const name of names) {
+              this.reactiveSymbolTable.add(name);
+            }
+          } else if (
+            decl.init?.type === 'CallExpression' &&
+            decl.init.callee?.type === 'Identifier' &&
+            (decl.init.callee.name === 'derived' || decl.init.callee.name === 'derive')
+          ) {
+            for (const name of names) {
+              this.derivedSymbolTable.add(name);
+            }
+          } else {
+            for (const name of names) {
+              this.staticSymbolTable.add(name);
+            }
+          }
+        }
+      } else if (stmt.type === 'FunctionDeclaration' || stmt.type === 'ClassDeclaration') {
+        if (stmt.id?.name) {
+          this.staticSymbolTable.add(stmt.id.name);
+        }
+      } else if (stmt.type === 'ImportDeclaration' && Array.isArray(stmt.specifiers)) {
+        for (const spec of stmt.specifiers) {
+          if (spec.local?.name) {
+            this.staticSymbolTable.add(spec.local.name);
+          }
+        }
+      }
+    }
+
+    // Backward compatibility: If no explicit state() declarations were used at all,
+    // treat mutable let/var declarations as reactive (Milestone 1 behavior)
+    if (!hasExplicitState) {
+      for (const stmt of stmts) {
+        if (!stmt || typeof stmt !== 'object') continue;
+        if (stmt.type === 'VariableDeclaration' && (stmt.kind === 'let' || stmt.kind === 'var')) {
+          for (const decl of stmt.declarations || []) {
+            if (
+              decl.init?.type === 'CallExpression' &&
+              decl.init.callee?.type === 'Identifier' &&
+              (decl.init.callee.name === 'derived' || decl.init.callee.name === 'derive')
+            ) {
+              continue;
+            }
+            for (const name of extractBindingNames(decl.id)) {
+              this.reactiveSymbolTable.add(name);
+              this.staticSymbolTable.delete(name);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  private desugarStatements(stmts: any[]): any[] {
+    const result: any[] = [];
+    for (const stmt of stmts) {
+      if (!stmt || typeof stmt !== 'object') {
+        result.push(stmt);
+        continue;
+      }
+
+      if (stmt.type === 'ExpressionStatement' && stmt.expression) {
+        const expr = stmt.expression;
+        if (expr.type === 'UpdateExpression') {
+          const rootId = getRootIdentifier(expr.argument);
+          if (rootId && this.reactiveSymbolTable.has(rootId)) {
+            result.push(this.desugarNode(stmt));
+            result.push(createMarkDirtyStatement(rootId));
+            continue;
+          }
+        } else if (expr.type === 'AssignmentExpression') {
+          const rootId = getRootIdentifier(expr.left);
+          if (rootId && this.reactiveSymbolTable.has(rootId)) {
+            result.push(this.desugarNode(stmt));
+            result.push(createMarkDirtyStatement(rootId));
+            continue;
+          }
+        }
+      }
+
+      result.push(this.desugarNode(stmt));
+    }
+    return result;
+  }
+
+  private desugarNode(node: any): any {
+    if (!node || typeof node !== 'object') return node;
+
+    if (node.type === 'BlockStatement' && Array.isArray(node.body)) {
+      return {
+        ...node,
+        body: this.desugarStatements(node.body),
+      };
+    }
+
+    if (
+      node.type === 'FunctionDeclaration' ||
+      node.type === 'FunctionExpression' ||
+      node.type === 'ArrowFunctionExpression'
+    ) {
+      if (node.body && node.body.type === 'BlockStatement') {
+        return {
+          ...node,
+          body: this.desugarNode(node.body),
+        };
+      } else if (node.body && typeof node.body === 'object') {
+        // Arrow function concise body: () => count++ or () => (user.age = 31)
+        if (node.body.type === 'UpdateExpression') {
+          const rootId = getRootIdentifier(node.body.argument);
+          if (rootId && this.reactiveSymbolTable.has(rootId)) {
+            return {
+              ...node,
+              body: {
+                type: 'SequenceExpression',
+                expressions: [node.body, createMarkDirtyCall(rootId)],
+              },
+            };
+          }
+        } else if (node.body.type === 'AssignmentExpression') {
+          const rootId = getRootIdentifier(node.body.left);
+          if (rootId && this.reactiveSymbolTable.has(rootId)) {
+            return {
+              ...node,
+              body: {
+                type: 'SequenceExpression',
+                expressions: [node.body, createMarkDirtyCall(rootId)],
+              },
+            };
+          }
+        }
+      }
+    }
+
+    if (node.type === 'IfStatement') {
+      return {
+        ...node,
+        consequent: this.desugarNode(node.consequent),
+        alternate: node.alternate ? this.desugarNode(node.alternate) : null,
+      };
+    }
+
+    if (
+      node.type === 'ForStatement' ||
+      node.type === 'ForInStatement' ||
+      node.type === 'ForOfStatement' ||
+      node.type === 'WhileStatement' ||
+      node.type === 'DoWhileStatement'
+    ) {
+      return {
+        ...node,
+        body: this.desugarNode(node.body),
+      };
+    }
+
+    if (node.type === 'SwitchStatement' && Array.isArray(node.cases)) {
+      return {
+        ...node,
+        cases: node.cases.map((c: any) => ({
+          ...c,
+          consequent: this.desugarStatements(c.consequent || []),
+        })),
+      };
+    }
+
+    if (node.type === 'TryStatement') {
+      return {
+        ...node,
+        block: this.desugarNode(node.block),
+        handler: node.handler ? this.desugarNode(node.handler) : null,
+        finalizer: node.finalizer ? this.desugarNode(node.finalizer) : null,
+      };
+    }
+
+    if (node.type === 'CatchClause') {
+      return {
+        ...node,
+        body: this.desugarNode(node.body),
+      };
+    }
+
+    return node;
   }
 
   /**

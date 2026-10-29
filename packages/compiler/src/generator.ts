@@ -43,9 +43,15 @@ export class DriftGenerator {
   private pendingDerived: { name: string; arg: any }[] = [];
   private effectBindings: EffectBinding[] = [];
   private pendingEffects: { arg: any }[] = [];
+  private reactiveSymbolTable?: ReadonlySet<string> | undefined;
+  private derivedSymbolTable?: ReadonlySet<string> | undefined;
+  private staticSymbolTable?: ReadonlySet<string> | undefined;
 
   constructor(ast: ProgramNode) {
     this.ast = ast;
+    this.reactiveSymbolTable = ast.reactiveSymbolTable;
+    this.derivedSymbolTable = ast.derivedSymbolTable;
+    this.staticSymbolTable = ast.staticSymbolTable;
   }
 
   /**
@@ -695,7 +701,7 @@ export class DriftGenerator {
           decl.id?.type === 'Identifier' &&
           decl.init?.type === 'CallExpression' &&
           decl.init.callee?.type === 'Identifier' &&
-          decl.init.callee.name === 'derive' &&
+          (decl.init.callee.name === 'derived' || decl.init.callee.name === 'derive') &&
           decl.init.arguments &&
           decl.init.arguments.length > 0
         ) {
@@ -839,6 +845,9 @@ export class DriftGenerator {
     if (this.declaredVars.size === 0) return;
     const analysis = this.analyzeExpression(expr);
     for (const name of analysis.deps) {
+      if (this.staticSymbolTable && this.staticSymbolTable.has(name)) {
+        continue;
+      }
       const type = this.classifyDependencyKind(expr, name);
       const key = `${name}:${type}`;
       if (!this.bindingPositions.has(key)) {
@@ -850,6 +859,7 @@ export class DriftGenerator {
 
   private isDerivedVar(name: string): boolean {
     return (
+      (this.derivedSymbolTable !== undefined && this.derivedSymbolTable.has(name)) ||
       this.derivedBindings.some((d) => d.name === name) ||
       this.pendingDerived.some((p) => p.name === name)
     );
@@ -1306,6 +1316,9 @@ export function astToJS(node: any, locals?: Set<string>): string {
     case 'Identifier':
       if (locals && locals.has(node.name)) return node.name;
       if (node.name === 'undefined') return 'undefined';
+      if (node.name === '__drift_mark_dirty__' || node.name === 'markDirty') {
+        return `((scope && typeof scope.__drift_mark_dirty__ === 'function') ? scope.__drift_mark_dirty__ : (typeof __drift_mark_dirty__ === 'function' ? __drift_mark_dirty__ : () => {}))`;
+      }
       return `getScopeValue(scope, ${JSON.stringify(node.name)})`;
 
     case 'Literal':

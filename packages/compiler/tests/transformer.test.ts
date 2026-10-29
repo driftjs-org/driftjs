@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { DriftLexer } from '../src/lexer.js';
 import { DriftParser } from '../src/parser.js';
 import { DriftTransformer, traverseTemplateAST } from '../src/transformer.js';
+import { compile } from '../src/index.js';
 import { ASTNodeType, type ElementNode, type TextNode, type InterpolationNode } from '../types/index.js';
 
 describe('DriftTransformer', () => {
@@ -165,6 +166,81 @@ describe('DriftTransformer', () => {
       expect(children).toHaveLength(2);
       expect(children[0]?.tagName).toBe('span');
       expect(children[1]?.tagName).toBe('span');
+    });
+  });
+
+  describe('Milestone 2: Fine-Grained Reactive Symbol Segregation & Desugaring', () => {
+    it('segregates state(), derived(), and plain let variables into their respective symbol tables', () => {
+      const input = `
+        <script>
+          let count = state(0);
+          let double = derived(() => count * 2);
+          let temp = 0;
+          const MAX = 100;
+          function helper() {}
+        </script>
+        <div>{count} {double} {temp}</div>
+      `;
+      const lexer = new DriftLexer(input);
+      const parser = new DriftParser(lexer);
+      const rawAst = parser.parse();
+      const transformer = new DriftTransformer(rawAst);
+      const transformedAst = transformer.transform();
+
+      expect(transformer.reactiveSymbolTable.has('count')).toBe(true);
+      expect(transformer.derivedSymbolTable.has('double')).toBe(true);
+      expect(transformer.staticSymbolTable.has('temp')).toBe(true);
+      expect(transformer.staticSymbolTable.has('MAX')).toBe(true);
+      expect(transformer.staticSymbolTable.has('helper')).toBe(true);
+
+      const mod = compile(input);
+      const countBinding = mod.reactiveBindings?.find((b) => b.name === 'count');
+      const doubleBinding = mod.reactiveBindings?.find((b) => b.name === 'double');
+      const tempBinding = mod.reactiveBindings?.find((b) => b.name === 'temp');
+
+      expect(countBinding).toBeDefined();
+      expect(countBinding?.type).toBe('variable');
+      expect(doubleBinding).toBeDefined();
+      expect(doubleBinding?.type).toBe('derived');
+      expect(tempBinding).toBeUndefined(); // Plain let in presence of explicit state() does not generate ReactiveBinding
+    });
+
+    it('auto-desugars count++ and member assignments to invoke __drift_mark_dirty__', () => {
+      const input = `
+        <script>
+          let count = state(0);
+          let user = state({ name: 'Alice', age: 30 });
+          let temp = 0;
+
+          function inc() {
+            count++;
+            user.age = 31;
+            temp++;
+          }
+        </script>
+        <div>{count}</div>
+      `;
+      const lexer = new DriftLexer(input);
+      const parser = new DriftParser(lexer);
+      const rawAst = parser.parse();
+      const transformer = new DriftTransformer(rawAst);
+      const transformedAst = transformer.transform();
+
+      const script = transformedAst.body.find((n: any) => (n as any).tagName === 'script') as ElementNode;
+      const scriptText = script.children[0] as TextNode;
+      const scriptAst = scriptText.content as any[];
+
+      const fnDecl = scriptAst.find((s: any) => s.type === 'FunctionDeclaration' && s.id.name === 'inc');
+      expect(fnDecl).toBeDefined();
+
+      const fnStatements = fnDecl.body.body;
+      const dirtyCalls = fnStatements
+        .filter((s: any) => s.type === 'ExpressionStatement' && s.expression?.type === 'CallExpression' && s.expression.callee?.name === '__drift_mark_dirty__')
+        .map((s: any) => s.expression.arguments[0]?.value);
+
+      expect(dirtyCalls).toContain('count');
+      expect(dirtyCalls).toContain('user');
+      expect(dirtyCalls).not.toContain('temp');
     });
   });
 });

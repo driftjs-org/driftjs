@@ -129,6 +129,9 @@ export type TemplateChildNode =
 export interface ProgramNode extends BaseASTNode {
   readonly type: typeof ASTNodeType.Program;
   readonly body: readonly TemplateChildNode[];
+  readonly reactiveSymbolTable?: ReadonlySet<string> | undefined;
+  readonly derivedSymbolTable?: ReadonlySet<string> | undefined;
+  readonly staticSymbolTable?: ReadonlySet<string> | undefined;
 }
 
 /**
